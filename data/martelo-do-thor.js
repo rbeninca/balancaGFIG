@@ -35,7 +35,8 @@ const COUNTDOWN_DURATION = 3000; // 3 segundos de contagem regressiva
 
 // Elemento do painel de debug
 let debugPanel = null;
-
+let resultsScreenTimeout = null;
+let lastEntryId = null;
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -72,6 +73,7 @@ function initializeDOMElements() {
     settings: document.getElementById('settings-screen') // Adicionado
   };
   elements.playerNameInput = document.getElementById('playerName');
+  elements.playerNameResult = document.getElementById('playerNameResult');
   elements.startButton = document.getElementById('startButton');
   elements.countdown = document.getElementById('countdown');
   elements.currentPlayer = document.getElementById('currentPlayer');
@@ -140,8 +142,18 @@ function initializeDOMElements() {
 
 function setupEventListeners() {
   elements.startButton.addEventListener('click', startGame);
-  elements.playAgainButton.addEventListener('click', resetGame);
-  elements.showRankingButton.addEventListener('click', showRankingScreen);
+  elements.playAgainButton.addEventListener('click', () => {
+    clearTimeout(resultsScreenTimeout);
+    resetGame();
+  });
+  elements.showRankingButton.addEventListener('click', () => {
+    clearTimeout(resultsScreenTimeout);
+    showRankingScreen();
+  });
+  elements.playerNameResult.addEventListener('input', () => {
+    updatePlayerName(elements.playerNameResult.value);
+    resetResultsTimeout();
+  });
   elements.backToStartButton.addEventListener('click', () => showScreen('start'));
   elements.clearRankingButton.addEventListener('click', clearRanking);
   elements.settingsButton.addEventListener('click', showSettingsScreen);
@@ -246,6 +258,7 @@ function showScreen(screenName) {
 // ==========================================
 
 function startGame() {
+  loadSettings(); // Garante que as configurações mais recentes sejam aplicadas
   const name = elements.playerNameInput.value.trim();
   
   if (!name) {
@@ -699,7 +712,7 @@ function endAttempt() {
   // Esconde a mensagem após alguns segundos
   setTimeout(() => {
     elements.attemptMessage.classList.remove('visible');
-  }, 4000); // A mensagem fica visível por 4 segundos
+  }, 5000); // A mensagem fica visível por 5 segundos
 
   marteloState.attempts.push({
     attempt: marteloState.currentAttempt,
@@ -710,9 +723,9 @@ function endAttempt() {
   // Próxima tentativa ou resultado
   if (marteloState.currentAttempt < marteloState.maxAttempts) {
     marteloState.currentAttempt++;
-    setTimeout(() => startCountdown(), 4500); // Aumenta o tempo para dar tempo de ler a msg
+    setTimeout(() => startCountdown(), 5500); // Aumenta o tempo para dar tempo de ler a msg
   } else {
-    setTimeout(() => showResultsScreen(), 4500);
+    setTimeout(() => showResultsScreen(), 5500);
   }
 }
 
@@ -737,6 +750,9 @@ function showResultsScreen() {
   const message = getMotivationalMessage(forceKg);
   elements.motivationalMessage.textContent = message;
 
+  // Preencher o nome do jogador
+  elements.playerNameResult.value = marteloState.playerName;
+
   // Salvar no ranking
   saveToRanking(marteloState.playerName, forceKg, forceN);
 
@@ -746,10 +762,15 @@ function showResultsScreen() {
     } catch (e) {}
   }
 
-  // Exibir ranking automaticamente após 4 segundos
-  setTimeout(() => {
-    showRankingScreen();
-  }, 4000);
+  // Iniciar timeout para ir para o ranking
+  resetResultsTimeout();
+}
+
+function resetResultsTimeout() {
+    clearTimeout(resultsScreenTimeout);
+    resultsScreenTimeout = setTimeout(() => {
+        showRankingScreen();
+    }, 15000); // 15 segundos
 }
 
 function getMotivationalMessage(forceKg) {
@@ -789,7 +810,7 @@ function loadSettings() {
   const savedSettings = JSON.parse(localStorage.getItem('martelo_settings'));
   const defaultSettings = {
     maxForceDisplay: 300,
-    useDynamicMaxForce: true, // Novo: habilitado por padrão
+    useDynamicMaxForce: true,
     thresholds: {
       fraca: 20,
       media: 50,
@@ -799,24 +820,26 @@ function loadSettings() {
     }
   };
 
-  gameSettings = { ...defaultSettings, ...savedSettings };
+  const currentSettings = { ...defaultSettings, ...savedSettings };
+  currentSettings.thresholds = { ...defaultSettings.thresholds, ...savedSettings?.thresholds };
+  gameSettings = currentSettings;
 
-  // Se a opção dinâmica estiver ativa, calcula o valor do ranking
   if (gameSettings.useDynamicMaxForce) {
     const ranking = JSON.parse(localStorage.getItem('martelo_ranking') || '[]');
     if (ranking.length > 0) {
-      gameSettings.maxForceDisplay = Math.ceil(ranking[0].forceKg / 10) * 10; // Arredonda para cima para a próxima dezena
+      gameSettings.maxForceDisplay = Math.ceil(ranking[0].forceKg / 10) * 10;
     } else {
-      // Se não houver ranking, usa o valor manual salvo ou o padrão
-      gameSettings.maxForceDisplay = savedSettings?.maxForceDisplay || defaultSettings.maxForceDisplay;
+      gameSettings.maxForceDisplay = defaultSettings.maxForceDisplay; // Fallback para o padrão
     }
     elements.maxForceInput.disabled = true;
+    elements.maxForceInput.value = '';
+    elements.maxForceInput.placeholder = `Automático (${gameSettings.maxForceDisplay} kg)`;
   } else {
     elements.maxForceInput.disabled = false;
+    elements.maxForceInput.value = gameSettings.maxForceDisplay;
+    elements.maxForceInput.placeholder = 'kg';
   }
 
-  // Update input fields
-  elements.maxForceInput.value = gameSettings.maxForceDisplay;
   elements.dynamicMaxForceCheckbox.checked = gameSettings.useDynamicMaxForce;
   elements.thresholdFraca.value = gameSettings.thresholds.fraca;
   elements.thresholdMedia.value = gameSettings.thresholds.media;
@@ -826,19 +849,23 @@ function loadSettings() {
 }
 
 function saveSettings() {
-  gameSettings.useDynamicMaxForce = elements.dynamicMaxForceCheckbox.checked;
-  // Salva o valor manual mesmo que o dinâmico esteja ativo
-  gameSettings.maxForceDisplay = parseInt(elements.maxForceInput.value) || 300;
-  
-  gameSettings.thresholds.fraca = parseInt(elements.thresholdFraca.value) || 20;
-  gameSettings.thresholds.media = parseInt(elements.thresholdMedia.value) || 50;
-  gameSettings.thresholds.alta = parseInt(elements.thresholdAlta.value) || 80;
-  gameSettings.thresholds.muito_alta = parseInt(elements.thresholdMuitoAlta.value) || 95;
-  gameSettings.thresholds.epica = parseInt(elements.thresholdEpica.value) || 100;
+  const useDynamic = elements.dynamicMaxForceCheckbox.checked;
+  const manualMaxForce = parseInt(elements.maxForceInput.value);
 
-  localStorage.setItem('martelo_settings', JSON.stringify(gameSettings));
+  const settingsToSave = {
+    useDynamicMaxForce: useDynamic,
+    maxForceDisplay: useDynamic ? 0 : (manualMaxForce || 300), // Salva 0 se dinâmico, senão o valor manual
+    thresholds: {
+      fraca: parseInt(elements.thresholdFraca.value) || 20,
+      media: parseInt(elements.thresholdMedia.value) || 50,
+      alta: parseInt(elements.thresholdAlta.value) || 80,
+      muito_alta: parseInt(elements.thresholdMuitoAlta.value) || 95,
+      epica: parseInt(elements.thresholdEpica.value) || 100,
+    },
+  };
+
+  localStorage.setItem('martelo_settings', JSON.stringify(settingsToSave));
   alert("Configurações salvas!");
-  // Recarrega as configurações para aplicar a lógica dinâmica se necessário
   loadSettings(); 
   showScreen('start');
 }
@@ -866,7 +893,10 @@ function saveToRanking(name, forceKg, forceN) {
     const bestAttemptIndex = marteloState.forceMaxPerAttempt.indexOf(Math.max(...marteloState.forceMaxPerAttempt));
     const bestAttemptData = marteloState.forceDataPerAttempt[bestAttemptIndex];
 
+    lastEntryId = Date.now();
+
     ranking.push({
+      id: lastEntryId,
       name,
       forceKg,
       forceN,
@@ -883,6 +913,20 @@ function saveToRanking(name, forceKg, forceN) {
     console.error("Erro ao salvar o ranking:", e);
     alert("Ocorreu um erro ao salvar o ranking. Verifique o console para mais detalhes.");
   }
+}
+
+function updatePlayerName(newName) {
+    marteloState.playerName = newName;
+    try {
+        const ranking = JSON.parse(localStorage.getItem('martelo_ranking') || '[]');
+        const entryIndex = ranking.findIndex(entry => entry.id === lastEntryId);
+        if (entryIndex !== -1) {
+            ranking[entryIndex].name = newName;
+            localStorage.setItem('martelo_ranking', JSON.stringify(ranking));
+        }
+    } catch (e) {
+        console.error("Erro ao atualizar o nome no ranking:", e);
+    }
 }
 
 function showRankingScreen() {
