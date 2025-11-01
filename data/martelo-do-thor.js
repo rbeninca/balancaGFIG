@@ -62,6 +62,8 @@ async function loadFrases() {
 function initializeDOMElements() {
   // Preenche o objeto de elementos
   elements.gameContainer = document.getElementById('gameContainer');
+  elements.gameContainer.backgroundColor = '#FFFFFF'; // Fundo preto para o jogo
+  
   elements.screens = {
     start: document.getElementById('start-screen'),
     game: document.getElementById('game-screen'),

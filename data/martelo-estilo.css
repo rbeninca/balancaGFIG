@@ -233,7 +233,7 @@ body {
     align-items: center;
     position: relative;
     z-index: 10; /* Fica acima da barra de progresso */
-    background: radial-gradient(ellipse at center, rgba(12, 10, 29, 0.95) 0%, rgba(6, 5, 15, 0.95) 70%);
+    background: transparent; /* Fundo principal transparente */
 }
 
 /* Screens */
@@ -376,17 +376,19 @@ body {
 #forceDisplay {
     font-size: 8rem;
     font-weight: bold;
+    text-shadow: 3px 3px 15px rgba(0, 0, 0, 0.8); /* Sombra mais forte */
 }
 
 #newtonDisplay {
     font-size: 2rem;
     color: #aaa;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8); /* Sombra mais forte */
 }
 
 #progressBarContainer {
     width: 80%;
     height: 50px;
-    background-color: rgba(0, 0, 0, 0.3);
+    background-color: transparent; /* Fundo transparente */
     border: 2px solid var(--color-primary);
     border-radius: 10px;
     margin-top: auto;
@@ -407,7 +409,7 @@ body {
     height: 600px;
     margin-top: 2rem;
     margin-bottom: 1rem;
-    background: rgba(0, 0, 0, 0.4);
+    background: transparent; /* Fundo transparente */
     border: 2px solid var(--color-secondary);
     border-radius: 10px;
     padding: 0;
