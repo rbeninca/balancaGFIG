@@ -978,10 +978,12 @@ function abrirAba(element, abaID) {
 }
 
 // ==========================================
-// MARTELO DO THOR - Abrir Fullscreen
+// JOGOS - Abrir Index com Todos os Jogos
 // ==========================================
 function abrirMarteloFullscreen() {
-  window.open('martelo-fullscreen.html', 'martelo', 'width=1200,height=800,fullscreen=yes');
+  // Abre o index de jogos com todos os templates disponíveis
+  // Martelo do Thor agora é um dos jogos nesta coleção
+  window.open('jogos/index.html', 'jogos', 'width=1400,height=900,scrollbars=yes,resizable=yes');
 }
 
 function showNotification(type, message, duration = 5000) {

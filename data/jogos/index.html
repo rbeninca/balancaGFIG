@@ -284,6 +284,60 @@
             </div>
         </div>
 
+        <!-- EXPLICAÇÃO GRÁFICA DE FUNCIONAMENTO -->
+        <div class="info-section" style="background: rgba(100, 150, 255, 0.15); border: 2px solid rgba(100, 200, 255, 0.5);">
+            <h2 style="color: #87CEEB; text-align: center;">🔗 Como os Jogos Recebem os Dados de Força</h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: center; margin: 30px 0;">
+                <!-- Lado Esquerdo -->
+                <div style="background: rgba(76, 175, 80, 0.2); padding: 20px; border-radius: 10px; border: 2px solid #4CAF50;">
+                    <div style="font-size: 1.2rem; font-weight: bold; color: #4CAF50; margin-bottom: 10px;">✅ JANELA PRINCIPAL</div>
+                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; line-height: 1.6; color: #90EE90;">
+                        <div style="color: #FFD700;">index.html</div>
+                        <div style="margin-top: 8px; color: #87CEEB;">window.sharedState {</div>
+                        <div style="margin-left: 15px; color: #98FB98;">forcaAtual: 45.3 N</div>
+                        <div style="margin-left: 15px; color: #98FB98;">overloadAlert: {...}</div>
+                        <div style="color: #87CEEB;">}</div>
+                        <div style="margin-top: 10px; color: #FFB6C1;">▶ Atualizada em tempo real</div>
+                    </div>
+                </div>
+
+                <!-- Seta de Conexão -->
+                <div style="text-align: center; font-size: 2rem;">
+                    <div style="color: #FFD700; animation: pulse 1s infinite;">⬇️ ⬇️ ⬇️</div>
+                    <div style="color: #87CEEB; font-weight: bold; margin: 10px 0;">window.open()</div>
+                    <div style="color: #FFD700; animation: pulse 1s infinite;">⬇️ ⬇️ ⬇️</div>
+                </div>
+
+                <!-- Lado Direito -->
+                <div style="background: rgba(255, 87, 34, 0.2); padding: 20px; border-radius: 10px; border: 2px solid #FF5722;">
+                    <div style="font-size: 1.2rem; font-weight: bold; color: #FF5722; margin-bottom: 10px;">🎮 POPUP DO JOGO</div>
+                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; line-height: 1.6; color: #FFB6C1;">
+                        <div style="color: #FFD700;">jogo.html</div>
+                        <div style="margin-top: 8px; color: #87CEEB;">window.opener ✅</div>
+                        <div style="margin-left: 15px; color: #98FB98;">window.opener.sharedState</div>
+                        <div style="margin-left: 15px; color: #98FB98;">.forcaAtual</div>
+                        <div style="margin-top: 10px; color: #FFB6C1;">▶ Lê dados em tempo real</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: rgba(255, 235, 59, 0.15); padding: 15px; border-radius: 8px; border-left: 4px solid #FFD700; margin: 20px 0;">
+                <div style="color: #FFD700; font-weight: bold;">⚠️ IMPORTANTE:</div>
+                <div style="color: rgba(255,255,255,0.9); margin-top: 8px;">
+                    Os jogos <strong>DEVEM</strong> ser abertos via <code style="background: rgba(0,0,0,0.4); padding: 3px 6px;">window.open()</code> da página principal. 
+                    Acessar diretamente a URL do jogo resultará em <strong>SIMULAÇÃO</strong> em vez de dados reais.
+                </div>
+            </div>
+
+            <style>
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.5; }
+                }
+            </style>
+        </div>
+
         <!-- CÓDIGO DE EXEMPLO -->
         <div class="info-section">
             <h2>💻 Como Ler a Célula de Carga</h2>
@@ -375,6 +429,16 @@ document.addEventListener(<span class="code-string">'DOMContentLoaded'</span>, (
         <h2 style="text-align: center; margin: 40px 0;">🎯 Escolha seu Jogo</h2>
 
         <div class="games-grid">
+            <a href="../martelo-fullscreen.html" class="game-card">
+                <div class="game-icon">⚡</div>
+                <div class="game-title">Martelo do Thor</div>
+                <div class="game-description">
+                    O classicão! Mede sua força e compara com outros. Sistema de ranking dinâmico 
+                    com frases motivacionais geradas por IA baseadas na intensidade do seu soco.
+                </div>
+                <span class="game-difficulty hard">Difícil</span>
+            </a>
+
             <a href="01-soco-do-seculo.html" class="game-card">
                 <div class="game-icon">🥊</div>
                 <div class="game-title">Soco do Século</div>
