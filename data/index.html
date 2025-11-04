@@ -300,30 +300,50 @@
         </div>
       </div>
       <div id="abaGravacoes" class="tabcontent">
-        
-
-        <div style="padding: 1rem; border: 1px dashed var(--cor-borda); border-radius: 0.5rem; margin-bottom: 1.5rem;">
-          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;">📥 Importar Teste Estático (.txt)</h3>
-          <p style="font-size: 0.75rem; color: var(--cor-texto-secundario); margin-bottom: 0.75rem;">
-            Importe arquivos de texto (ex: saídas de simulação FxT) no formato *tempo [s] força [N]*.</p>
-          <input type="file" id="importar-arquivo-motor" accept=".txt,.log" style="width: auto; margin-right: 10px;" title="Selecione um arquivo .txt ou .log com dados de força ao longo do tempo">
-          <input type="text" id="nome-importacao" placeholder="Nome da sessão importada" style="max-width: 200px;" title="Nome identificador para a sessão importada">
-          <button onclick="importarGravacaoExterna()" class="btn btn-info" style="margin-top: 10px;" title="Processar e salvar o arquivo importado no banco de dados">
-            Salvar Importação
-          </button>
-        </div>
-
-        <div style="padding: 1rem; border: 1px dashed var(--cor-primaria); border-radius: 0.5rem; margin-bottom: 1.5rem; background: rgba(52, 152, 219, 0.05);">
-          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;">📤 Importar Gravação Exportada (.json)</h3>
-          <p style="font-size: 0.75rem; color: var(--cor-texto-secundario); margin-bottom: 0.75rem;">
-            Restaure gravações previamente exportadas em formato JSON. Todas as informações da sessão serão recuperadas.</p>
-          <input type="file" id="importar-json" accept=".json,application/json" style="width: auto; margin-right: 10px;" title="Selecione um arquivo JSON exportado anteriormente desta aplicação">
-          <button onclick="importarGravacaoJSON()" class="btn btn-sucesso" style="margin-top: 10px;" title="Restaurar sessão completa a partir do arquivo JSON">
-            📥 Importar JSON
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+          <button onclick="abrirModalImportacao()" class="btn btn-info" style="font-size: 1rem; padding: 0.75rem 1.5rem;">
+            📥 Importar Gravação
           </button>
         </div>
 
         <div id="lista-gravacoes" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+      </div>
+
+      <!-- Modal de Importação -->
+      <div id="modal-importacao" class="wizard-modal">
+        <div class="wizard-content">
+          <div class="wizard-header">
+            <h2>📥 Importar Gravação</h2>
+            <button class="wizard-close" onclick="fecharModalImportacao()">&times;</button>
+          </div>
+          <div class="wizard-body">
+            <div class="wizard-step" style="display: block;">
+              <div style="padding: 1rem; border: 1px dashed var(--cor-borda); border-radius: 0.5rem; margin-bottom: 1.5rem;">
+                <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;">📥 Importar Teste Estático (.txt)</h3>
+                <p style="font-size: 0.75rem; color: var(--cor-texto-secundario); margin-bottom: 0.75rem;">
+                  Importe arquivos de texto (ex: saídas de simulação FxT) no formato *tempo [s] força [N]*.</p>
+                <input type="file" id="importar-arquivo-motor" accept=".txt,.log" style="width: auto; margin-right: 10px;" title="Selecione um arquivo .txt ou .log com dados de força ao longo do tempo">
+                <input type="text" id="nome-importacao" placeholder="Nome da sessão importada" style="max-width: 200px;" title="Nome identificador para a sessão importada">
+                <button onclick="importarGravacaoExterna()" class="btn btn-info" style="margin-top: 10px;" title="Processar e salvar o arquivo importado no banco de dados">
+                  Salvar Importação
+                </button>
+              </div>
+
+              <div style="padding: 1rem; border: 1px dashed var(--cor-primaria); border-radius: 0.5rem; margin-bottom: 1.5rem; background: rgba(52, 152, 219, 0.05);">
+                <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;">📤 Importar Gravação Exportada (.json)</h3>
+                <p style="font-size: 0.75rem; color: var(--cor-texto-secundario); margin-bottom: 0.75rem;">
+                  Restaure gravações previamente exportadas em formato JSON. Todas as informações da sessão serão recuperadas.</p>
+                <input type="file" id="importar-json" accept=".json,application/json" style="width: auto; margin-right: 10px;" title="Selecione um arquivo JSON exportado anteriormente desta aplicação">
+                <button onclick="importarGravacaoJSON()" class="btn btn-sucesso" style="margin-top: 10px;" title="Restaurar sessão completa a partir do arquivo JSON">
+                  📥 Importar JSON
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="wizard-footer">
+            <button onclick="fecharModalImportacao()" class="btn btn-secundario">Fechar</button>
+          </div>
+        </div>
       </div>
         
         <hr style="border: 0; border-top: 1px solid var(--cor-borda); margin: 2rem 0;">

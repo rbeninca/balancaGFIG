@@ -1211,6 +1211,16 @@ function resetarWsUrl() {
   showNotification('success', 'URL do WebSocket restaurada para o padrão: ' + defaultWsUrl);
 }
 
+// --- Funções do Modal de Importação ---
+function abrirModalImportacao() {
+  const modal = document.getElementById('modal-importacao');
+  modal.style.display = 'block';
+}
+
+function fecharModalImportacao() {
+  const modal = document.getElementById('modal-importacao');
+  modal.style.display = 'none';
+}
 
 // --- Funções do Modal de Nova Sessão ---
 function abrirModalNovaSessao() {
