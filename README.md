@@ -1,6 +1,8 @@
 # 🚀 GFIG - Balança de Teste Estático (Versão 2.0)
 
-**Projeto de Foguetes de Modelismo Experimental - Campus Gaspar - IFC**
+**Projeto de Foguetes de Modelismo Experimental -Instituto Federal de Santa Campus Gaspar - IFSC**
+**Projto de controle e autmoção** 
+    
 A aplicação é uma balança digital para testes estáticos de motores de minifoguetes experimentais, composta por três camadas integradas: o firmware no ESP, um servidor intermediário em Python e uma interface web interativa.
 O ESP realiza a leitura da célula de carga e envia os dados por protocolo binário via USB ao servidor.
 O servidor Python decodifica os pacotes, aplica filtros e disponibiliza os valores em tempo real através de WebSocket (WS) para os clientes conectados.
