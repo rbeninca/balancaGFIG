@@ -3,7 +3,9 @@ name: Deploy GitHub Pages from data/
 on:
   push:
     branches:
-      - main   # ou outra branch que você usa como principal
+      - master
+      - main   # mantém compatível caso a branch principal mude no futuro
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -20,6 +22,8 @@ jobs:
         run: |
           mkdir public
           cp -r data/* public/
+          # Evita processamento do Jekyll no GitHub Pages (necessário para pastas/arquivos com underscore)
+          touch public/.nojekyll
 
       - name: Publicar na branch gh-pages
         uses: peaceiris/actions-gh-pages@v4
