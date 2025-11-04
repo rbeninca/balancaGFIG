@@ -476,6 +476,14 @@ window.onload = () => {
   }
 };
 
+/**
+ * Verifica se a aplicação está sendo executada no GitHub Pages.
+ * @returns {boolean} True se estiver no GitHub Pages, false caso contrário.
+ */
+function isGitHubPages() {
+  return window.location.hostname.endsWith('github.io');
+}
+
 function setupTheme() {
   const themeToggle = document.getElementById('theme-toggle');
   const currentTheme = localStorage.getItem('theme') || 'light';
@@ -501,6 +509,26 @@ function setupTheme() {
 
 function setupWebSocketUrl() {
   const wsUrlInput = document.getElementById('ws-url');
+  const wsUrlSaveButton = document.getElementById('btn-salvar-ws-url');
+  const wsUrlResetButton = document.getElementById('btn-resetar-ws-url');
+  const wsUrlControls = document.getElementById('ws-url-controls');
+
+  if (isGitHubPages()) {
+    if (wsUrlInput) {
+      wsUrlInput.value = 'WebSocket desabilitado no GitHub Pages (HTTPS)';
+      wsUrlInput.disabled = true;
+      wsUrlInput.style.backgroundColor = '#e9e9e9';
+      wsUrlInput.style.color = '#555';
+      wsUrlInput.style.cursor = 'not-allowed';
+      wsUrlInput.title = 'Conexões WebSocket são desabilitadas em ambientes HTTPS como o GitHub Pages por segurança.';
+    }
+    if (wsUrlSaveButton) wsUrlSaveButton.style.display = 'none';
+    if (wsUrlResetButton) wsUrlResetButton.style.display = 'none';
+    if (wsUrlControls) wsUrlControls.style.display = 'none'; // Hide the whole section if it exists
+    console.warn('WebSocket connections are disabled on GitHub Pages.');
+    return; // Exit early, no need to set a URL
+  }
+
   const savedWsUrl = localStorage.getItem('wsUrl');
 
   if (savedWsUrl) {
@@ -826,6 +854,21 @@ function conectarWorkerRapido() {
       dataWorker = new Worker('dataWorker.js');
       dataWorker.onmessage = handleWorkerMessage;
       
+      // Envia o status do GitHub Pages para o worker
+      dataWorker.postMessage({ type: 'set_github_pages_mode', payload: { isGitHubPages: isGitHubPages() } });
+
+      // Se estiver no GitHub Pages, não tenta conectar ao WebSocket
+      if (isGitHubPages()) {
+        console.warn('[Worker] WebSocket desabilitado no GitHub Pages. Não será feita conexão.');
+        dataWorker.postMessage({ type: 'set_ws_url', payload: { url: null } }); // Envia null para o worker
+        // Ainda pode solicitar dados se houver outra forma (e.g., mock data)
+        // OTIMIZAÇÃO: Taxa de atualização mais rápida e agressiva na inicialização
+        // Começa com 50ms para melhor responsividade inicial
+        taxaAtualizacaoMs = 50;
+        setInterval(() => dataWorker.postMessage({ type: 'solicitarDados' }), taxaAtualizacaoMs);
+        return; // Sai da função, não tenta conectar
+      }
+
       // Envia a URL do WebSocket IMEDIATAMENTE
       const savedWsUrl = localStorage.getItem('wsUrl');
       if (savedWsUrl) {
