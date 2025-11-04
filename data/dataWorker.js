@@ -8,6 +8,7 @@ let emaValue = 0;
 let emaInitialized = false;
 let maxForce = -Infinity;
 let wsURL = ''; // NOVO: Variável para armazenar a URL do WebSocket
+let isGitHubPagesMode = false; // NEW: Flag para indicar se está no GitHub Pages
 
 // NOVO: Buffer para mensagens parciais do WebSocket
 let messageBuffer = "";
@@ -25,6 +26,11 @@ let rpsAtual = 0;
 // OTIMIZAÇÃO: Tentar conexão imediatamente com URL padrão
 // Não espera por set_ws_url, o que acelera muito a primeira conexão
 (() => {
+    // A conexão inicial só é tentada se não estiver em modo GitHub Pages
+    if (isGitHubPagesMode) {
+        console.log("[Worker] 🚫 Não tentando conexão inicial em modo GitHub Pages.");
+        return;
+    }
     console.log("[Worker] 🚀 Tentando conexão rápida com URL padrão...");
     let host = location.hostname;
     if (location.port === '5500' || host === 'localhost' || host === '127.0.0.1') {
@@ -40,6 +46,10 @@ let rpsAtual = 0;
  * Conecta ao servidor WebSocket do Host (Raspberry Pi/PC).
  */
 function connectWebSocket() {
+    if (isGitHubPagesMode) {
+        console.log("[Worker] 🚫 connectWebSocket ignorado em modo GitHub Pages.");
+        return;
+    }
     // Evita criar múltiplas conexões se uma já estiver ativa ou tentando conectar.
     if (socket && socket.readyState !== WebSocket.CLOSED) {
         console.log(`[Worker] Socket já existe. Estado: ${socket.readyState}`);
@@ -345,7 +355,25 @@ self.onmessage = (e) => {
     const { type, payload } = e.data;
 
     switch (type) {
+        case 'set_github_pages_mode':
+            isGitHubPagesMode = payload.isGitHubPages;
+            console.log(`[Worker] GitHub Pages Mode set to: ${isGitHubPagesMode}`);
+            if (isGitHubPagesMode) {
+                // If in GitHub Pages mode, immediately close any existing socket
+                if (socket) {
+                    socket.close();
+                    socket = null;
+                }
+                self.postMessage({ type: 'status', status: 'disconnected', message: 'WebSocket desabilitado no GitHub Pages.' });
+            }
+            break;
+
         case 'set_ws_url':
+            if (isGitHubPagesMode) {
+                console.warn('[Worker] Ignorando set_ws_url em modo GitHub Pages.');
+                wsURL = null; // Ensure wsURL is null
+                return;
+            }
             if (payload && payload.url) {
                 wsURL = payload.url;
                 console.log(`[Worker] URL do WebSocket definida para: ${wsURL}`);
@@ -353,6 +381,13 @@ self.onmessage = (e) => {
                 if (socket && socket.readyState === WebSocket.CLOSED) {
                     connectWebSocket();
                 }
+            } else {
+                wsURL = null; // If URL is null/empty, ensure it's set to null
+                if (socket) {
+                    socket.close();
+                    socket = null;
+                }
+                self.postMessage({ type: 'status', status: 'disconnected', message: 'WebSocket URL inválida ou desabilitada.' });
             }
             break;
 
@@ -473,6 +508,10 @@ self.onmessage = (e) => {
  * OTIMIZADO: Reduzido de 5s para 1s para conexão mais rápida e responsiva.
  */
 setInterval(() => {
+    if (isGitHubPagesMode) {
+        // Não tenta reconectar em modo GitHub Pages
+        return;
+    }
     if (socket == null || socket.readyState === WebSocket.CLOSED) {
         console.log("[Worker] 🔄 Tentando reconectar ao WebSocket do Host...");
         connectWebSocket();
