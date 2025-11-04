@@ -234,7 +234,7 @@ function startForcePolling() {
         forcePollingError = e.message;
       }
     }
-  }, 50);
+  }, 20);
 
   // Log do status de polling para debug
   setTimeout(() => {
@@ -396,7 +396,7 @@ function startAttempt() {
       clearInterval(interval);
       endAttempt();
     }
-  }, 50);
+  }, 20);
 }
 
 let isRecordAnimationPlaying = false;
