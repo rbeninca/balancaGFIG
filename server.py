@@ -697,9 +697,10 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(data, default=str).encode('utf-8'))
 
-class DualStackTCPServer(socketserver.TCPServer):
+class DualStackTCPServer(socketserver.ThreadingMixIn,socketserver.TCPServer):
     address_family = socket.AF_INET # Force IPv4
     allow_reuse_address = True
+    daemon_threads = True   
     
     def handle_error(self, request, client_address):
         """Sobrescreve handle_error para tratar exceções sem travar o servidor"""
@@ -722,9 +723,8 @@ class DualStackTCPServer(socketserver.TCPServer):
 def start_http_server():
     try:
         server_address = (BIND_HOST, HTTP_PORT)
-        
         httpd = DualStackTCPServer(server_address, APIRequestHandler)
-        
+
         t = threading.Thread(target=httpd.serve_forever, daemon=True)
         t.start()
         logging.info(f"Servidor HTTP/API iniciado em {BIND_HOST}:{HTTP_PORT}")
@@ -732,6 +732,7 @@ def start_http_server():
     except OSError as e:
         logging.error(f"Falha ao iniciar servidor HTTP: {e}", exc_info=True)
         return None
+
 
 # ================== WebSocket ==================
 async def ws_handler(websocket):
