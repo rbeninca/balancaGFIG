@@ -13,7 +13,13 @@ const marteloState = {
   isGameRunning: false,
   countdownActive: false,
   // Dados para o gráfico - array de arrays, cada um contém os pontos (tempo, força) de uma tentativa
-  forceDataPerAttempt: [[], [], []]
+  forceDataPerAttempt: [[], [], []],
+  continuousForceData: [], // Dados para o gráfico contínuo
+  // Cache de interpolação para otimizar render
+  continuousForcePathCache: null,
+  continuousForcePathCacheVersion: 0,
+  forcePathCachePerAttempt: [null, null, null],
+  forcePathCacheVersionPerAttempt: [0, 0, 0]
 };
 
 // Elementos DOM
@@ -47,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
   showScreen('start');
   startForcePolling(); // Inicia polling de força
   createDebugPanel(); // Criar painel de debug permanente
+  gameRenderLoop(); // Inicia o loop de renderização
   console.log('✓ Martelo do Thor carregado');
 });
 
@@ -216,6 +223,16 @@ function startForcePolling() {
           currentForceValue = window.opener.sharedState.forcaAtual;
           forcePollingActive = true;
           forcePollingError = null;
+
+          // Adicionar dados para o gráfico contínuo
+          if (!marteloState.isGameRunning) {
+            const forceKg = currentForceValue / 9.80665;
+            updateForceDisplay(forceKg);
+            marteloState.continuousForceData.push({ force: forceKg });
+            if (marteloState.continuousForceData.length > 834) {
+              marteloState.continuousForceData.shift(); // Manter 834 pontos (10s)
+            }
+          }
         }
 
         // Verifica o estado do alerta de sobrecarga
@@ -234,7 +251,7 @@ function startForcePolling() {
         forcePollingError = e.message;
       }
     }
-  }, 50);
+  }, 12);
 
   // Log do status de polling para debug
   setTimeout(() => {
@@ -347,6 +364,7 @@ function startAttempt() {
   const attemptIndex = marteloState.currentAttempt - 1;
   marteloState.forceMaxPerAttempt[attemptIndex] = 0;
   marteloState.forceDataPerAttempt[attemptIndex] = []; // Limpar dados anteriores
+  marteloState.continuousForceData = []; // Limpar dados contínuos
 
   elements.currentPlayer.innerHTML = `
     <div class="attempt-info">
@@ -388,15 +406,12 @@ function startAttempt() {
     // Atualizar display com timer
     updateForceDisplay(forceKg, remainingSec);
 
-    // Desenhar gráfico
-    drawForceGraph();
-
     // Verificar se acabou
     if (remainingMs <= 0) {
       clearInterval(interval);
       endAttempt();
     }
-  }, 50);
+  }, 12);
 }
 
 let isRecordAnimationPlaying = false;
@@ -518,6 +533,73 @@ function triggerLevelEffect(forceKg) {
 }
 
 // ==========================================
+// INTERPOLAÇÃO CATMULL-ROM PARA LINHAS SUAVES
+// ==========================================
+
+function interpolateCatmullRom(p0, p1, p2, p3, t) {
+  const a0 = (-0.5 * p0) + (1.5 * p1) + (-1.5 * p2) + (0.5 * p3);
+  const a1 = p0 + (-2.5 * p1) + (2 * p2) + (-0.5 * p3);
+  const a2 = (-0.5 * p0) + (0.5 * p2);
+  const a3 = p1;
+
+  return a0 * (t * t * t) + a1 * (t * t) + a2 * t + a3;
+}
+
+function generateSmoothCurvePoints(points, startX, startY, graphWidth, graphHeight, maxForceDisplay) {
+  if (points.length < 2) return [];
+
+  // Criar pontos de controle para interpolação suave
+  const controlPoints = [];
+  for (let i = 0; i < points.length; i++) {
+    const point = points[i];
+    const timePercent = Math.min(point.time / (ATTEMPT_DURATION / 1000), 1);
+    const forcePercent = Math.min(point.force / maxForceDisplay, 1);
+    
+    const x = startX + timePercent * graphWidth;
+    const y = startY - forcePercent * graphHeight;
+    
+    controlPoints.push({ x, y, force: point.force });
+  }
+
+  // Gerar pontos interpolados usando catmull-rom
+  const pathPoints = [];
+  
+  for (let i = 0; i < controlPoints.length - 1; i++) {
+    const p0 = controlPoints[Math.max(0, i - 1)];
+    const p1 = controlPoints[i];
+    const p2 = controlPoints[i + 1];
+    const p3 = controlPoints[Math.min(controlPoints.length - 1, i + 2)];
+
+    // Interpolar entre p1 e p2 com múltiplos passos para suavidade
+    const steps = 8; // Maior suavidade
+    for (let t = 0; t <= 1; t += 1 / steps) {
+      const x = interpolateCatmullRom(p1.x, p2.x, p3.x, p0.x, t);
+      const y = interpolateCatmullRom(p1.y, p2.y, p3.y, p0.y, t);
+      pathPoints.push({ x, y });
+    }
+  }
+
+  return pathPoints;
+}
+
+function drawSmoothCurve(ctx, points, startX, startY, graphWidth, graphHeight, maxForceDisplay, color) {
+  if (points.length < 2) return;
+
+  const pathPoints = generateSmoothCurvePoints(points, startX, startY, graphWidth, graphHeight, maxForceDisplay);
+  
+  ctx.beginPath();
+  for (let i = 0; i < pathPoints.length; i++) {
+    const pt = pathPoints[i];
+    if (i === 0) {
+      ctx.moveTo(pt.x, pt.y);
+    } else {
+      ctx.lineTo(pt.x, pt.y);
+    }
+  }
+  ctx.stroke();
+}
+
+// ==========================================
 // GRÁFICO DE FORÇA
 // ==========================================
 
@@ -539,18 +621,24 @@ function drawForceGraph() {
   
   const graphWidth = canvas.width - paddingLeft - paddingRight;
   const graphHeight = canvas.height - paddingTop - paddingBottom;
+  const startX = paddingLeft;
+  const startY = canvas.height - paddingBottom;
   
-  // Limpar canvas
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+  // Limpar canvas com gradiente bonito
+  const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  bgGradient.addColorStop(0, 'rgba(15, 20, 40, 0.3)');
+  bgGradient.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
+  ctx.fillStyle = bgGradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   
-  // Desenhar grid
-  ctx.strokeStyle = 'rgba(0, 217, 255, 0.1)';
+  // Desenhar grid com animação sutil
+  ctx.strokeStyle = 'rgba(0, 217, 255, 0.08)';
   ctx.lineWidth = 1;
   
-  // Linhas verticais (tempo)
+  // Linhas verticais (tempo) - com alternância de transparência
   for (let i = 0; i <= 10; i++) {
-    const x = paddingLeft + (graphWidth / 10) * i;
+    const x = startX + (graphWidth / 10) * i;
+    ctx.strokeStyle = i % 2 === 0 ? 'rgba(0, 217, 255, 0.08)' : 'rgba(0, 217, 255, 0.04)';
     ctx.beginPath();
     ctx.moveTo(x, paddingTop);
     ctx.lineTo(x, canvas.height - paddingBottom);
@@ -559,56 +647,41 @@ function drawForceGraph() {
   
   // Linhas horizontais (força)
   for (let i = 0; i <= 5; i++) {
-    const y = canvas.height - paddingBottom - (graphHeight / 5) * i;
+    const y = startY - (graphHeight / 5) * i;
+    ctx.strokeStyle = i % 2 === 0 ? 'rgba(0, 217, 255, 0.08)' : 'rgba(0, 217, 255, 0.04)';
     ctx.beginPath();
-    ctx.moveTo(paddingLeft, y);
+    ctx.moveTo(startX, y);
     ctx.lineTo(canvas.width - paddingRight, y);
     ctx.stroke();
   }
   
-  // Cores para cada tentativa
-  const colors = ['#00d9ff', '#ff00e0', '#fff300']; // Ciano, Magenta, Amarelo
+  // Cores para cada tentativa (gradientes bonitos)
+  const colors = [
+    { line: '#00d9ff', glow: '#00d9ff', fill: 'rgba(0, 217, 255, 0.1)' },  // Ciano
+    { line: '#ff00e0', glow: '#ff00e0', fill: 'rgba(255, 0, 224, 0.1)' },  // Magenta
+    { line: '#fff300', glow: '#fff300', fill: 'rgba(255, 243, 0, 0.1)' }   // Amarelo
+  ];
   
   // Desenhar cada tentativa
   for (let attemptIndex = 0; attemptIndex < marteloState.currentAttempt; attemptIndex++) {
     const data = marteloState.forceDataPerAttempt[attemptIndex];
     if (!data || data.length === 0) continue;
     
-    // Gradiente para a linha
-    const gradient = ctx.createLinearGradient(0, canvas.height, 0, 0);
-    gradient.addColorStop(0, colors[attemptIndex]);
-    gradient.addColorStop(1, getForceColor(marteloState.forceMaxPerAttempt[attemptIndex]));
-
-    ctx.strokeStyle = gradient;
-    ctx.lineWidth = 5; // Aumentado para 5px
-    ctx.globalAlpha = 0.9;
+    const colorSet = colors[attemptIndex];
     
-    // Adicionar glow/brilho à linha
-    ctx.shadowColor = colors[attemptIndex];
-    ctx.shadowBlur = 10;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
-    
+    // Desenhar preenchimento suave (área sob a curva)
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = colorSet.fill;
     ctx.beginPath();
     
-    let maxForce = 0;
-    let maxX = 0, maxY = 0;
-    
-    // Desenhar cada ponto
+    // Construir caminho preenchido
     for (let i = 0; i < data.length; i++) {
       const point = data[i];
       const timePercent = Math.min(point.time / (ATTEMPT_DURATION / 1000), 1);
       const forcePercent = Math.min(point.force / gameSettings.maxForceDisplay, 1);
       
-      const x = paddingLeft + timePercent * graphWidth;
-      const y = canvas.height - paddingBottom - forcePercent * graphHeight;
-      
-      // Encontrar o máximo
-      if (point.force > maxForce) {
-        maxForce = point.force;
-        maxX = x;
-        maxY = y;
-      }
+      const x = startX + timePercent * graphWidth;
+      const y = startY - forcePercent * graphHeight;
       
       if (i === 0) {
         ctx.moveTo(x, y);
@@ -616,88 +689,375 @@ function drawForceGraph() {
         ctx.lineTo(x, y);
       }
     }
-    
-    ctx.stroke();
-    
-    // Desenhar ponto de máximo (círculo destacado)
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = colors[attemptIndex];
-    ctx.fillStyle = colors[attemptIndex];
-    ctx.beginPath();
-    ctx.arc(maxX, maxY, 8, 0, Math.PI * 2);
+    ctx.lineTo(canvas.width - paddingRight, startY);
+    ctx.lineTo(startX, startY);
+    ctx.closePath();
     ctx.fill();
     
-    // Círculo externo (anel)
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-    ctx.lineWidth = 2;
+    ctx.globalAlpha = 1.0;
+    
+    // Desenhar a linha suavizada com glow
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // Primeira camada: Glow forte (background)
+    ctx.shadowColor = colorSet.glow;
+    ctx.shadowBlur = 20;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.strokeStyle = colorSet.glow;
+    ctx.globalAlpha = 0.3;
+    drawSmoothCurve(ctx, data, startX, startY, graphWidth, graphHeight, gameSettings.maxForceDisplay, colorSet.line);
+    
+    // Segunda camada: Linha principal
+    ctx.globalAlpha = 1.0;
+    ctx.lineWidth = 5;
+    ctx.shadowBlur = 15;
+    ctx.strokeStyle = colorSet.line;
+    drawSmoothCurve(ctx, data, startX, startY, graphWidth, graphHeight, gameSettings.maxForceDisplay, colorSet.line);
+    
+    // Encontrar o ponto de máximo
+    let maxForce = 0;
+    let maxX = 0, maxY = 0;
+    
+    for (let i = 0; i < data.length; i++) {
+      const point = data[i];
+      const timePercent = Math.min(point.time / (ATTEMPT_DURATION / 1000), 1);
+      const forcePercent = Math.min(point.force / gameSettings.maxForceDisplay, 1);
+      
+      const x = startX + timePercent * graphWidth;
+      const y = startY - forcePercent * graphHeight;
+      
+      if (point.force > maxForce) {
+        maxForce = point.force;
+        maxX = x;
+        maxY = y;
+      }
+    }
+    
+    // Desenhar ponto de máximo com efeito de pulsação
+    ctx.shadowBlur = 25;
+    ctx.shadowColor = colorSet.glow;
+    
+    // Halo externo
+    ctx.fillStyle = `rgba(${colorSet.glow === '#00d9ff' ? '0, 217, 255' : colorSet.glow === '#ff00e0' ? '255, 0, 224' : '255, 243, 0'}, 0.2)`;
+    ctx.beginPath();
+    ctx.arc(maxX, maxY, 20, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Círculo principal brilhante
+    ctx.fillStyle = colorSet.line;
     ctx.beginPath();
     ctx.arc(maxX, maxY, 10, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Círculo externo branco
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(maxX, maxY, 12, 0, Math.PI * 2);
     ctx.stroke();
     
-    // Label do máximo perto do ponto
-    ctx.font = 'bold 14px Arial';
-    ctx.fillStyle = '#FFFFFF';
+    // Label do máximo com sombra
+    ctx.font = 'bold 16px Arial';
+    ctx.fillStyle = colorSet.line;
     ctx.textAlign = 'center';
-    ctx.shadowColor = 'black';
-    ctx.shadowBlur = 5;
-    ctx.fillText(`${maxForce.toFixed(0)}kg`, maxX, maxY - 20);
-    
-    ctx.globalAlpha = 1.0;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 2;
+    ctx.fillText(`${maxForce.toFixed(1)}kg`, maxX, maxY - 25);
     ctx.shadowBlur = 0;
   }
   
-  // Desenhar eixos
-  ctx.strokeStyle = 'rgba(0, 217, 255, 0.5)';
+  // Desenhar eixos com brilho
+  ctx.shadowColor = 'rgba(0, 217, 255, 0.5)';
+  ctx.shadowBlur = 8;
+  ctx.strokeStyle = 'rgba(0, 217, 255, 0.6)';
   ctx.lineWidth = 2;
   
   // Eixo X (tempo)
   ctx.beginPath();
-  ctx.moveTo(paddingLeft, canvas.height - paddingBottom);
-  ctx.lineTo(canvas.width - paddingRight, canvas.height - paddingBottom);
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(canvas.width - paddingRight, startY);
   ctx.stroke();
   
   // Eixo Y (força)
   ctx.beginPath();
-  ctx.moveTo(paddingLeft, paddingTop);
-  ctx.lineTo(paddingLeft, canvas.height - paddingBottom);
+  ctx.moveTo(startX, paddingTop);
+  ctx.lineTo(startX, startY);
   ctx.stroke();
   
-  // Labels da força (colocar sobre o gráfico no início/fim quando necessário)
+  ctx.shadowBlur = 0;
+  
+  // Labels da força com fundo semi-transparente
   ctx.font = 'bold 12px Arial';
   ctx.textAlign = 'right';
   
   for (let i = 0; i <= 5; i++) {
     const force = (gameSettings.maxForceDisplay / 5) * i;
-    const y = canvas.height - paddingBottom - (graphHeight / 5) * i;
+    const y = startY - (graphHeight / 5) * i;
     
-    // Label sobre o gráfico (direita do eixo Y)
     ctx.fillStyle = 'rgba(0, 217, 255, 0.9)';
-    ctx.fillText(`${force.toFixed(0)}kg`, paddingLeft - 10, y + 4);
+    ctx.fillText(`${force.toFixed(0)}kg`, startX - 15, y + 4);
   }
   
-  // Labels do tempo (colocar sobre o gráfico)
+  // Labels do tempo
   ctx.font = 'bold 12px Arial';
   ctx.textAlign = 'center';
   
   for (let i = 0; i <= 10; i += 2) {
-    const x = paddingLeft + (graphWidth / 10) * i;
+    const x = startX + (graphWidth / 10) * i;
     ctx.fillStyle = 'rgba(0, 217, 255, 0.9)';
-    ctx.fillText(`${i}s`, x, canvas.height - paddingBottom + 20);
+    ctx.fillText(`${i}s`, x, canvas.height - paddingBottom + 22);
   }
   
-  // Legenda
-  ctx.font = 'bold 12px Arial';
+  // Legenda com ícones bonitos
+  ctx.font = 'bold 13px Arial';
   ctx.textAlign = 'left';
-  const legendX = canvas.width - 210;
-  const legendY = paddingTop + 10;
+  const legendX = canvas.width - 220;
+  const legendY = paddingTop + 15;
   
   for (let i = 0; i < marteloState.currentAttempt; i++) {
-    ctx.fillStyle = colors[i];
-    ctx.fillRect(legendX, legendY + i * 22, 15, 15);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-    ctx.fillText(`Tentativa ${i + 1}`, legendX + 22, legendY + i * 22 + 12);
+    const colorSet = colors[i];
+    
+    // Caixa de fundo
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillRect(legendX - 8, legendY + i * 28 - 12, 180, 24);
+    
+    // Linha colorida
+    ctx.fillStyle = colorSet.line;
+    ctx.fillRect(legendX - 4, legendY + i * 28 - 8, 20, 4);
+    
+    // Texto
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.fillText(`⚡ Tentativa ${i + 1} • ${marteloState.forceMaxPerAttempt[i].toFixed(1)}kg`, legendX + 22, legendY + i * 28 - 2);
   }
 }
+
+// ==========================================
+// RENDER LOOP
+// ==========================================
+
+let renderLoopId = null;
+let lastRenderTime = 0;
+const RENDER_INTERVAL = 1000 / 60; // 60 FPS
+
+function gameRenderLoop() {
+  const now = performance.now();
+  
+  // Renderizar apenas a cada intervalo de tempo fixo
+  if (now - lastRenderTime >= RENDER_INTERVAL) {
+    if (marteloState.isGameRunning) {
+      drawForceGraph();
+    } else {
+      drawContinuousForceGraph();
+    }
+    lastRenderTime = now;
+  }
+  
+  // Usar setTimeout em vez de requestAnimationFrame para evitar travamentos
+  renderLoopId = setTimeout(gameRenderLoop, 16); // ~60fps
+}
+
+// Função auxiliar para gerar cache de pontos interpolados
+function generateInterpolatedPath(controlPoints, startX, startY, graphWidth, graphHeight) {
+  const pathPoints = [];
+  
+  for (let i = 0; i < controlPoints.length - 1; i++) {
+    const p0 = controlPoints[Math.max(0, i - 1)];
+    const p1 = controlPoints[i];
+    const p2 = controlPoints[i + 1];
+    const p3 = controlPoints[Math.min(controlPoints.length - 1, i + 2)];
+
+    const steps = 8;
+    for (let t = 0; t <= 1; t += 1 / steps) {
+      const x = interpolateCatmullRom(p1.x, p2.x, p3.x, p0.x, t);
+      const y = interpolateCatmullRom(p1.y, p2.y, p3.y, p0.y, t);
+      pathPoints.push({ x, y });
+    }
+  }
+  
+  return pathPoints;
+}
+
+function drawContinuousForceGraph() {
+    if (!elements.forceGraphCanvas) return;
+
+    const canvas = elements.forceGraphCanvas;
+    const rect = canvas.parentElement.getBoundingClientRect();
+
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+
+    const ctx = canvas.getContext('2d');
+    const paddingLeft = 60;
+    const paddingRight = 20;
+    const paddingTop = 20;
+    const paddingBottom = 40;
+
+    const graphWidth = canvas.width - paddingLeft - paddingRight;
+    const graphHeight = canvas.height - paddingTop - paddingBottom;
+    const startX = paddingLeft;
+    const startY = canvas.height - paddingBottom;
+
+    // Fundo com gradiente bonito
+    const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    bgGradient.addColorStop(0, 'rgba(15, 20, 40, 0.3)');
+    bgGradient.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
+    ctx.fillStyle = bgGradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Grid com alternância
+    ctx.lineWidth = 1;
+
+    for (let i = 0; i <= 10; i++) {
+        const x = startX + (graphWidth / 10) * i;
+        ctx.strokeStyle = i % 2 === 0 ? 'rgba(0, 217, 255, 0.08)' : 'rgba(0, 217, 255, 0.04)';
+        ctx.beginPath();
+        ctx.moveTo(x, paddingTop);
+        ctx.lineTo(x, startY);
+        ctx.stroke();
+    }
+
+    for (let i = 0; i <= 5; i++) {
+        const y = startY - (graphHeight / 5) * i;
+        ctx.strokeStyle = i % 2 === 0 ? 'rgba(0, 217, 255, 0.08)' : 'rgba(0, 217, 255, 0.04)';
+        ctx.beginPath();
+        ctx.moveTo(startX, y);
+        ctx.lineTo(canvas.width - paddingRight, y);
+        ctx.stroke();
+    }
+
+    const data = marteloState.continuousForceData;
+    if (!data || data.length === 0) return;
+
+    // Construir pontos de controle para interpolação
+    const controlPoints = [];
+    for (let i = 0; i < data.length; i++) {
+        const point = data[i];
+        const timePercent = i / 834;
+        const forcePercent = Math.min(point.force / gameSettings.maxForceDisplay, 1);
+
+        const x = startX + timePercent * graphWidth;
+        const y = startY - forcePercent * graphHeight;
+        
+        controlPoints.push({ x, y, force: point.force });
+    }
+
+    // Verificar se precisa recalcular o cache
+    if (data.length !== marteloState.continuousForcePathCacheVersion) {
+      marteloState.continuousForcePathCache = generateInterpolatedPath(controlPoints, startX, startY, graphWidth, graphHeight);
+      marteloState.continuousForcePathCacheVersion = data.length;
+    }
+
+    const pathPoints = marteloState.continuousForcePathCache;
+
+    // Desenhar preenchimento suave (área sob a curva)
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = 'rgba(0, 217, 255, 0.3)';
+    ctx.beginPath();
+    
+    for (let i = 0; i < controlPoints.length; i++) {
+        const pt = controlPoints[i];
+        if (i === 0) {
+            ctx.moveTo(pt.x, pt.y);
+        } else {
+            ctx.lineTo(pt.x, pt.y);
+        }
+    }
+    ctx.lineTo(canvas.width - paddingRight, startY);
+    ctx.lineTo(startX, startY);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.globalAlpha = 1.0;
+
+    // Desenhar a linha suavizada com cache pré-calculado
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // Primeira camada: Glow
+    ctx.shadowColor = '#00d9ff';
+    ctx.shadowBlur = 20;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.strokeStyle = '#00d9ff';
+    ctx.globalAlpha = 0.3;
+    
+    ctx.beginPath();
+    for (let i = 0; i < pathPoints.length; i++) {
+        const pt = pathPoints[i];
+        if (i === 0) {
+            ctx.moveTo(pt.x, pt.y);
+        } else {
+            ctx.lineTo(pt.x, pt.y);
+        }
+    }
+    ctx.stroke();
+
+    // Segunda camada: Linha principal
+    ctx.globalAlpha = 1.0;
+    ctx.lineWidth = 4;
+    ctx.shadowBlur = 15;
+    ctx.strokeStyle = '#00d9ff';
+    
+    ctx.beginPath();
+    for (let i = 0; i < pathPoints.length; i++) {
+        const pt = pathPoints[i];
+        if (i === 0) {
+            ctx.moveTo(pt.x, pt.y);
+        } else {
+            ctx.lineTo(pt.x, pt.y);
+        }
+    }
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+
+    // Eixos com brilho
+    ctx.shadowColor = 'rgba(0, 217, 255, 0.5)';
+    ctx.shadowBlur = 8;
+    ctx.strokeStyle = 'rgba(0, 217, 255, 0.6)';
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(canvas.width - paddingRight, startY);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(startX, paddingTop);
+    ctx.lineTo(startX, startY);
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+
+    // Labels força
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'right';
+
+    for (let i = 0; i <= 5; i++) {
+        const force = (gameSettings.maxForceDisplay / 5) * i;
+        const y = startY - (graphHeight / 5) * i;
+        ctx.fillStyle = 'rgba(0, 217, 255, 0.9)';
+        ctx.fillText(`${force.toFixed(0)}kg`, startX - 15, y + 4);
+    }
+
+    // Labels tempo
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+
+    for (let i = 0; i <= 10; i += 2) {
+        const x = startX + (graphWidth / 10) * i;
+        ctx.fillStyle = 'rgba(0, 217, 255, 0.9)';
+        const label = i - 10;
+        ctx.fillText(label === 0 ? 'Agora' : `${label}s`, x, canvas.height - paddingBottom + 22);
+    }
+}
+
 
 function endAttempt() {
   marteloState.isGameRunning = false;
