@@ -366,7 +366,6 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
         super().__init__(*args, directory='/app/data', **kwargs)
 
     def do_GET(self):
-         import time
         start = time.perf_counter()
         try:
             if self.path == '/api/sessoes':
@@ -382,12 +381,18 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
             else:
                 super().do_GET()
         except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError) as e:
-            logging.debug(f"Cliente desconectou durante requisição GET {self.path}: {type(e).__name__}")
+            logging.debug(
+                f"Cliente desconectou durante requisição GET {self.path}: {type(e).__name__}"
+            )
         except Exception as e:
-            logging.error(f"Erro inesperado ao processar requisição GET {self.path}: {e}", exc_info=True)
+            logging.error(
+                f"Erro inesperado ao processar requisição GET {self.path}: {e}",
+                exc_info=True
+            )
         finally:
             elapsed = (time.perf_counter() - start) * 1000
             logging.info(f"GET {self.path} levou {elapsed:.1f} ms")
+
     def do_POST(self):
         try:
             if self.path == '/api/sessoes':
@@ -397,11 +402,14 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
             else:
                 self.send_error(404, "Not Found")
         except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError) as e:
-            # Cliente desconectou durante transferência - normal, não precisa logar erro
-            logging.debug(f"Cliente desconectou durante requisição POST {self.path}: {type(e).__name__}")
+            logging.debug(
+                f"Cliente desconectou durante requisição POST {self.path}: {type(e).__name__}"
+            )
         except Exception as e:
-            # Outros erros devem ser logados
-            logging.error(f"Erro inesperado ao processar requisição POST {self.path}: {e}", exc_info=True)
+            logging.error(
+                f"Erro inesperado ao processar requisição POST {self.path}: {e}",
+                exc_info=True
+            )
 
     def do_DELETE(self):
         try:
