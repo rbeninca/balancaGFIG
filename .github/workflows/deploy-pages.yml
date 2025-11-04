@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - master
-      - main          # mantém compatível caso mude a branch padrão
+      - main
     paths:
-      - 'data/**'     # só dispara se algo dentro de data/ mudar
-      - '.github/workflows/deploy-pages.yml'  # e se você mudar o próprio workflow
+      - 'data/**'
+      - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
 permissions:
@@ -23,10 +23,24 @@ jobs:
 
       - name: Preparar artefatos do site
         run: |
-          mkdir public
+          mkdir -p public
           cp -r data/* public/
-          # Evita processamento do Jekyll no GitHub Pages (necessário para pastas/arquivos com underscore)
           touch public/.nojekyll
+
+      - name: Instalar Node e minificador
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nodejs npm
+          npm install -g minify
+
+      - name: Minificar HTML, CSS e JS
+        run: |
+          # Percorre todos os arquivos e minifica os suportados
+          find public -type f \( -name "*.html" -o -name "*.css" -o -name "*.js" \) | while read FILE; do
+            echo "Minificando $FILE"
+            minify "$FILE" > "$FILE.min"
+            mv "$FILE.min" "$FILE"
+          done
 
       - name: Publicar na branch gh-pages
         uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0 (pinned)
