@@ -365,6 +365,7 @@ window.onload = () => {
   
   abrirAba(document.getElementById("padrao"), 'abaGrafico');
   initializeApexChart(); // NOVA FUNÇÃO DE GRÁFICO
+  loadAndDisplayAllSessions(); // Carrega as sessões uma vez ao iniciar
   setDisplayUnit('kgf');
   setChartMode('deslizante');
   
@@ -1487,7 +1488,8 @@ function abrirAba(element, abaID) {
     el.classList.add('config-loading'); // Add loading class
     sendCommandToWorker('get_config');
   } else if (abaID === 'abaGravacoes') {
-    loadAndDisplayAllSessions(); // Load all sessions (local and DB)
+    // As sessões agora são carregadas no início e atualizadas dinamicamente.
+    // Nenhuma ação é necessária aqui para evitar recargas desnecessárias.
   }
   el.style.display = "block";
   el.classList.add('active');
