@@ -2317,29 +2317,37 @@ async function loadAndDisplayAllSessions() {
 
   listaGravacoesDiv.innerHTML = combinedSessions.map(session => {
     const sourceIcons = `${session.inLocal ? '<span title="Salvo Localmente" style="margin-right: 5px;">💾</span>' : ''}${session.inDb ? '<span title="Salvo no Banco de Dados" style="margin-right: 5px;">☁️</span>' : ''}`;
-  const baseStart = session.data_inicio || session.timestamp;
-  const dataInicio = baseStart ? parseDbTimestampToUTC(baseStart).toLocaleString('pt-BR') : 'N/D';
+    const baseStart = session.data_inicio || session.timestamp;
+    const dataInicio = baseStart ? parseDbTimestampToUTC(baseStart).toLocaleString('pt-BR') : 'N/D';
 
     let impulsoTotal = 'N/A';
     let motorClass = 'N/A';
     let classColor = '#95a5a6'; // Default gray color
 
     if (session.dadosTabela && session.dadosTabela.length > 0) {
-      const dados = processarDadosSimples(session.dadosTabela);
-      const impulsoData = calcularAreaSobCurva(dados.tempos, dados.newtons, false);
-      const metricasPropulsao = calcularMetricasPropulsao(impulsoData);
-      impulsoTotal = impulsoData.impulsoTotal.toFixed(2);
-      motorClass = metricasPropulsao.classificacaoMotor.classe;
-      classColor = metricasPropulsao.classificacaoMotor.cor; // Get color from classification
+        const dados = processarDadosSimples(session.dadosTabela);
+        const impulsoData = calcularAreaSobCurva(dados.tempos, dados.newtons, false);
+        const metricasPropulsao = calcularMetricasPropulsao(impulsoData);
+        impulsoTotal = impulsoData.impulsoTotal.toFixed(2);
+        motorClass = metricasPropulsao.classificacaoMotor.classe;
+        classColor = metricasPropulsao.classificacaoMotor.cor; // Get color from classification
     }
 
     // Metadados do motor
     const meta = session.metadadosMotor || {};
-    const metadadosDisplay = meta.name ? `
-      <p style="font-size: 0.75rem; color: var(--cor-texto-secundario); margin-top: 5px;">
-        🚀 Motor: ${meta.name || 'N/D'} • ⌀${meta.diameter || 'N/D'}mm • L${meta.length || 'N/D'}mm •
-        Prop: ${meta.propweight || 'N/D'}kg • Total: ${meta.totalweight || 'N/D'}kg • ${meta.manufacturer || 'N/D'}
-      </p>
+    const hasMeta = meta && Object.values(meta).some(v => v !== null && v !== '' && v !== 0);
+    const metadadosDisplay = hasMeta ? `
+      <div class="metadados-gravacao" style="display: flex; flex-wrap: wrap; gap: 15px; font-size: 0.9rem; color: var(--cor-texto-secundario); margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--cor-borda-fraca); grid-column: 1 / -1;">
+        <span class="meta-item"><strong>🚀 Motor:</strong> ${meta.name || 'N/D'}</span>
+        <span class="meta-item"><strong>Fabricante:</strong> ${meta.manufacturer || 'N/D'}</span>
+        <span class="meta-item"><strong>Diâmetro:</strong> ${meta.diameter || 'N/D'} mm</span>
+        <span class="meta-item"><strong>Comprimento:</strong> ${meta.length || 'N/D'} mm</span>
+        <span class="meta-item"><strong>Delay:</strong> ${meta.delay || 'N/D'} s</span>
+        <span class="meta-item"><strong>Peso Prop.:</strong> ${meta.propweight || 'N/D'} kg</span>
+        <span class="meta-item"><strong>Peso Total:</strong> ${meta.totalweight || 'N/D'} kg</span>
+        ${meta.description ? `<span class="meta-item" style="width: 100%;"><strong>Descrição:</strong> ${meta.description}</span>` : ''}
+        ${meta.observations ? `<span class="meta-item" style="width: 100%;"><strong>Observações:</strong> ${meta.observations}</span>` : ''}
+      </div>
     ` : '';
 
     // Indicador de conflito
@@ -2350,15 +2358,14 @@ async function loadAndDisplayAllSessions() {
     ` : '';
 
     return `
-      <div class="card-gravacao" style="display: flex; justify-content: space-between; align-items: center; background: var(--cor-fundo-card); padding: 15px; border-radius: 8px; box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 10px; margin-bottom: 10px; border-left: 5px solid ${classColor};" id="session-${session.id}">
+      <div class="card-gravacao" style="display: grid; grid-template-columns: 1fr auto auto; align-items: start; gap: 15px; background: var(--cor-fundo-card); padding: 15px; border-radius: 8px; box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 10px; margin-bottom: 10px; border-left: 5px solid ${classColor};" id="session-${session.id}">
         <div style="flex: 1;">
             <p style="font-weight: 600; margin-bottom: 5px;">${sourceIcons}${session.nome} <span style="font-size: 0.75rem; background: ${classColor}; color: white; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">CLASSE ${motorClass}</span>${conflictIndicator}</p>
             <p style="font-size: 0.875rem; color: var(--cor-texto-secundario);">
                 ${dataInicio} • Impulso Total: ${impulsoTotal} N⋅s
             </p>
-            ${metadadosDisplay}
         </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
             ${session.hasConflict
         ? `<button onclick="resolverConflito(${session.id})" title="Resolver Conflito de Sincronização" class="btn btn-aviso">⚠️ Resolver Conflito</button>`
         : ''}
@@ -2390,10 +2397,41 @@ async function loadAndDisplayAllSessions() {
              <button class="btn btn-perigo btn-small" title="Excluir do LocalStorage" onclick="deleteLocalSession(${session.id})">🗑️ Excluir do Local</button>`
         : ''}
         </div>
+        <div class="mini-chart-container" id="chart-container-${session.id}" style="width: 200px; height: 100px;"></div>
+        ${metadadosDisplay}
       </div>
     `;
 
   }).join('');
+
+  // Render mini-charts
+  for (const session of combinedSessions) {
+    const container = document.getElementById(`chart-container-${session.id}`);
+    if (container && session.dadosTabela && session.dadosTabela.length > 0) {
+      
+      const chartData = session.dadosTabela
+        .map(l => [Number(l.tempo_esp), Number(l.newtons)])
+        .filter(([t, f]) => Number.isFinite(t) && Number.isFinite(f))
+        .sort((a, b) => a[0] - b[0]);
+
+      const options = {
+        series: [{ data: chartData }],
+        chart: {
+          type: 'line',
+          width: 200,
+          height: 100,
+          sparkline: { enabled: true }
+        },
+        stroke: { curve: 'smooth', width: 2 },
+        tooltip: {
+          enabled: false,
+        },
+      };
+
+      const chart = new ApexCharts(container, options);
+      chart.render();
+    }
+  }
 }
 
 /** Ordem dos botões  para salvar 
