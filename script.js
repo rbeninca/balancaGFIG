@@ -11,7 +11,7 @@ let A=a=>typeof a==='function';const{isArray:_}=Array;let c=a=>typeof a==='strin
       <p style="font-size: 0.75rem; color: var(--cor-texto-secundario); margin-top: 5px;">
         🚀 Motor: ${sH.name||'N/D'} • ⌀${sH.diameter||'N/D'}mm • L${sH.length||'N/D'}mm •
         Prop: ${sH.propweight||'N/D'}kg • Total: ${sH.totalweight||'N/D'}kg • ${sH.manufacturer||'N/D'}
-      </p>
+      </p> 
     `:'',sJ=sA.hasConflict?`
       <span style="background: #e74c3c; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 8px;">
         ⚠️ CONFLITO
