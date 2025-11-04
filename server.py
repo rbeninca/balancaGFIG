@@ -72,8 +72,6 @@ serial_connection: Optional[serial.Serial] = None
 serial_lock = threading.Lock()
 mysql_connection = None
 mysql_connected = False
-cached_config: Optional[Dict[str, Any]] = None
-cached_config_lock = threading.Lock()
 
 # ================== MySQL Utils ==================
 def connect_to_mysql():
@@ -368,32 +366,64 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
         super().__init__(*args, directory='/app/data', **kwargs)
 
     def do_GET(self):
-        if self.path == '/api/sessoes':
-            self.handle_get_sessoes()
-        elif self.path.startswith('/api/sessoes/') and self.path.endswith('/leituras'):
-            self.handle_get_leituras()
-        elif self.path.startswith('/api/sessoes/'):
-            self.handle_get_sessao_by_id()
-        elif self.path == '/api/time':
-            self.handle_get_time()
-        elif self.path == '/api/info':
-            self.handle_get_info()
-        else:
-            super().do_GET()
+        try:
+            if self.path == '/api/sessoes':
+                self.handle_get_sessoes()
+            elif self.path.startswith('/api/sessoes/') and self.path.endswith('/leituras'):
+                self.handle_get_leituras()
+            elif self.path.startswith('/api/sessoes/'):
+                self.handle_get_sessao_by_id()
+            elif self.path == '/api/time':
+                self.handle_get_time()
+            elif self.path == '/api/info':
+                self.handle_get_info()
+            else:
+                super().do_GET()
+        except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError) as e:
+            # Cliente desconectou durante transferência - normal, não precisa logar erro
+            logging.debug(f"Cliente desconectou durante requisição GET {self.path}: {type(e).__name__}")
+        except Exception as e:
+            # Outros erros devem ser logados
+            logging.error(f"Erro inesperado ao processar requisição GET {self.path}: {e}", exc_info=True)
 
     def do_POST(self):
-        if self.path == '/api/sessoes':
-            self.handle_post_sessao()
-        elif self.path == '/api/time/sync':
-            self.handle_sync_time()
-        else:
-            self.send_error(404, "Not Found")
+        try:
+            if self.path == '/api/sessoes':
+                self.handle_post_sessao()
+            elif self.path == '/api/time/sync':
+                self.handle_sync_time()
+            else:
+                self.send_error(404, "Not Found")
+        except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError) as e:
+            # Cliente desconectou durante transferência - normal, não precisa logar erro
+            logging.debug(f"Cliente desconectou durante requisição POST {self.path}: {type(e).__name__}")
+        except Exception as e:
+            # Outros erros devem ser logados
+            logging.error(f"Erro inesperado ao processar requisição POST {self.path}: {e}", exc_info=True)
 
     def do_DELETE(self):
-        if self.path.startswith('/api/sessoes/'):
-            self.handle_delete_sessao()
-        else:
-            self.send_error(404, "Not Found")
+        try:
+            if self.path.startswith('/api/sessoes/'):
+                self.handle_delete_sessao()
+            else:
+                self.send_error(404, "Not Found")
+        except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError) as e:
+            # Cliente desconectou durante transferência - normal, não precisa logar erro
+            logging.debug(f"Cliente desconectou durante requisição DELETE {self.path}: {type(e).__name__}")
+        except Exception as e:
+            # Outros erros devem ser logados
+            logging.error(f"Erro inesperado ao processar requisição DELETE {self.path}: {e}", exc_info=True)
+
+    def log_error(self, format, *args):
+        """Sobrescreve log_error para suprimir erros comuns de conexão"""
+        # Não loga erros de conexão que são esperados
+        if args and len(args) > 0:
+            error_msg = str(args[0]) if args[0] else ""
+            # Ignora erros comuns de clientes desconectando
+            if any(err in error_msg for err in ["Connection reset", "Broken pipe", "Connection aborted"]):
+                return
+        # Loga outros erros normalmente
+        super().log_error(format, *args)
 
     def handle_get_sessoes(self):
         if not mysql_connected:
@@ -670,6 +700,24 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
 class DualStackTCPServer(socketserver.TCPServer):
     address_family = socket.AF_INET # Force IPv4
     allow_reuse_address = True
+    
+    def handle_error(self, request, client_address):
+        """Sobrescreve handle_error para tratar exceções sem travar o servidor"""
+        import sys
+        import traceback
+        
+        exc_type, exc_value, exc_tb = sys.exc_info()
+        
+        # Não loga erros comuns de conexão - são normais
+        if exc_type in (ConnectionResetError, BrokenPipeError, ConnectionAbortedError):
+            logging.debug(f"Cliente {client_address} desconectou durante requisição: {exc_type.__name__}")
+            return
+        
+        # Loga outros erros mas não trava o servidor
+        logging.error(f"Erro ao processar requisição de {client_address}:")
+        logging.error(''.join(traceback.format_exception(exc_type, exc_value, exc_tb)))
+        
+        # Não propaga a exceção - isso permite que o servidor continue funcionando
 
 def start_http_server():
     try:
@@ -687,7 +735,6 @@ def start_http_server():
 
 # ================== WebSocket ==================
 async def ws_handler(websocket):
-    global cached_config
     CONNECTED_CLIENTS.add(websocket)
     try:
         # Send initial status on connect
@@ -697,16 +744,6 @@ async def ws_handler(websocket):
             try:
                 cmd = json.loads(message)
                 cmd_type = cmd.get("cmd")
-
-                if cmd_type == "get_config":
-                    with cached_config_lock:
-                        if cached_config:
-                            logging.info("Servindo configuração do cache.")
-                            # Add type for consistency with broadcast
-                            response = cached_config.copy()
-                            response["mysql_connected"] = mysql_connected
-                            await websocket.send(json.dumps(response))
-                            continue # Skip sending command to device
 
                 if cmd_type == "save_session_to_mysql":
                     session_data = cmd.get("payload")
@@ -727,13 +764,6 @@ async def ws_handler(websocket):
                                     serial_connection.write(binary_packet)
                                     serial_connection.flush()
                                     logging.debug(f"Comando serial enviado: {cmd_type}")
-
-                                    # Invalidate cache on set_param
-                                    if cmd.get("cmd", "").lower() in ("set", "set_param"):
-                                        with cached_config_lock:
-                                            cached_config = None
-                                            logging.info("Cache de configuração invalidado devido a set_param.")
-
                                 except Exception as e:
                                     logging.error(f"Erro ao enviar comando serial: {e}")
                     else:
@@ -887,7 +917,7 @@ def find_serial_port() -> Optional[str]:
     return ports[0] if ports else None
 
 def serial_reader(loop: asyncio.AbstractEventLoop):
-    global serial_connection, cached_config
+    global serial_connection
     while True:
         port = find_serial_port()
         if not port:
@@ -950,12 +980,6 @@ def serial_reader(loop: asyncio.AbstractEventLoop):
                     json_obj = parsers.get(pkt_type)(packet) if pkt_type in parsers else None
                     
                     if json_obj:
-                        # If it's a config packet, cache it
-                        if json_obj.get("type") == "config":
-                            with cached_config_lock:
-                                cached_config = json_obj
-                                logging.info("Configuração recebida e armazenada em cache.")
-
                         invalid_packet_count = 0  # Reset contador se pacote válido
                         asyncio.run_coroutine_threadsafe(broadcast_json(json_obj), loop)
                     else:
