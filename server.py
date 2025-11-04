@@ -366,6 +366,7 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
         super().__init__(*args, directory='/app/data', **kwargs)
 
     def do_GET(self):
+        start = time.perf_counter()
         try:
             if self.path == '/api/sessoes':
                 self.handle_get_sessoes()
@@ -380,11 +381,17 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
             else:
                 super().do_GET()
         except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError) as e:
-            # Cliente desconectou durante transferência - normal, não precisa logar erro
-            logging.debug(f"Cliente desconectou durante requisição GET {self.path}: {type(e).__name__}")
+            logging.debug(
+                f"Cliente desconectou durante requisição GET {self.path}: {type(e).__name__}"
+            )
         except Exception as e:
-            # Outros erros devem ser logados
-            logging.error(f"Erro inesperado ao processar requisição GET {self.path}: {e}", exc_info=True)
+            logging.error(
+                f"Erro inesperado ao processar requisição GET {self.path}: {e}",
+                exc_info=True
+            )
+        finally:
+            elapsed = (time.perf_counter() - start) * 1000
+            logging.info(f"GET {self.path} levou {elapsed:.1f} ms")
 
     def do_POST(self):
         try:
@@ -395,11 +402,14 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
             else:
                 self.send_error(404, "Not Found")
         except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError) as e:
-            # Cliente desconectou durante transferência - normal, não precisa logar erro
-            logging.debug(f"Cliente desconectou durante requisição POST {self.path}: {type(e).__name__}")
+            logging.debug(
+                f"Cliente desconectou durante requisição POST {self.path}: {type(e).__name__}"
+            )
         except Exception as e:
-            # Outros erros devem ser logados
-            logging.error(f"Erro inesperado ao processar requisição POST {self.path}: {e}", exc_info=True)
+            logging.error(
+                f"Erro inesperado ao processar requisição POST {self.path}: {e}",
+                exc_info=True
+            )
 
     def do_DELETE(self):
         try:
@@ -697,9 +707,10 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(data, default=str).encode('utf-8'))
 
-class DualStackTCPServer(socketserver.TCPServer):
+class DualStackTCPServer(socketserver.ThreadingMixIn,socketserver.TCPServer):
     address_family = socket.AF_INET # Force IPv4
     allow_reuse_address = True
+    daemon_threads = True   
     
     def handle_error(self, request, client_address):
         """Sobrescreve handle_error para tratar exceções sem travar o servidor"""
@@ -722,9 +733,8 @@ class DualStackTCPServer(socketserver.TCPServer):
 def start_http_server():
     try:
         server_address = (BIND_HOST, HTTP_PORT)
-        
         httpd = DualStackTCPServer(server_address, APIRequestHandler)
-        
+
         t = threading.Thread(target=httpd.serve_forever, daemon=True)
         t.start()
         logging.info(f"Servidor HTTP/API iniciado em {BIND_HOST}:{HTTP_PORT}")
@@ -732,6 +742,7 @@ def start_http_server():
     except OSError as e:
         logging.error(f"Falha ao iniciar servidor HTTP: {e}", exc_info=True)
         return None
+
 
 # ================== WebSocket ==================
 async def ws_handler(websocket):

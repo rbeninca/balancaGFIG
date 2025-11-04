@@ -10,6 +10,12 @@
 # - Oferece fallback para hostapd+dnsmasq se NetworkManager falhar
 # - É portável para diferentes dispositivos Linux
 #
+<<<<<<< HEAD
+=======
+#
+# Data: 2025-10-29
+#
+>>>>>>> origin/master
 
 set -e  # Sair em caso de erro crítico
 
