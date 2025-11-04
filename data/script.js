@@ -1058,6 +1058,20 @@ function updateUIFromData(dado) {
   // Verifica e atualiza modal de sobrecarga (80%+)
   verificarModalSobrecarga(forcaFiltrada, percentual);
 
+  // Calcula e exibe a latência
+  const latenciaMs = performance.now() - (tempo * 1000);
+  const latenciaEl = document.getElementById('latencia-display');
+  if (latenciaEl) {
+    latenciaEl.textContent = `${latenciaMs.toFixed(0)} ms`;
+    if (latenciaMs < 150) {
+      latenciaEl.style.color = 'var(--cor-sucesso)';
+    } else if (latenciaMs < 300) {
+      latenciaEl.style.color = 'var(--cor-aviso)';
+    } else {
+      latenciaEl.style.color = 'var(--cor-perigo)';
+    }
+  }
+
   rawDataN.push([tempo, forcaFiltrada]);
 
   // No modo deslizante, mantém apenas os últimos MAX_DATA_POINTS
