@@ -1,6 +1,5 @@
 #!/bin/bash
 #
-# setup_wifi_claude.sh - Script híbrido para criar Access Point WiFi
 # Combina a simplicidade do NetworkManager com robustez e controle avançado
 #
 # Este script:
@@ -10,9 +9,6 @@
 # - Faz backup de configurações
 # - Oferece fallback para hostapd+dnsmasq se NetworkManager falhar
 # - É portável para diferentes dispositivos Linux
-#
-# Autor: Claude (Anthropic)
-# Data: 2025-10-29
 #
 
 set -e  # Sair em caso de erro crítico
@@ -56,7 +52,7 @@ log_step() {
 show_banner() {
     echo -e "${CYAN}"
     echo "╔════════════════════════════════════════════════════════╗"
-    echo "║     WiFi Access Point Setup - Claude Edition         ║"
+    echo "║     WiFi Access Point Setup        ║"
     echo "║  Hybrid NetworkManager + hostapd/dnsmasq Solution    ║"
     echo "╚════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
