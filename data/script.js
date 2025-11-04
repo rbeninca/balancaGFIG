@@ -17,8 +17,15 @@ function openWizard() {
   
   goToStep(0);
 
-  // Tenta buscar a configuração 3 vezes antes de mostrar erro
-  let retries = 3;
+  // Se estiver no GitHub Pages, não tenta buscar a configuração
+  if (isGitHubPages()) {
+    console.warn('[Wizard] GitHub Pages detectado - pulando busca de configuração');
+    document.getElementById('wizard-loading').style.display = 'none';
+    return;
+  }
+
+  // Tenta buscar a configuração por 10 segundos com uma tentativa a cada segundo
+  let retries = 10;
   const fetchConfig = () => {
     sendCommandToWorker('get_config');
     configTimeout = setTimeout(() => {
@@ -26,10 +33,11 @@ function openWizard() {
         retries--;
         fetchConfig();
       } else {
+        // Após 10 tentativas, mostra erro
         document.getElementById('wizard-loading').style.display = 'none';
         document.getElementById('wizard-error').style.display = 'block';
       }
-    }, 2000); // 2 segundos de timeout
+    }, 1000); // 1 segundo de timeout entre tentativas
   };
 
   fetchConfig();
@@ -1057,20 +1065,6 @@ function updateUIFromData(dado) {
   
   // Verifica e atualiza modal de sobrecarga (80%+)
   verificarModalSobrecarga(forcaFiltrada, percentual);
-
-  // Calcula e exibe a latência
-  const latenciaMs = performance.now() - (tempo * 1000);
-  const latenciaEl = document.getElementById('latencia-display');
-  if (latenciaEl) {
-    latenciaEl.textContent = `${latenciaMs.toFixed(0)} ms`;
-    if (latenciaMs < 150) {
-      latenciaEl.style.color = 'var(--cor-sucesso)';
-    } else if (latenciaMs < 300) {
-      latenciaEl.style.color = 'var(--cor-aviso)';
-    } else {
-      latenciaEl.style.color = 'var(--cor-perigo)';
-    }
-  }
 
   rawDataN.push([tempo, forcaFiltrada]);
 
