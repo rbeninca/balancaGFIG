@@ -1731,7 +1731,7 @@ function aplicarZonaMorta(valorGramas) {
   
   // Log apenas quando houver mudança (evita spam no console)
   if (resultado === 0 && valorGramas !== 0) {
-    //console.log('[ZonaMorta] Valor', valorGramas.toFixed(3), 'g → 0 (limite:', erroAbsoluto.toFixed(2), 'g)');
+    console.log('[ZonaMorta] Valor', valorGramas.toFixed(3), 'g → 0 (limite:', erroAbsoluto.toFixed(2), 'g)');
   }
   
   return resultado;

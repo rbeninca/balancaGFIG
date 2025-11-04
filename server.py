@@ -687,6 +687,7 @@ def start_http_server():
 
 # ================== WebSocket ==================
 async def ws_handler(websocket):
+    global cached_config
     CONNECTED_CLIENTS.add(websocket)
     try:
         # Send initial status on connect
@@ -730,7 +731,6 @@ async def ws_handler(websocket):
                                     # Invalidate cache on set_param
                                     if cmd.get("cmd", "").lower() in ("set", "set_param"):
                                         with cached_config_lock:
-                                            global cached_config
                                             cached_config = None
                                             logging.info("Cache de configuração invalidado devido a set_param.")
 
@@ -887,7 +887,7 @@ def find_serial_port() -> Optional[str]:
     return ports[0] if ports else None
 
 def serial_reader(loop: asyncio.AbstractEventLoop):
-    global serial_connection
+    global serial_connection, cached_config
     while True:
         port = find_serial_port()
         if not port:
@@ -953,7 +953,6 @@ def serial_reader(loop: asyncio.AbstractEventLoop):
                         # If it's a config packet, cache it
                         if json_obj.get("type") == "config":
                             with cached_config_lock:
-                                global cached_config
                                 cached_config = json_obj
                                 logging.info("Configuração recebida e armazenada em cache.")
 
