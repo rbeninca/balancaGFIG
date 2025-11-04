@@ -11,7 +11,7 @@
 # - Oferece fallback para hostapd+dnsmasq se NetworkManager falhar
 # - É portável para diferentes dispositivos Linux
 #
-# Autor: Claude (Anthropic)
+#
 # Data: 2025-10-29
 #
 
