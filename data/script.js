@@ -2339,7 +2339,7 @@ async function loadAndDisplayAllSessions() {
       <p style="font-size: 0.75rem; color: var(--cor-texto-secundario); margin-top: 5px;">
         🚀 Motor: ${meta.name || 'N/D'} • ⌀${meta.diameter || 'N/D'}mm • L${meta.length || 'N/D'}mm •
         Prop: ${meta.propweight || 'N/D'}kg • Total: ${meta.totalweight || 'N/D'}kg • ${meta.manufacturer || 'N/D'}
-      </p>
+      </p> 
     ` : '';
 
     // Indicador de conflito
