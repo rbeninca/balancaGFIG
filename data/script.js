@@ -713,7 +713,7 @@ function updateForceDisplays(forceN, emaN, maxN, minN) {
     const minDisplayForce = convertForce(minN, displayUnit);
 
     document.getElementById('forca-atual').textContent = `${displayForce.toFixed(3)} ${displayUnit}`;
-    document.getElementById('forca-ems').textContent = `${emaDisplay.toFixed(3)} ${displayUnit}`;
+    
     document.getElementById('forca-maxima').textContent = `${maxDisplayForce.toFixed(3)} ${displayUnit}`;
     document.getElementById('forca-minima').textContent = `mín: ${minDisplayForce.toFixed(3)} ${displayUnit}`;
 }
