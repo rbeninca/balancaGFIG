@@ -1,387 +1,23 @@
-// ============================================
-// GERAÇÃO DE RELATÓRIOS EM PDF COM GRÁFICO REAL - GFIG
-// ============================================
-
-/**
- * Exporta PDF com gráfico real e todos os dados via impressão do navegador
- * @param {number} sessionId - ID da sessão a ser exportada
- */
-function exportarPDFViaPrint(sessionId) {
-  try {
-    const gravacoes = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
-    const sessao = gravacoes.find(g => g.id === sessionId);
-    
-    if (!sessao || !sessao.dadosTabela || sessao.dadosTabela.length === 0) {
-      showNotification('error', 'Sessão não encontrada ou sem dados');
-      return;
-    }
-    
-    showNotification('info', 'Gerando relatório PDF com gráfico...', 2000);
-    
-    // Processa dados
-    const dados = processarDadosSimples(sessao.dadosTabela);
-    // Assumimos que calcularAreaSobCurva retorna o Impulso Total (área sob a curva)
-    const impulsoData = calcularAreaSobCurva(dados.tempos, dados.newtons, false);
-    // Assumimos que calcularMetricasPropulsao lida com a classificação NAR/TRA
-    const metricasPropulsao = calcularMetricasPropulsao(impulsoData);
-    
-    // Gera o gráfico em canvas e converte para imagem
-    gerarGraficoParaPDF(sessao, dados, impulsoData, metricasPropulsao, (imagemBase64) => {
-      // Cria janela de impressão com o gráfico
-      const printWindow = window.open('', '_blank');
-      
-      // Gera HTML do relatório COM a imagem do gráfico
-      const html = gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsao, imagemBase64);
-      
-      printWindow.document.write(html);
-      printWindow.document.close();
-      
-      // Aguarda carregamento e abre diálogo de impressão
-      printWindow.onload = function() {
-        setTimeout(() => {
-          printWindow.print();
-        }, 500);
-      };
-      
-      showNotification('success', 'Relatório pronto! Use "Salvar como PDF" no diálogo', 5000);
-    });
-    
-  } catch (e) {
-    console.error('Erro ao gerar PDF:', e);
-    showNotification('error', 'Erro ao gerar relatório: ' + e.message);
-  }
-}
-
-/**
- * Gera o gráfico em canvas e retorna como base64
- */
-function gerarGraficoParaPDF(sessao, dados, impulsoData, metricasPropulsao, callback) {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  
-  // Dimensões do gráfico
-  const w = 1400;
-  const h = 800;
-  canvas.width = w;
-  canvas.height = h;
-  
-  // Cores
-  const cor = {
-    fundo: '#ffffff',
-    titulo: '#2c3e50',
-    subtitulo: '#7f8c8d',
-    azul: '#3498db',
-    verde: '#27ae60',
-    vermelho: '#e74c3c',
-    cinza: '#95a5a6',
-    fundo2: '#f8f9fa',
-    roxo: '#9b59b6',
-    laranja: '#e67e22'
-  };
-  
-  // Fundo branco
-  ctx.fillStyle = cor.fundo;
-  ctx.fillRect(0, 0, w, h);
-  
-  // Cabeçalho do gráfico
-  ctx.fillStyle = cor.titulo;
-  ctx.font = 'bold 28px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText(`Curva de Propulsão - ${sessao.nome}`, w/2, 40);
-  
-  ctx.fillStyle = cor.roxo;
-  ctx.font = 'bold 20px Arial';
-  const classificacao = metricasPropulsao.classificacaoMotor;
-  ctx.fillText(`💥 Impulso: ${impulsoData.impulsoTotal.toFixed(2)} N⋅s | Classe ${classificacao.classe}`, w/2, 70);
-  
-  // Desenha o gráfico
-  const gx = 120;  // X inicial do gráfico
-  const gy = 100;  // Y inicial do gráfico
-  const gw = w - 200;  // Largura do gráfico
-  const gh = h - 200;  // Altura do gráfico
-  
-  // Caixa do gráfico
-  ctx.fillStyle = cor.fundo2;
-  ctx.fillRect(gx, gy, gw, gh);
-  
-  ctx.strokeStyle = cor.cinza;
-  ctx.lineWidth = 2;
-  ctx.strokeRect(gx, gy, gw, gh);
-  
-  // Valores e escalas
-  const valores = dados.newtons;
-  const tempos = dados.tempos;
-  
-  if (valores.length < 2) {
-    ctx.fillStyle = cor.vermelho;
-    ctx.font = '20px Arial';
-    ctx.fillText('Dados insuficientes para gráfico', w/2, h/2);
-    callback(canvas.toDataURL('image/png'));
-    return;
-  }
-  
-  const maxVal = Math.max(...valores);
-  const minVal = Math.min(...valores, 0);
-  const range = maxVal - minVal || 0.001;
-  const padding = range * 0.1;
-  
-  const yMin = minVal - padding;
-  const yMax = maxVal + padding;
-  const yRange = yMax - yMin;
-  
-  // Grid horizontal
-  ctx.strokeStyle = '#e0e0e0';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([3, 3]);
-  
-  for (let i = 0; i <= 6; i++) {
-    const y = gy + (gh/6) * i;
-    const valor = yMax - (yRange/6) * i;
-    
-    ctx.beginPath();
-    ctx.moveTo(gx, y);
-    ctx.lineTo(gx + gw, y);
-    ctx.stroke();
-    
-    // Label Y
-    ctx.fillStyle = cor.titulo;
-    ctx.font = '14px Arial';
-    ctx.textAlign = 'right';
-    ctx.fillText(valor.toFixed(1) + ' N', gx - 10, y + 5);
-  }
-  
-  // Grid vertical (tempo)
-  const numVerticalLines = 10;
-  const maxTempo = Math.max(...tempos);
-  for (let i = 0; i <= numVerticalLines; i++) {
-    const x = gx + (gw / numVerticalLines) * i;
-    const tempo = (maxTempo / numVerticalLines) * i;
-    
-    ctx.beginPath();
-    ctx.moveTo(x, gy);
-    ctx.lineTo(x, gy + gh);
-    ctx.stroke();
-    
-    // Label X
-    ctx.fillStyle = cor.titulo;
-    ctx.font = '14px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(tempo.toFixed(2) + 's', x, gy + gh + 20);
-  }
-  
-  ctx.setLineDash([]);
-  
-  // ÁREA SOB A CURVA (representa o impulso)
-  if (valores.length > 1) {
-    ctx.fillStyle = 'rgba(52, 152, 219, 0.3)';
-    ctx.beginPath();
-    
-    const zeroY = gy + gh - ((0 - yMin) / yRange) * gh;
-    ctx.moveTo(gx, zeroY);
-    
-    for (let i = 0; i < valores.length; i++) {
-      const x = gx + (gw / (valores.length - 1)) * i;
-      const valorPositivo = Math.max(0, valores[i]);
-      const y = gy + gh - ((valorPositivo - yMin) / yRange) * gh;
-      ctx.lineTo(x, y);
-    }
-    
-    ctx.lineTo(gx + gw, zeroY);
-    ctx.closePath();
-    ctx.fill();
-  }
-  
-  // LINHA DE FORÇA
-  if (valores.length > 1) {
-    ctx.strokeStyle = cor.azul;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    
-    for (let i = 0; i < valores.length; i++) {
-      const x = gx + (gw / (valores.length - 1)) * i;
-      const y = gy + gh - ((valores[i] - yMin) / yRange) * gh;
-      
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    }
-    ctx.stroke();
-  }
-  
-  // LINHA DO ZERO
-  if (yMin < 0 && yMax > 0) {
-    const zeroY = gy + gh - ((0 - yMin) / yRange) * gh;
-    ctx.strokeStyle = cor.cinza;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([5, 5]);
-    ctx.beginPath();
-    ctx.moveTo(gx, zeroY);
-    ctx.lineTo(gx + gw, zeroY);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-  
-  // PONTO DE FORÇA MÁXIMA
-  const maxIndex = valores.indexOf(Math.max(...valores));
-  if (maxIndex >= 0) {
-    const x = gx + (gw / (valores.length - 1)) * maxIndex;
-    const y = gy + gh - ((valores[maxIndex] - yMin) / yRange) * gh;
-    
-    ctx.fillStyle = cor.vermelho;
-    ctx.beginPath();
-    ctx.arc(x, y, 8, 0, 2 * Math.PI);
-    ctx.fill();
-    
-    // Label do pico
-    ctx.fillStyle = cor.vermelho;
-    ctx.font = 'bold 16px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(`Fmax: ${valores[maxIndex].toFixed(2)}N`, x, y - 15);
-  }
-  
-  // MARCADORES DE IGNIÇÃO E BURNOUT
-  // Ignição
-  if (impulsoData.tempoIgnicao > 0) {
-    const ignicaoIndex = tempos.findIndex(t => t >= impulsoData.tempoIgnicao);
-    if (ignicaoIndex >= 0) {
-      const x = gx + (gw / (valores.length - 1)) * ignicaoIndex;
-      ctx.strokeStyle = cor.verde;
-      ctx.lineWidth = 2;
-      ctx.setLineDash([10, 5]);
-      ctx.beginPath();
-      ctx.moveTo(x, gy);
-      ctx.lineTo(x, gy + gh);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      
-      ctx.fillStyle = cor.verde;
-      ctx.font = 'bold 12px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('Ignição', x, gy - 5);
-    }
-  }
-  
-  // Burnout
-  if (impulsoData.tempoBurnout > 0) {
-    const burnoutIndex = tempos.findIndex(t => t >= impulsoData.tempoBurnout);
-    if (burnoutIndex >= 0) {
-      const x = gx + (gw / (valores.length - 1)) * burnoutIndex;
-      ctx.strokeStyle = cor.laranja;
-      ctx.lineWidth = 2;
-      ctx.setLineDash([10, 5]);
-      ctx.beginPath();
-      ctx.moveTo(x, gy);
-      ctx.lineTo(x, gy + gh);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      
-      ctx.fillStyle = cor.laranja;
-      ctx.font = 'bold 12px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('Burnout', x, gy - 5);
-    }
-  }
-  
-  // LABELS DOS EIXOS
-  ctx.fillStyle = cor.titulo;
-  ctx.font = 'bold 18px Arial';
-  ctx.textAlign = 'center';
-  
-  // Eixo Y
-  ctx.save();
-  ctx.translate(30, gy + gh/2);
-  ctx.rotate(-Math.PI/2);
-  ctx.fillText('Força (N)', 0, 0);
-  ctx.restore();
-  
-  // Eixo X
-  ctx.fillText('Tempo (s)', gx + gw/2, gy + gh + 50);
-  
-  // LEGENDA
-  const legX = gx + gw - 200;
-  const legY = gy + 20;
-  
-  // Área = Impulso
-  ctx.fillStyle = 'rgba(52, 152, 219, 0.3)';
-  ctx.fillRect(legX, legY, 30, 20);
-  ctx.strokeStyle = cor.azul;
-  ctx.lineWidth = 2;
-  ctx.strokeRect(legX, legY, 30, 20);
-  
-  ctx.fillStyle = cor.titulo;
-  ctx.font = 'bold 14px Arial';
-  ctx.textAlign = 'left';
-  ctx.fillText('Área = Impulso', legX + 40, legY + 15);
-  
-  ctx.font = '12px Arial';
-  ctx.fillStyle = cor.verde;
-  ctx.fillText(`${impulsoData.impulsoTotal.toFixed(2)} N⋅s`, legX + 40, legY + 30);
-  
-  // Converte canvas para base64
-  callback(canvas.toDataURL('image/png', 1.0));
-}
-
-/**
- * Gera as linhas da tabela completa de classificações com destaque no motor testado
- */
-function gerarLinhasClassificacaoCompleta(impulsoTestado, classeTestada) {
-  const classificacoes = [
-    { min: 0.00,    max: 0.3125,   classe: 'Micro 1/8A', tipo: 'FM (foguetemodelo)', nivel: 'Micro',       cor: '#8e44ad' },
-    { min: 0.3126,  max: 0.625,    classe: '¼A',         tipo: 'FM (foguetemodelo)', nivel: 'Baixa potência', cor: '#9b59b6' },
-    { min: 0.626,   max: 1.25,     classe: '½A',         tipo: 'FM (foguetemodelo)', nivel: 'Baixa potência', cor: '#e74c3c' },
-    { min: 1.26,    max: 2.50,     classe: 'A',          tipo: 'FM (foguetemodelo)', nivel: 'Baixa potência', cor: '#e67e22' },
-    { min: 2.51,    max: 5.00,     classe: 'B',          tipo: 'FM (foguetemodelo)', nivel: 'Baixa potência', cor: '#f39c12' },
-    { min: 5.01,    max: 10.00,    classe: 'C',          tipo: 'FM (foguetemodelo)', nivel: 'Baixa potência', cor: '#f1c40f' },
-    { min: 10.01,   max: 20.00,    classe: 'D',          tipo: 'FM (foguetemodelo)', nivel: 'Baixa potência', cor: '#2ecc71' },
-    { min: 20.01,   max: 40.00,    classe: 'E',          tipo: 'FM (foguetemodelo)', nivel: 'Média potência', cor: '#1abc9c' },
-    { min: 40.01,   max: 80.00,    classe: 'F',          tipo: 'FM (foguetemodelo)', nivel: 'Média potência', cor: '#3498db' },
-    { min: 80.01,   max: 160.00,   classe: 'G',          tipo: 'FM (foguetemodelo)', nivel: 'Média potência', cor: '#9b59b6' },
-    { min: 160.01,  max: 320.00,   classe: 'H',          tipo: 'MFE (experimental)', nivel: 'Nível 1',        cor: '#e74c3c' },
-    { min: 320.01,  max: 640.00,   classe: 'I',          tipo: 'MFE (experimental)', nivel: 'Nível 1',        cor: '#e67e22' },
-    { min: 640.01,  max: 1280.00,  classe: 'J',          tipo: 'MFE (experimental)', nivel: 'Nível 2',        cor: '#f39c12' },
-    { min: 1280.01, max: 2560.00,  classe: 'K',          tipo: 'MFE (experimental)', nivel: 'Nível 2',        cor: '#2ecc71' },
-    { min: 2560.01, max: 5120.00,  classe: 'L',          tipo: 'MFE (experimental)', nivel: 'Nível 2',        cor: '#3498db' },
-    { min: 5120.01, max: 10240.00, classe: 'M',          tipo: 'MFE (experimental)', nivel: 'Nível 3',        cor: '#9b59b6' },
-    { min: 10240.01,max: 20480.00, classe: 'N',          tipo: 'MFE (experimental)', nivel: 'Nível 3',        cor: '#e74c3c' },
-    { min: 20480.01,max: 40960.00, classe: 'O',          tipo: 'MFE (experimental)', nivel: 'Nível 3',        cor: '#c0392b' },
-  ];
-
-  let linhas = '';
-  classificacoes.forEach((c) => {
-    const isMotorTestado = c.classe === classeTestada;
-    const impulsoAtual = isMotorTestado ? impulsoTestado : null;
-
-    // Estilo da linha: destaque forte para o motor testado
-    let rowStyle = '';
-    let markerHTML = '';
-
-    if (isMotorTestado) {
-      rowStyle = `background: linear-gradient(90deg, ${c.cor}40 0%, ${c.cor}20 100%);
+function a(B){try{let C=JSON.parse(localStorage.getItem('balancaGravacoes'))||[],_b=C.find(g=>g.id===B),D=calcularAreaSobCurva(_c.tempos,_c.newtons,!1),E=calcularMetricasPropulsao(D);if(!_b||!_b.dadosTabela||_b.dadosTabela.length===0){showNotification('error','Sessão não encontrada ou sem dados');return}showNotification('info','Gerando relatório PDF com gráfico...',2000);let _c=processarDadosSimples(_b.dadosTabela);b(_b,_c,D,E,_a=>{let _B=window.open('','_blank');_B.document.write(_(_b,_c,D,E,_a));_B.document.close();_B.onload=()=>setTimeout(()=>_B.print(),500);showNotification('success','Relatório pronto! Use "Salvar como PDF" no diálogo',5000)})}catch(e){console.error('Erro ao gerar PDF:',e);showNotification('error','Erro ao gerar relatório: '+e.message)}}function b(_A,aA,_C,_d,_e){let f=document.createElement('canvas'),G=f.getContext('2d'),w=1400,h=800,k=_d.classificacaoMotor,m=100,n=w-200,o=h-200,q=aA.tempos,s=Math.min(...p,0),T=r-s||0.001,u=T*0.1,v=s-u,W=r+u,X=W-v,z=Math.max(...q),aC=l+n-200,aD=m+20;f.width=w;f.height=h;let j={fundo:'#ffffff',titulo:'#2c3e50',subtitulo:'#7f8c8d',azul:'#3498db',verde:'#27ae60',vermelho:'#e74c3c',cinza:'#95a5a6',fundo2:'#f8f9fa',roxo:'#9b59b6',laranja:'#e67e22'};G.fillStyle=j.fundo;G.fillRect(0,0,w,h);G.fillStyle=j.titulo;G.font='bold 28px Arial';G.textAlign='center';G.fillText(`Curva de Propulsão - ${_A.nome}`,w/2,40);G.fillStyle=j.roxo;G.font='bold 20px Arial';G.fillText(`💥 Impulso: ${_C.impulsoTotal.toFixed(2)} N⋅s | Classe ${k.classe}`,w/2,70);let l=120;G.fillStyle=j.fundo2;G.fillRect(l,m,n,o);G.strokeStyle=j.cinza;G.lineWidth=2;G.strokeRect(l,m,n,o);let p=aA.newtons;if(p.length<2){G.fillStyle=j.vermelho;G.font='20px Arial';G.fillText('Dados insuficientes para gráfico',w/2,h/2);_e(f.toDataURL('image/png'));return}let r=Math.max(...p);G.strokeStyle='#e0e0e0';G.lineWidth=1;G.setLineDash([3,3]);for(let i=0;i<=6;i++){const y=m+(o/6)*i,aE=W-(X/6)*i;G.beginPath();G.moveTo(l,y);G.lineTo(l+n,y);G.stroke();G.fillStyle=j.titulo;G.font='14px Arial';G.textAlign='right';G.fillText(aE.toFixed(1)+' N',l-10,y+5)}let Y=10;for(let i=0;i<=Y;i++){const x=l+(n/Y)*i,aF=(z/Y)*i;G.beginPath();G.moveTo(x,m);G.lineTo(x,m+o);G.stroke();G.fillStyle=j.titulo;G.font='14px Arial';G.textAlign='center';G.fillText(aF.toFixed(2)+'s',x,m+o+20)}G.setLineDash([]);if(p.length>1){G.fillStyle='rgba(52, 152, 219, 0.3)';G.beginPath();let aG=m+o-((0-v)/X)*o;G.moveTo(l,aG);for(let i=0;i<p.length;i++){const aH=Math.max(0,p[i]);G.lineTo(l+(n/(p.length-1))*i,m+o-((aH-v)/X)*o)}G.lineTo(l+n,aG);G.closePath();G.fill()}if(p.length>1){G.strokeStyle=j.azul;G.lineWidth=3;G.beginPath();for(let i=0;i<p.length;i++){const x=l+(n/(p.length-1))*i,y=m+o-((p[i]-v)/X)*o;i===0?G.moveTo(x,y):G.lineTo(x,y)}G.stroke()}if(v<0&&W>0){let aI=m+o-((0-v)/X)*o;G.strokeStyle=j.cinza;G.lineWidth=1;G.setLineDash([5,5]);G.beginPath();G.moveTo(l,aI);G.lineTo(l+n,aI);G.stroke();G.setLineDash([])}let aB=p.indexOf(Math.max(...p));if(aB>=0){let x=l+(n/(p.length-1))*aB,y=m+o-((p[aB]-v)/X)*o;G.fillStyle=j.vermelho;G.beginPath();G.arc(x,y,8,0,2*Math.PI);G.fill();G.fillStyle=j.vermelho;G.font='bold 16px Arial';G.textAlign='center';G.fillText(`Fmax: ${p[aB].toFixed(2)}N`,x,y-15)}if(_C.tempoIgnicao>0){let aJ=q.findIndex(t=>t>=_C.tempoIgnicao);if(aJ>=0){let x=l+(n/(p.length-1))*aJ;G.strokeStyle=j.verde;G.lineWidth=2;G.setLineDash([10,5]);G.beginPath();G.moveTo(x,m);G.lineTo(x,m+o);G.stroke();G.setLineDash([]);G.fillStyle=j.verde;G.font='bold 12px Arial';G.textAlign='center';G.fillText('Ignição',x,m-5)}}if(_C.tempoBurnout>0){let aK=q.findIndex(t=>t>=_C.tempoBurnout);if(aK>=0){let x=l+(n/(p.length-1))*aK;G.strokeStyle=j.laranja;G.lineWidth=2;G.setLineDash([10,5]);G.beginPath();G.moveTo(x,m);G.lineTo(x,m+o);G.stroke();G.setLineDash([]);G.fillStyle=j.laranja;G.font='bold 12px Arial';G.textAlign='center';G.fillText('Burnout',x,m-5)}}G.fillStyle=j.titulo;G.font='bold 18px Arial';G.textAlign='center';G.save();G.translate(30,m+o/2);G.rotate(-Math.PI/2);G.fillText('Força (N)',0,0);G.restore();G.fillText('Tempo (s)',l+n/2,m+o+50);G.fillStyle='rgba(52, 152, 219, 0.3)';G.fillRect(aC,aD,30,20);G.strokeStyle=j.azul;G.lineWidth=2;G.strokeRect(aC,aD,30,20);G.fillStyle=j.titulo;G.font='bold 14px Arial';G.textAlign='left';G.fillText('Área = Impulso',aC+40,aD+15);G.font='12px Arial';G.fillStyle=j.verde;G.fillText(`${_C.impulsoTotal.toFixed(2)} N⋅s`,aC+40,aD+30);_e(f.toDataURL('image/png',1.0))}function A(aL,aM){let aN=[{min:0.00,max:0.3125,classe:'Micro 1/8A',tipo:'FM (foguetemodelo)',nivel:'Micro',cor:'#8e44ad'},{min:0.3126,max:0.625,classe:'¼A',tipo:'FM (foguetemodelo)',nivel:'Baixa potência',cor:'#9b59b6'},{min:0.626,max:1.25,classe:'½A',tipo:'FM (foguetemodelo)',nivel:'Baixa potência',cor:'#e74c3c'},{min:1.26,max:2.50,classe:'A',tipo:'FM (foguetemodelo)',nivel:'Baixa potência',cor:'#e67e22'},{min:2.51,max:5.00,classe:'B',tipo:'FM (foguetemodelo)',nivel:'Baixa potência',cor:'#f39c12'},{min:5.01,max:10.00,classe:'C',tipo:'FM (foguetemodelo)',nivel:'Baixa potência',cor:'#f1c40f'},{min:10.01,max:20.00,classe:'D',tipo:'FM (foguetemodelo)',nivel:'Baixa potência',cor:'#2ecc71'},{min:20.01,max:40.00,classe:'E',tipo:'FM (foguetemodelo)',nivel:'Média potência',cor:'#1abc9c'},{min:40.01,max:80.00,classe:'F',tipo:'FM (foguetemodelo)',nivel:'Média potência',cor:'#3498db'},{min:80.01,max:160.00,classe:'G',tipo:'FM (foguetemodelo)',nivel:'Média potência',cor:'#9b59b6'},{min:160.01,max:320.00,classe:'H',tipo:'MFE (experimental)',nivel:'Nível 1',cor:'#e74c3c'},{min:320.01,max:640.00,classe:'I',tipo:'MFE (experimental)',nivel:'Nível 1',cor:'#e67e22'},{min:640.01,max:1280.00,classe:'J',tipo:'MFE (experimental)',nivel:'Nível 2',cor:'#f39c12'},{min:1280.01,max:2560.00,classe:'K',tipo:'MFE (experimental)',nivel:'Nível 2',cor:'#2ecc71'},{min:2560.01,max:5120.00,classe:'L',tipo:'MFE (experimental)',nivel:'Nível 2',cor:'#3498db'},{min:5120.01,max:10240.00,classe:'M',tipo:'MFE (experimental)',nivel:'Nível 3',cor:'#9b59b6'},{min:10240.01,max:20480.00,classe:'N',tipo:'MFE (experimental)',nivel:'Nível 3',cor:'#e74c3c'},{min:20480.01,max:40960.00,classe:'O',tipo:'MFE (experimental)',nivel:'Nível 3',cor:'#c0392b'}],_D='';for(const c of aN){let aO=c.classe===aM,aP=aO?aL:null,aQ='',aR='';aO&&(aQ=`background: linear-gradient(90deg, ${c.cor}40 0%, ${c.cor}20 100%);
                   border-left: 6px solid ${c.cor};
                   border-right: 6px solid ${c.cor};
                   font-weight: bold;
-                  box-shadow: 0 2px 8px rgba(0,0,0,0.15);`;
-      markerHTML = '<span style="font-size: 16px; margin-right: 5px;">🎯</span>';
-    }
-
-    linhas += `
-      <tr style="${rowStyle}">
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.15);`,aR='<span style="font-size: 16px; margin-right: 5px;">🎯</span>');_D+=`
+      <tr style="${aQ}">
         <td style="text-align: center; padding: 10px;">
           <div style="display: flex; align-items: center; justify-content: center;">
-            ${markerHTML}
-            <span style="font-size: ${isMotorTestado ? '14px' : '11px'};">${c.classe}</span>
+            ${aR}
+            <span style="font-size: ${aO?'14px':'11px'};">${c.classe}</span>
           </div>
-          ${isMotorTestado ? `<div style="font-size: 9px; color: #666; margin-top: 3px;">(Seu motor)</div>` : ''}
+          ${aO?`<div style="font-size: 9px; color: #666; margin-top: 3px;">(Seu motor)</div>`:''}
         </td>
         <td style="text-align: center; padding: 10px;">
           ${c.min.toFixed(4)}
-          ${isMotorTestado && impulsoAtual < (c.min + c.max) / 2 ? '<br><span style="color: #e67e22; font-size: 18px;">▼</span>' : ''}
+          ${aO&&aP<(c.min+c.max)/2?'<br><span style="color: #e67e22; font-size: 18px;">▼</span>':''}
         </td>
         <td style="text-align: center; padding: 10px;">
           ${c.max.toFixed(4)}
-          ${isMotorTestado && impulsoAtual >= (c.min + c.max) / 2 ? '<br><span style="color: #e67e22; font-size: 18px;">▼</span>' : ''}
+          ${aO&&aP>=(c.min+c.max)/2?'<br><span style="color: #e67e22; font-size: 18px;">▼</span>':''}
         </td>
         <td style="text-align: center; padding: 10px;">${c.tipo}</td>
         <td style="text-align: center; padding: 10px;">${c.nivel}</td>
@@ -389,52 +25,10 @@ function gerarLinhasClassificacaoCompleta(impulsoTestado, classeTestada) {
           <div style="width: 100%; height: 25px; background: ${c.cor}; border-radius: 4px; border: 1px solid #ccc;"></div>
         </td>
       </tr>
-    `;
-  });
-
-  return linhas;
-}
-
-/**
- * Gera uma barra visual mostrando graficamente onde o motor se enquadra
- */
-function gerarBarraVisualClassificacao(impulsoTestado, classificacao) {
-  const classificacoes = [
-    { min: 0.00,    max: 0.3125,   classe: 'Micro 1/8A', cor: '#8e44ad' },
-    { min: 0.3126,  max: 0.625,    classe: '¼A',         cor: '#9b59b6' },
-    { min: 0.626,   max: 1.25,     classe: '½A',         cor: '#e74c3c' },
-    { min: 1.26,    max: 2.50,     classe: 'A',          cor: '#e67e22' },
-    { min: 2.51,    max: 5.00,     classe: 'B',          cor: '#f39c12' },
-    { min: 5.01,    max: 10.00,    classe: 'C',          cor: '#f1c40f' },
-    { min: 10.01,   max: 20.00,    classe: 'D',          cor: '#2ecc71' },
-    { min: 20.01,   max: 40.00,    classe: 'E',          cor: '#1abc9c' },
-    { min: 40.01,   max: 80.00,    classe: 'F',          cor: '#3498db' },
-    { min: 80.01,   max: 160.00,   classe: 'G',          cor: '#9b59b6' },
-    { min: 160.01,  max: 320.00,   classe: 'H',          cor: '#e74c3c' },
-    { min: 320.01,  max: 640.00,   classe: 'I',          cor: '#e67e22' },
-    { min: 640.01,  max: 1280.00,  classe: 'J',          cor: '#f39c12' },
-    { min: 1280.01, max: 2560.00,  classe: 'K',          cor: '#2ecc71' },
-    { min: 2560.01, max: 5120.00,  classe: 'L',          cor: '#3498db' },
-    { min: 5120.01, max: 10240.00, classe: 'M',          cor: '#9b59b6' },
-    { min: 10240.01,max: 20480.00, classe: 'N',          cor: '#e74c3c' },
-    { min: 20480.01,max: 40960.00, classe: 'O',          cor: '#c0392b' },
-  ];
-
-  // Encontra o índice da classe testada
-  const indiceTestado = classificacoes.findIndex(c => c.classe === classificacao.classe);
-
-  // Gera as barras
-  let barrasHTML = '<div style="display: flex; gap: 2px; align-items: flex-end; height: 120px;">';
-
-  classificacoes.forEach((c, index) => {
-    const isMotorTestado = index === indiceTestado;
-    const altura = isMotorTestado ? '100%' : '60%';
-    const largura = `${100 / classificacoes.length}%`;
-
-    barrasHTML += `
+    `}return _D}function d(aS,aT){let aU=[{min:0.00,max:0.3125,classe:'Micro 1/8A',cor:'#8e44ad'},{min:0.3126,max:0.625,classe:'¼A',cor:'#9b59b6'},{min:0.626,max:1.25,classe:'½A',cor:'#e74c3c'},{min:1.26,max:2.50,classe:'A',cor:'#e67e22'},{min:2.51,max:5.00,classe:'B',cor:'#f39c12'},{min:5.01,max:10.00,classe:'C',cor:'#f1c40f'},{min:10.01,max:20.00,classe:'D',cor:'#2ecc71'},{min:20.01,max:40.00,classe:'E',cor:'#1abc9c'},{min:40.01,max:80.00,classe:'F',cor:'#3498db'},{min:80.01,max:160.00,classe:'G',cor:'#9b59b6'},{min:160.01,max:320.00,classe:'H',cor:'#e74c3c'},{min:320.01,max:640.00,classe:'I',cor:'#e67e22'},{min:640.01,max:1280.00,classe:'J',cor:'#f39c12'},{min:1280.01,max:2560.00,classe:'K',cor:'#2ecc71'},{min:2560.01,max:5120.00,classe:'L',cor:'#3498db'},{min:5120.01,max:10240.00,classe:'M',cor:'#9b59b6'},{min:10240.01,max:20480.00,classe:'N',cor:'#e74c3c'},{min:20480.01,max:40960.00,classe:'O',cor:'#c0392b'}],aV=aU.findIndex(c=>c.classe===aT.classe),_E='<div style="display: flex; gap: 2px; align-items: flex-end; height: 120px;">';for(const[aW,c] of aU.entries()){let aX=aW===aV,aY=aX?'100%':'60%';let aZ=`${100/aU.length}%`;_E+=`
       <div style="
-        width: ${largura};
-        height: ${altura};
+        width: ${aZ};
+        height: ${aY};
         background: ${c.cor};
         display: flex;
         flex-direction: column;
@@ -443,131 +37,57 @@ function gerarBarraVisualClassificacao(impulsoTestado, classificacao) {
         border-radius: 4px 4px 0 0;
         position: relative;
         transition: all 0.3s ease;
-        ${isMotorTestado ? 'box-shadow: 0 -4px 12px rgba(0,0,0,0.3); border: 3px solid #2c3e50;' : 'opacity: 0.6;'}
+        ${aX?'box-shadow: 0 -4px 12px rgba(0,0,0,0.3); border: 3px solid #2c3e50;':'opacity: 0.6;'}
       ">
-        ${isMotorTestado ? `
+        ${aX?`
           <div style="
             position: absolute;
             top: -35px;
             font-size: 24px;
             animation: bounce 1s infinite;
           ">🎯</div>
-        ` : ''}
+        `:''}
         <div style="
           writing-mode: vertical-rl;
           text-orientation: mixed;
           padding: 5px;
-          font-size: ${isMotorTestado ? '11px' : '8px'};
-          font-weight: ${isMotorTestado ? 'bold' : 'normal'};
+          font-size: ${aX?'11px':'8px'};
+          font-weight: ${aX?'bold':'normal'};
           color: white;
           text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         ">${c.classe}</div>
       </div>
-    `;
-  });
-
-  barrasHTML += '</div>';
-
-  // Adiciona legenda
-  barrasHTML += `
+    `}_E+='</div>';_E+=`
     <div style="margin-top: 15px; text-align: center; font-size: 12px; color: #2c3e50;">
-      <strong>Impulso medido:</strong> ${impulsoTestado.toFixed(2)} N⋅s &nbsp;|&nbsp;
-      <strong>Classe:</strong> ${classificacao.classe} &nbsp;|&nbsp;
-      <strong>Faixa:</strong> ${classificacao.faixa}
+      <strong>Impulso medido:</strong> ${aS.toFixed(2)} N⋅s &nbsp;|&nbsp;
+      <strong>Classe:</strong> ${aT.classe} &nbsp;|&nbsp;
+      <strong>Faixa:</strong> ${aT.faixa}
     </div>
     <div style="margin-top: 8px; text-align: center; font-size: 11px; color: #7f8c8d;">
       Cada barra representa uma classe de motor. A barra destacada indica a classe do seu motor testado.
     </div>
-  `;
-
-  return barrasHTML;
-}
-
-/**
- * Gera HTML completo do relatório com gráfico embutido e todos os dados
- */
-function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsao, imagemGrafico) {
-  const dataSessao = new Date(sessao.timestamp).toLocaleString('pt-BR');
-  const classificacao = metricasPropulsao.classificacaoMotor;
-  
-  // Tenta obter massa do propelente dos metadados do motor ou campo customizado
-  let massaPropelente = null;
-  let impulsoEspecifico = null;
-  
-  // Procura por massa em diferentes lugares nos metadados
-  if (sessao.metadadosMotor) {
-    if (sessao.metadadosMotor.massaPropelente) {
-      massaPropelente = parseFloat(sessao.metadadosMotor.massaPropelente);
-    } else if (sessao.metadadosMotor.propweight) {
-      massaPropelente = parseFloat(sessao.metadadosMotor.propweight) / 1000; // Converte de gramas para kg
-    }
-  }
-  
-  // Se encontrou massa, calcula impulso específico
-  if (massaPropelente && massaPropelente > 0) {
-    impulsoEspecifico = impulsoData.impulsoTotal / (massaPropelente * 9.81);
-  }
-  
-  // 1. Encontra a força máxima para normalização (usada no gradiente da tabela)
-  const newtonsValues = sessao.dadosTabela.map(dado => parseFloat(dado.newtons) || 0);
-  const maxNewtons = Math.max(...newtonsValues) || 1;
-  
-  // Gera linhas da tabela com TODOS os dados
-  let linhasTabela = '';
-  sessao.dadosTabela.forEach((dado, index) => {
-    const tempo = parseFloat(dado.tempo_esp) || 0;
-    const newtons = parseFloat(dado.newtons) || 0;
-    const gramaForca = parseFloat(dado.grama_forca) || 0;
-    const quiloForca = parseFloat(dado.quilo_forca) || 0;
-    
-    // 2. Normaliza o valor de Força N em relação ao máximo
-    const normalizedForce = Math.max(0, newtons) / maxNewtons; 
-    
-    // 3. Cria o estilo de fundo com opacidade crescente (laranja suave)
-    let rowStyle = '';
-    if (newtons > 0.05) { // Aplica destaque apenas para empuxo significativo
-        const maxOpacity = 0.5; 
-        // Opacidade mínima 0.1 para forçar o gradiente a ser visível, máxima 0.5 para não ofuscar o texto
-        const opacity = Math.min(maxOpacity, Math.max(0.1, normalizedForce * 0.5)); 
-        
-        // Cor de destaque (laranja muito suave - 255, 165, 0)
-        rowStyle = `background: rgba(255, 165, 0, ${opacity.toFixed(2)}) !important;`; 
-    }
-
-    linhasTabela += `
-      <tr style="${rowStyle}">
-        <td>${index + 1}</td>
-        <td>${tempo.toFixed(6)}</td>
-        <td>${newtons.toFixed(6)}</td>
-        <td>${gramaForca.toFixed(6)}</td>
-        <td>${quiloForca.toFixed(6)}</td>
+  `;return _E}function _(bA,bB,bC,bD,bE){let F=new Date(bA.timestamp).toLocaleString('pt-BR'),_g=bD.classificacaoMotor,H=null,I=null,K=Math.max(...J)||1,L='';if(bA.metadadosMotor)if(bA.metadadosMotor.massaPropelente)H=parseFloat(bA.metadadosMotor.massaPropelente);else bA.metadadosMotor.propweight&&(H=parseFloat(bA.metadadosMotor.propweight)/1000);(H&&H>0)&&(I=bC.impulsoTotal/(H*9.81));let J=bA.dadosTabela.map(bF=>parseFloat(bF.newtons)||0);for(const[bG,bH] of bA.dadosTabela.entries()){let bI=parseFloat(bH.tempo_esp)||0,bJ=parseFloat(bH.newtons)||0,bK=parseFloat(bH.grama_forca)||0,bL=parseFloat(bH.quilo_forca)||0,bM=Math.max(0,bJ)/K,_f='';if(bJ>0.05){let bN=Math.min(0.5,Math.max(0.1,bM*0.5));_f=`background: rgba(255, 165, 0, ${bN.toFixed(2)}) !important;`}L+=`
+      <tr style="${_f}">
+        <td>${bG+1}</td>
+        <td>${bI.toFixed(6)}</td>
+        <td>${bJ.toFixed(6)}</td>
+        <td>${bK.toFixed(6)}</td>
+        <td>${bL.toFixed(6)}</td>
       </tr>
-    `;
-  });
-  
-  // Cria string de informação sobre Impulso Específico
-  let infoIsp = '<strong>* Impulso Específico (Isp):</strong> Requer a massa do propelente queimado. ';
-  let cardIsp = `<div class="metrica-card">
+    `}let M='<strong>* Impulso Específico (Isp):</strong> Requer a massa do propelente queimado. ';let N=`<div class="metrica-card">
         <h3>Impulso Específico (Isp)</h3>
         <div class="valor">N/A</div>
         <div class="unidade">s</div>
-      </div>`;
-  
-  if (impulsoEspecifico !== null) {
-    cardIsp = `<div class="metrica-card">
+      </div>`;I!==null&&(N=`<div class="metrica-card">
         <h3>Impulso Específico (Isp)</h3>
-        <div class="valor">${impulsoEspecifico.toFixed(2)}</div>
+        <div class="valor">${I.toFixed(2)}</div>
         <div class="unidade">segundos</div>
-      </div>`;
-    infoIsp = `<strong>✓ Impulso Específico (Isp):</strong> Calculado usando massa de propelente = ${massaPropelente.toFixed(3)} kg. `;
-  }
-  
-  return `
+      </div>`,M=`<strong>✓ Impulso Específico (Isp):</strong> Calculado usando massa de propelente = ${H.toFixed(3)} kg. `);return`
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Relatório - ${sessao.nome}</title>
+  <title>Relatório - ${bA.nome}</title>
   <style>
     @media print {
       @page {
@@ -619,7 +139,7 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
     }
     
     .impulso-destaque {
-      background: linear-gradient(135deg, ${classificacao.cor || '#667eea'} 0%, #764ba2 100%);
+      background: linear-gradient(135deg, ${_g.cor||'#667eea'} 0%, #764ba2 100%);
       color: white;
       padding: 15px;
       border-radius: 8px;
@@ -742,8 +262,8 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
     }
     
     .classificacao-info {
-      background: ${classificacao.cor}20;
-      border: 2px solid ${classificacao.cor};
+      background: ${_g.cor}20;
+      border: 2px solid ${_g.cor};
       padding: 12px;
       border-radius: 6px;
       margin: 12px 0;
@@ -751,7 +271,7 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
     
     .classificacao-info h3 {
       margin: 0 0 8px 0;
-      color: ${classificacao.cor};
+      color: ${_g.cor};
       font-size: 16px;
     }
     
@@ -799,18 +319,18 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
   <div class="header avoid-break">
     <h1>🚀 GFIG - RELATÓRIO DE TESTE ESTÁTICO</h1>
     <div class="subtitle">Projeto de Foguetes de Modelismo Experimental - Campus Gaspar</div>
-    <h2 style="color: #3498db; margin: 12px 0;">${sessao.nome}</h2>
-    <div class="subtitle">Teste realizado em: ${dataSessao}</div>
-    <div class="subtitle">${sessao.dadosTabela.length} leituras coletadas • Taxa: ${(sessao.dadosTabela.length / dados.duracao).toFixed(0)} Hz</div>
+    <h2 style="color: #3498db; margin: 12px 0;">${bA.nome}</h2>
+    <div class="subtitle">Teste realizado em: ${F}</div>
+    <div class="subtitle">${bA.dadosTabela.length} leituras coletadas • Taxa: ${(bA.dadosTabela.length/bB.duracao).toFixed(0)} Hz</div>
   </div>
 
   <!-- IMPULSO EM DESTAQUE -->
   <div class="impulso-destaque avoid-break">
-    <h2>💥 ${impulsoData.impulsoTotal.toFixed(2)} N⋅s</h2>
+    <h2>💥 ${bC.impulsoTotal.toFixed(2)} N⋅s</h2>
     <div>Impulso Total Positivo</div>
-    <div class="classe">Motor Classe ${classificacao.classe}</div>
+    <div class="classe">Motor Classe ${_g.classe}</div>
     <div style="margin-top: 8px; font-size: 13px;">
-      ${classificacao.tipo} • ${classificacao.nivel}
+      ${_g.tipo} • ${_g.nivel}
     </div>
   </div>
 
@@ -820,43 +340,43 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
     <div class="metricas-grid">
       <div class="metrica-card">
         <h3>Impulso Total</h3>
-        <div class="valor">${impulsoData.impulsoTotal.toFixed(2)}</div>
+        <div class="valor">${bC.impulsoTotal.toFixed(2)}</div>
         <div class="unidade">N⋅s</div>
       </div>
       <div class="metrica-card">
         <h3>Força Máxima</h3>
-        <div class="valor">${impulsoData.forcaMaxima.toFixed(2)}</div>
+        <div class="valor">${bC.forcaMaxima.toFixed(2)}</div>
         <div class="unidade">N</div>
       </div>
       <div class="metrica-card">
         <h3>Duração da Queima</h3>
-        <div class="valor">${impulsoData.duracaoQueima.toFixed(3)}</div>
+        <div class="valor">${bC.duracaoQueima.toFixed(3)}</div>
         <div class="unidade">segundos</div>
       </div>
       <div class="metrica-card">
         <h3>Força Média (Queima)</h3>
-        <div class="valor">${(impulsoData.duracaoQueima > 0 ? impulsoData.impulsoTotal / impulsoData.duracaoQueima : 0).toFixed(2)}</div>
+        <div class="valor">${(bC.duracaoQueima>0?bC.impulsoTotal/bC.duracaoQueima:0).toFixed(2)}</div>
         <div class="unidade">N</div>
       </div>
       <div class="metrica-card">
         <h3>Tempo de Ignição</h3>
-        <div class="valor">${impulsoData.tempoIgnicao.toFixed(3)}</div>
+        <div class="valor">${bC.tempoIgnicao.toFixed(3)}</div>
         <div class="unidade">segundos</div>
       </div>
       <div class="metrica-card">
         <h3>Tempo de Burnout</h3>
-        <div class="valor">${impulsoData.tempoBurnout.toFixed(3)}</div>
+        <div class="valor">${bC.tempoBurnout.toFixed(3)}</div>
         <div class="unidade">segundos</div>
       </div>
-      ${cardIsp}
+      ${N}
       <div class="metrica-card">
         <h3>Impulso Líquido</h3>
-        <div class="valor">${impulsoData.impulsoLiquido.toFixed(2)}</div>
+        <div class="valor">${bC.impulsoLiquido.toFixed(2)}</div>
         <div class="unidade">N⋅s</div>
       </div>
     </div>
     <div class="info-box">
-      ${infoIsp}Para calcular, insira a massa do propelente queimado nos metadados do motor.
+      ${M}Para calcular, insira a massa do propelente queimado nos metadados do motor.
     </div>
   </div>
 
@@ -865,7 +385,7 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
   <div class="secao">
     <h2>📉 Curva de Propulsão</h2>
     <div class="grafico-container">
-      <img src="${imagemGrafico}" alt="Gráfico de Propulsão" />
+      <img src="${bE}" alt="Gráfico de Propulsão" />
     </div>
     <div class="info-box">
       <strong>Legenda:</strong> A área sob a curva (preenchimento azul) representa o impulso total do motor. 
@@ -885,27 +405,27 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
       </tr>
       <tr>
         <td>Impulso Positivo</td>
-        <td>${impulsoData.impulsoPositivo.toFixed(3)} N⋅s</td>
+        <td>${bC.impulsoPositivo.toFixed(3)} N⋅s</td>
         <td>Área Negativa</td>
-        <td>${impulsoData.areaNegativa.toFixed(3)} N⋅s</td>
+        <td>${bC.areaNegativa.toFixed(3)} N⋅s</td>
       </tr>
       <tr>
         <td>Força Média (Amostral)</td>
-        <td>${impulsoData.forcaMedia.toFixed(2)} N</td>
+        <td>${bC.forcaMedia.toFixed(2)} N</td>
         <td>Força Média (Positiva)</td>
-        <td>${impulsoData.forcaMediaPositiva.toFixed(2)} N</td>
+        <td>${bC.forcaMediaPositiva.toFixed(2)} N</td>
       </tr>
       <tr>
         <td>Duração Total</td>
-        <td>${dados.duracao.toFixed(3)} s</td>
+        <td>${bB.duracao.toFixed(3)} s</td>
         <td>Número de Leituras</td>
-        <td>${sessao.dadosTabela.length}</td>
+        <td>${bA.dadosTabela.length}</td>
       </tr>
       <tr>
         <td>Classificação NAR/TRA</td>
-        <td>${classificacao.classe}</td>
+        <td>${_g.classe}</td>
         <td>Cor de Identificação</td>
-        <td><span style="background: ${classificacao.cor}; color: white; padding: 2px 8px; border-radius: 3px;">${classificacao.cor}</span></td>
+        <td><span style="background: ${_g.cor}; color: white; padding: 2px 8px; border-radius: 3px;">${_g.cor}</span></td>
       </tr>
     </table>
   </div>
@@ -913,7 +433,7 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
   <!-- TABELA COMPLETA DE DADOS -->
   <div class="page-break"></div>
   <div class="secao">
-    <h2>📋 Tabela Completa de Dados (${sessao.dadosTabela.length} leituras)</h2>
+    <h2>📋 Tabela Completa de Dados (${bA.dadosTabela.length} leituras)</h2>
     <table>
       <thead>
         <tr>
@@ -925,7 +445,7 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
         </tr>
       </thead>
       <tbody>
-        ${linhasTabela}
+        ${L}
       </tbody>
     </table>
   </div>
@@ -1072,7 +592,7 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
       </tr>
       <tr>
         <td><strong>Taxa de Amostragem:</strong></td>
-        <td>${(sessao.dadosTabela.length / dados.duracao).toFixed(1)} Hz</td>
+        <td>${(bA.dadosTabela.length/bB.duracao).toFixed(1)} Hz</td>
       </tr>
       <tr>
         <td><strong>Classificação:</strong></td>
@@ -1092,19 +612,19 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
     <table style="font-size: 12px;">
       <tr>
         <td><strong>Classe:</strong></td>
-        <td>${classificacao.classe}</td>
+        <td>${_g.classe}</td>
         <td><strong>Tipo:</strong></td>
-        <td>${classificacao.tipo}</td>
+        <td>${_g.tipo}</td>
       </tr>
       <tr>
         <td><strong>Nível:</strong></td>
-        <td>${classificacao.nivel}</td>
+        <td>${_g.nivel}</td>
         <td><strong>Faixa:</strong></td>
-        <td>${classificacao.faixa}</td>
+        <td>${_g.faixa}</td>
       </tr>
       <tr>
         <td><strong>Impulso Total:</strong></td>
-        <td>${impulsoData.impulsoTotal.toFixed(2)} N⋅s</td>
+        <td>${bC.impulsoTotal.toFixed(2)} N⋅s</td>
         <td><strong>Status:</strong></td>
         <td>✓ Dentro dos limites NAR/TRA</td>
       </tr>
@@ -1123,13 +643,13 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
     <h2>📋 Tabela Completa de Classificações NAR/TRA</h2>
     <div class="info-box" style="margin-bottom: 15px;">
       <strong>🎯 Motor Testado:</strong> A linha em destaque abaixo indica onde seu motor se enquadra na tabela de classificações.
-      O impulso medido (${impulsoData.impulsoTotal.toFixed(2)} N⋅s) está dentro da faixa da classe <strong>${classificacao.classe}</strong>.
+      O impulso medido (${bC.impulsoTotal.toFixed(2)} N⋅s) está dentro da faixa da classe <strong>${_g.classe}</strong>.
     </div>
 
     <!-- Representação Gráfica Visual -->
     <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px;">
       <h3 style="margin-top: 0; font-size: 14px; color: #2c3e50;">Posição Visual do Motor Testado:</h3>
-      ${gerarBarraVisualClassificacao(impulsoData.impulsoTotal, classificacao)}
+      ${d(bC.impulsoTotal,_g)}
     </div>
 
     <table style="font-size: 10px; width: 100%;">
@@ -1144,7 +664,7 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
         </tr>
       </thead>
       <tbody>
-        ${gerarLinhasClassificacaoCompleta(impulsoData.impulsoTotal, classificacao.classe)}
+        ${A(bC.impulsoTotal,_g.classe)}
       </tbody>
     </table>
   </div>
@@ -1159,5 +679,4 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
 
 </body>
 </html>
-  `;
-}
+  `}
