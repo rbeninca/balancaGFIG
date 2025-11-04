@@ -15,6 +15,7 @@ from typing import Optional, Dict, Any
 import pymysql.cursors
 from datetime import datetime
 from zoneinfo import ZoneInfo
+import sqlite3
 
 """
 Binary Protocol Server - Balança GFIG (IPv4 + IPv6)
@@ -38,6 +39,11 @@ MYSQL_USER = os.environ.get("MYSQL_USER", "balanca_user")
 MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "balanca_password")
 MYSQL_DB = os.environ.get("MYSQL_DB", "balanca_gfig")
 MYSQL_ROOT_PASSWORD = os.environ.get("MYSQL_ROOT_PASSWORD", "Hilquias")
+
+# Database selection: 'mysql' (default) or 'sqlite'
+DB_TYPE = os.environ.get("DB_TYPE", os.environ.get("DATABASE_TYPE", "mysql")).lower()
+# SQLite file (used when DB_TYPE=sqlite)
+SQLITE_FILE = os.environ.get("SQLITE_FILE", "/app/data/balanca_gfig.db")
 
 # Binary Protocol Constants
 MAGIC = 0xA1B2
@@ -72,11 +78,71 @@ serial_connection: Optional[serial.Serial] = None
 serial_lock = threading.Lock()
 mysql_connection = None
 mysql_connected = False
+db_init_done = False
 
 # ================== MySQL Utils ==================
 def connect_to_mysql():
+    """Connects to the database. If DB_TYPE=='sqlite' returns a lightweight wrapper around sqlite3.
+    Otherwise returns a pymysql connection (same name kept for backward compatibility).
+    """
     global mysql_connection, mysql_connected
-    if mysql_connection and mysql_connection.open:
+
+    if DB_TYPE == 'sqlite':
+        try:
+            # reuse existing sqlite connection wrapper if available
+            if mysql_connection and getattr(mysql_connection, 'open', False):
+                return mysql_connection
+
+            raw = sqlite3.connect(SQLITE_FILE, check_same_thread=False, timeout=5.0)
+            raw.row_factory = sqlite3.Row
+
+            # provide a minimal wrapper with cursor() context manager similar to pymysql
+            class _CursorCtx:
+                def __init__(self, conn):
+                    self._conn = conn
+                    self._cur = None
+                def __enter__(self):
+                    self._cur = self._conn.cursor()
+                    return self._cur
+                def __exit__(self, exc_type, exc, tb):
+                    if exc_type:
+                        try:
+                            self._conn.rollback()
+                        except Exception:
+                            pass
+                    else:
+                        try:
+                            self._conn.commit()
+                        except Exception:
+                            pass
+
+            class _ConnWrap:
+                def __init__(self, conn):
+                    self._conn = conn
+                    self._raw = conn
+                    self.open = True
+                def cursor(self):
+                    return _CursorCtx(self._conn)
+                def commit(self):
+                    return self._conn.commit()
+                def rollback(self):
+                    return self._conn.rollback()
+                def close(self):
+                    try:
+                        self._conn.close()
+                    finally:
+                        self.open = False
+
+            mysql_connection = _ConnWrap(raw)
+            mysql_connected = True
+            return mysql_connection
+        except Exception as e:
+            logging.error(f"Erro ao conectar ao SQLite: {e}")
+            mysql_connected = False
+            return None
+
+    # default: MySQL via pymysql
+    if mysql_connection and getattr(mysql_connection, 'open', False):
         return mysql_connection
 
     max_retries = 3
@@ -104,7 +170,88 @@ def connect_to_mysql():
                 return None
 
 def init_mysql_db():
-    global mysql_connection, mysql_connected
+    global mysql_connection, mysql_connected, db_init_done
+    if db_init_done:
+        return
+
+    if DB_TYPE == 'sqlite':
+        conn = connect_to_mysql()
+        if not conn:
+            logging.error("Não foi possível conectar ao SQLite para inicializar o banco de dados.")
+            return
+
+        try:
+            # enable foreign keys on raw sqlite connection if available
+            try:
+                raw = conn._raw if hasattr(conn, '_raw') else getattr(conn, '_conn', None)
+                if raw:
+                    raw.execute('PRAGMA foreign_keys = ON')
+            except Exception:
+                pass
+
+            with conn.cursor() as cursor:
+                sql_sessoes_create = """
+                CREATE TABLE IF NOT EXISTS sessoes (
+                    id INTEGER PRIMARY KEY,
+                    nome TEXT NOT NULL,
+                    data_inicio TEXT NOT NULL,
+                    data_fim TEXT,
+                    data_modificacao TEXT DEFAULT (datetime('now')),
+                    motor_name TEXT,
+                    motor_diameter REAL,
+                    motor_length REAL,
+                    motor_delay REAL,
+                    motor_propweight REAL,
+                    motor_totalweight REAL,
+                    motor_manufacturer TEXT,
+                    motor_description TEXT,
+                    motor_observations TEXT
+                )
+                """
+                cursor.execute(sql_sessoes_create)
+
+                sql_leituras_create = """
+                CREATE TABLE IF NOT EXISTS leituras (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    sessao_id INTEGER NOT NULL,
+                    tempo REAL,
+                    forca REAL,
+                    ema REAL,
+                    massaKg REAL,
+                    timestamp TEXT,
+                    FOREIGN KEY (sessao_id) REFERENCES sessoes(id) ON DELETE CASCADE
+                )
+                """
+                cursor.execute(sql_leituras_create)
+
+                sql_config_create = """
+                CREATE TABLE IF NOT EXISTS configuracoes (
+                    id INTEGER PRIMARY KEY DEFAULT 1,
+                    conversionFactor REAL DEFAULT 1.0,
+                    gravity REAL DEFAULT 9.80665,
+                    tareOffset INTEGER DEFAULT 0,
+                    leiturasEstaveis INTEGER DEFAULT 5,
+                    toleranciaEstabilidade REAL DEFAULT 0.05,
+                    mode INTEGER DEFAULT 0,
+                    usarEMA INTEGER DEFAULT 1,
+                    numAmostrasMedia INTEGER DEFAULT 10,
+                    timeoutCalibracao INTEGER DEFAULT 30000,
+                    capacidadeMaximaGramas REAL DEFAULT 5000.0,
+                    percentualAcuracia REAL DEFAULT 0.05,
+                    data_modificacao TEXT DEFAULT (datetime('now'))
+                )
+                """
+                cursor.execute(sql_config_create)
+                cursor.execute("INSERT OR IGNORE INTO configuracoes (id) VALUES (1)")
+
+            logging.info("Banco SQLite inicializado e tabelas verificadas/criadas.")
+            db_init_done = True
+        except Exception as e:
+            logging.error(f"Erro ao inicializar o SQLite DB: {e}")
+            mysql_connected = False
+        return
+
+    # MySQL path (unchanged)
     max_retries = 5
     retry_count = 0
     
@@ -198,11 +345,42 @@ def init_mysql_db():
 
             mysql_connection.commit()
             logging.info(f"Banco de dados '{MYSQL_DB}' e tabelas 'sessoes', 'leituras' verificadas/criadas.")
+            db_init_done = True
         except pymysql.Error as e:
             logging.error(f"Erro ao inicializar o banco de dados MySQL: {e}")
             mysql_connected = False
     else:
         logging.warning("Não foi possível inicializar o banco de dados MySQL: conexão não estabelecida.")
+
+
+def db_execute(cursor, sql: str, params=None):
+    """Execute SQL using correct param style for the selected DB.
+    MySQL/PyMySQL: use %s placeholders. SQLite: '?' placeholders.
+    This helper converts %s -> ? for sqlite and executes with params.
+    """
+    if params is None:
+        return cursor.execute(sql)
+    if DB_TYPE == 'sqlite':
+        # naive replacement: replace %s with ? (works if %s used only for placeholders)
+        sql_conv = sql.replace('%s', '?')
+        return cursor.execute(sql_conv, params)
+    else:
+        return cursor.execute(sql, params)
+
+
+def db_fetchall(cursor):
+    rows = cursor.fetchall()
+    if DB_TYPE == 'sqlite':
+        # sqlite3.Row -> dict
+        return [dict(r) for r in rows]
+    return rows
+
+
+def db_fetchone(cursor):
+    row = cursor.fetchone()
+    if DB_TYPE == 'sqlite':
+        return dict(row) if row is not None else None
+    return row
 
 async def save_session_to_mysql_db(session_data: Dict[str, Any]):
     global mysql_connection, mysql_connected
@@ -282,7 +460,20 @@ async def save_session_to_mysql_db(session_data: Dict[str, Any]):
                 motor_observations = VALUES(motor_observations)
             """
             try:
-                cursor.execute(sql_sessoes, (session_data['id'], session_data['nome'], data_inicio, data_fim,
+                if DB_TYPE == 'sqlite':
+                    # SQLite UPSERT using INSERT OR REPLACE
+                    sql_sqlite = """
+                    INSERT OR REPLACE INTO sessoes (id, nome, data_inicio, data_fim, motor_name, motor_diameter,
+                                motor_length, motor_delay, motor_propweight, motor_totalweight, motor_manufacturer,
+                                motor_description, motor_observations)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """
+                    cursor.execute(sql_sqlite, (session_data['id'], session_data['nome'], data_inicio, data_fim,
+                                                 motor_name, motor_diameter, motor_length, motor_delay,
+                                                 motor_propweight, motor_totalweight, motor_manufacturer,
+                                                 motor_description, motor_observations))
+                else:
+                    db_execute(cursor, sql_sessoes, (session_data['id'], session_data['nome'], data_inicio, data_fim,
                                             motor_name, motor_diameter, motor_length, motor_delay,
                                             motor_propweight, motor_totalweight, motor_manufacturer,
                                             motor_description, motor_observations))
@@ -292,9 +483,9 @@ async def save_session_to_mysql_db(session_data: Dict[str, Any]):
                 raise
 
             try:
-                cursor.execute("DELETE FROM leituras WHERE sessao_id = %s", (session_data['id'],))
+                db_execute(cursor, "DELETE FROM leituras WHERE sessao_id = %s", (session_data['id'],))
                 logging.info(f"Leituras antigas deletadas para sessão {session_data['id']}")
-            except pymysql.Error as e:
+            except Exception as e:
                 logging.error(f"Erro ao deletar leituras antigas: {type(e).__name__}: {e}")
                 raise
 
@@ -333,9 +524,13 @@ async def save_session_to_mysql_db(session_data: Dict[str, Any]):
 
                 if leituras_to_insert:
                     try:
-                        cursor.executemany(sql_leituras, leituras_to_insert)
+                        if DB_TYPE == 'sqlite':
+                            sql_sqlite_leit = sql_leituras.replace('%s', '?')
+                            cursor.executemany(sql_sqlite_leit, leituras_to_insert)
+                        else:
+                            cursor.executemany(sql_leituras, leituras_to_insert)
                         logging.info(f"Inseridas {len(leituras_to_insert)} leituras para sessão {session_data['id']}")
-                    except pymysql.Error as e:
+                    except Exception as e:
                         logging.error(f"Erro ao inserir leituras: {type(e).__name__}: {e}")
                         raise
 
@@ -448,7 +643,7 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
                            motor_description, motor_observations
                     FROM sessoes ORDER BY data_inicio DESC
                 """)
-                sessoes = cursor.fetchall()
+                sessoes = db_fetchall(cursor)
                 # Transform motor fields into metadadosMotor object
                 for sessao in sessoes:
                     sessao['metadadosMotor'] = {
@@ -479,8 +674,8 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
             return
         try:
             with mysql_connection.cursor() as cursor:
-                cursor.execute("SELECT tempo, forca, ema, massaKg, timestamp FROM leituras WHERE sessao_id = %s ORDER BY tempo ASC", (sessao_id,))
-                leituras = cursor.fetchall()
+                db_execute(cursor, "SELECT tempo, forca, ema, massaKg, timestamp FROM leituras WHERE sessao_id = %s ORDER BY tempo ASC", (sessao_id,))
+                leituras = db_fetchall(cursor)
                 self.send_json_response(200, leituras)
         except pymysql.Error as e:
             logging.error(f"API Error (get_leituras): {e}")
@@ -498,14 +693,14 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
             return
         try:
             with mysql_connection.cursor() as cursor:
-                    cursor.execute("""
+                    db_execute(cursor, """
                         SELECT id, nome, data_inicio, data_fim, data_modificacao,
                                motor_name, motor_diameter, motor_length, motor_delay,
                                motor_propweight, motor_totalweight, motor_manufacturer,
                                motor_description, motor_observations
                         FROM sessoes WHERE id = %s
                     """, (sessao_id,))
-                    sessao = cursor.fetchone()
+                    sessao = db_fetchone(cursor)
                     if sessao:
                         # Transform motor fields into metadadosMotor object
                         sessao['metadadosMotor'] = {
@@ -569,9 +764,14 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
             return
         try:
             with mysql_connection.cursor() as cursor:
-                result = cursor.execute("DELETE FROM sessoes WHERE id = %s", (sessao_id,))
-                mysql_connection.commit()
-                if result > 0:
+                result = db_execute(cursor, "DELETE FROM sessoes WHERE id = %s", (sessao_id,))
+                try:
+                    mysql_connection.commit()
+                except Exception:
+                    pass
+                # cursor.execute returns number of rows affected for some DBs; normalize
+                rows_affected = result if isinstance(result, int) else getattr(cursor, 'rowcount', None)
+                if rows_affected and rows_affected > 0:
                     self.send_json_response(200, {"message": f"Sessão {sessao_id} deletada."})
                 else:
                     self.send_error(404, "Session Not Found")
