@@ -2674,10 +2674,9 @@ async function getSessionDataForExport(sessionId, source) {
 
   if (!sessionData && (source === 'db' || source === 'both')) { // Try DB if local not found or explicitly DB
     try {
-      const dbSessionResponse = await apiFetch('/api/sessoes');
+      const dbSessionResponse = await apiFetch(`/api/sessoes/${sessionId}`);
       if (!dbSessionResponse.ok) throw new Error('Falha ao carregar detalhes da sessão do DB para exportação.');
-      const allDbSessions = await dbSessionResponse.json();
-      const dbSession = allDbSessions.find(s => s.id === sessionId);
+      const dbSession = await dbSessionResponse.json();
 
       if (dbSession) {
         const readingsResponse = await apiFetch('/api/sessoes/' + sessionId + '/leituras');
