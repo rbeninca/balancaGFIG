@@ -319,6 +319,9 @@ let lastEmaN = 0;
 let rawDataN = []; // Mantido para conversão de unidades
 let isSessionActive = false;
 let isChartPaused = false;
+let sessionStartTime = null; // Armazena o tempo inicial da sessão para normalização
+let sessionRecordingStartTimestamp = null; // Wall-clock time when recording started
+let sessionRecordingEndTimestamp = null; // Wall-clock time when recording ended
 let chartUpdateBuffer = [];
 let animationFrameId = null;
 let originalChartContainer = null; // New global variable to store original parent
@@ -988,6 +991,7 @@ function updateMysqlIndicator(connected) {
 function sendCommandToWorker(command, value = null) {
   if (!dataWorker) {
     showNotification("error", "Worker não está conectado.");
+    console.error(`[sendCommandToWorker] Worker não conectado ao enviar comando: ${command}`);
     return;
   }
   // NEW: Always send a JSON object as payload to the worker
@@ -996,12 +1000,17 @@ function sendCommandToWorker(command, value = null) {
     // For 'save_session_to_mysql', value is the entire session object
     if (command === 'save_session_to_mysql') {
       messagePayload.sessionData = value;
+      console.log(`[sendCommandToWorker] Enviando comando 'save_session_to_mysql' com sessão:`, value.nome, `(ID: ${value.id})`);
     } else {
       // For other commands, value is a simple parameter
       messagePayload.value = value;
+      console.log(`[sendCommandToWorker] Enviando comando '${command}' com valor:`, value);
     }
+  } else {
+    console.log(`[sendCommandToWorker] Enviando comando '${command}' sem valor adicional`);
   }
   dataWorker.postMessage({ type: 'sendCommand', payload: messagePayload });
+  console.log(`[sendCommandToWorker] ✓ Mensagem enviada ao worker`);
 }
 
 // --- Atualização da UI ---
@@ -1086,6 +1095,20 @@ function updateUIFromData(dado) {
   if (isSessionActive) {
     const tbody = document.getElementById("tabela").querySelector("tbody");
     const linha = tbody.insertRow(0);
+
+  // Normalizar tempo: começar do zero
+  // O ESP envia tempo em ms, mas o servidor Python JÁ converte para segundos (t_ms / 1000.0)
+  // Portanto, aqui o 'tempo' já está em segundos
+
+  // Define o tempo inicial na primeira leitura
+  if (sessionStartTime === null) {
+    sessionStartTime = tempo;
+    sessionRecordingStartTimestamp = new Date(); // Capture wall-clock start time
+  }
+
+  // Tempo normalizado começando do zero
+  const tempoNormalizado = tempo - sessionStartTime;
+
   // Gera timestamp em GMT (UTC) no formato dd/mm/yyyy HH:MM:SS.mmm
   const agora = new Date();
   const dd = String(agora.getUTCDate()).padStart(2, '0');
@@ -1098,7 +1121,7 @@ function updateUIFromData(dado) {
   const timestamp = `${dd}/${mm}/${yyyy} ${HH}:${MM}:${SS}.${mmm}`;
 
   linha.insertCell(0).innerText = timestamp;
-  linha.insertCell(1).innerText = Number(tempo).toFixed(3);
+  linha.insertCell(1).innerText = Number(tempoNormalizado).toFixed(3);
   linha.insertCell(2).innerText = Number(forcaFiltrada).toFixed(6);
   linha.insertCell(3).innerText = Number((forcaFiltrada / 9.80665) * 1000).toFixed(casasDecimais);
   linha.insertCell(4).innerText = Number(forcaFiltrada / 9.80665).toFixed(6);
@@ -1301,6 +1324,10 @@ function cancelarContagem() {
   document.getElementById('btn-abrir-modal-sessao').disabled = false;
   document.getElementById('btn-encerrar-sessao').disabled = true;
 
+  // Reset timestamps
+  sessionRecordingStartTimestamp = null;
+  sessionRecordingEndTimestamp = null;
+
   showNotification('warning', 'Gravação cancelada pelo usuário.');
 }
 
@@ -1363,6 +1390,7 @@ function iniciarSessaoAvancado() {
     clearChart();
     document.getElementById("tabela").querySelector("tbody").innerHTML = '';
     isSessionActive = true;
+    sessionStartTime = null; // Resetar o tempo inicial (será definido na primeira leitura)
 
     // O botão de nova sessão já está desabilitado, mas o de encerrar é habilitado aqui
     document.getElementById('btn-encerrar-sessao').disabled = false;
@@ -1422,22 +1450,44 @@ async function encerrarSessao() {
   const nomeSessao = document.getElementById('sessao-nome').value.trim();
   const tabela = document.getElementById("tabela").querySelector("tbody");
   if (tabela.rows.length > 0) {
+    sessionRecordingEndTimestamp = new Date(); // Capture wall-clock end time
     const gravacao = await salvarDadosDaSessao(nomeSessao, tabela); // Modified to await
-    if (gravacao && isMysqlConnected) {
-      showNotification('info', 'Enviando sessão "' + gravacao.nome + '" para o MySQL...');
-      sendCommandToWorker('save_session_to_mysql', gravacao); // Save to DB via worker
+    
+    // Se a sessão foi salva com sucesso
+    if (gravacao) {
+      // Sempre tenta enviar para MySQL se conectado
+      if (isMysqlConnected) {
+        showNotification('info', 'Enviando sessão "' + gravacao.nome + '" para o MySQL...');
+        sendCommandToWorker('save_session_to_mysql', gravacao); // Save to DB via worker
+      } else {
+        // Se MySQL não estiver conectado, mas o usuário sabe que deveria estar, oferece opção de salvar manualmente
+        showNotification('warning', 'Sessão "' + gravacao.nome + '" salva localmente. MySQL desconectado. Você poderá sincronizar quando a conexão retornar.');
+      }
+      
+      // Recarrega a lista de gravações para refletir a nova sessão
+      setTimeout(() => {
+        loadAndDisplayAllSessions();
+      }, 500);
+    } else {
+      showNotification('error', 'Erro ao salvar a sessão. Verifique se o LocalStorage não está cheio.');
     }
   } else {
     showNotification('info', 'Nenhum dado foi gravado. Nada foi salvo.');
   }
   isSessionActive = false;
-  
+  sessionStartTime = null; // Resetar o tempo inicial
+  sessionRecordingStartTimestamp = null; // Reset wall-clock timestamps
+  sessionRecordingEndTimestamp = null;
+
   document.getElementById('btn-abrir-modal-sessao').disabled = false;
   document.getElementById('btn-encerrar-sessao').disabled = true;
   document.getElementById('sessao-nome').value = ''; // Limpa o nome no modal
 }
 
 async function salvarDadosDaSessao(nome, tabela) {
+  console.log(`[salvarDadosDaSessao] Iniciando salvamento da sessão: "${nome}"`);
+  console.log(`[salvarDadosDaSessao] Número de linhas na tabela:`, tabela.rows.length);
+  
   const dadosTabela = Array.from(tabela.rows).map(linha => ({
     timestamp: linha.cells[0].innerText,
     tempo_esp: linha.cells[1].innerText,
@@ -1456,23 +1506,36 @@ async function salvarDadosDaSessao(nome, tabela) {
     observations: document.getElementById('sessao-meta-observacoes')?.value?.trim() || null,
   };
 
+  // Use the captured timestamps or fallback to current time
+  const startTimestamp = sessionRecordingStartTimestamp ? sessionRecordingStartTimestamp.toISOString() : new Date().toISOString();
+  const endTimestamp = sessionRecordingEndTimestamp ? sessionRecordingEndTimestamp.toISOString() : new Date().toISOString();
+
   const gravacao = {
     id: Date.now(),
     nome,
-    timestamp: new Date().toISOString(),
+    timestamp: startTimestamp,
+    data_inicio: startTimestamp,
+    data_fim: endTimestamp,
     data_modificacao: new Date().toISOString(),
     dadosTabela,
     metadadosMotor,
     savedToMysql: isMysqlConnected // Mark as saved to MySQL if connected
   };
 
+  console.log(`[salvarDadosDaSessao] Gravação preparada - ID: ${gravacao.id}, Nome: ${nome}, Dados: ${dadosTabela.length} linhas`);
+
   try {
     let gravacoes = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+    console.log(`[salvarDadosDaSessao] Sessões existentes no localStorage:`, gravacoes.length);
+    
     gravacoes.push(gravacao);
     localStorage.setItem('balancaGravacoes', JSON.stringify(gravacoes));
+    
+    console.log(`[salvarDadosDaSessao] ✓ Sessão salva no localStorage com sucesso. Total de sessões: ${gravacoes.length}`);
     showNotification('success', 'Sessão "' + nome + '" salva localmente!');
     return gravacao; // Return the saved session
   } catch (e) {
+    console.error(`[salvarDadosDaSessao] ✗ Erro ao salvar no localStorage:`, e.message);
     showNotification('error', 'Erro ao salvar. O Local Storage pode estar cheio.');
     return null;
   }
@@ -1517,6 +1580,41 @@ function showNotification(type, message, duration = 5000) {
     setTimeout(() => notification.remove(), 500);
   }, duration);
 }
+
+/**
+ * Mostra overlay de carregamento
+ */
+function showLoading() {
+  const loader = document.getElementById('loading-overlay');
+  if (loader) {
+    loader.style.display = 'flex';
+    // Força o reflow para garantir que a mudança seja aplicada
+    loader.offsetHeight;
+  }
+}
+
+/**
+ * Esconde overlay de carregamento
+ */
+function hideLoading() {
+  const loader = document.getElementById('loading-overlay');
+  if (loader) {
+    loader.style.display = 'none';
+  }
+}
+
+/**
+ * Configura event listener para botão de fechamento manual do loader
+ */
+document.addEventListener('DOMContentLoaded', () => {
+  const btnFecharLoader = document.getElementById('btn-fechar-loader');
+  if (btnFecharLoader) {
+    btnFecharLoader.addEventListener('click', () => {
+      hideLoading();
+      showNotification('warning', 'Carregamento interrompido manualmente.');
+    });
+  }
+});
 
 function convertForce(valueN, unit) {
   const g_force_conversion = 101.9716;
@@ -2255,125 +2353,156 @@ async function fetchDbSessions() {
 
 async function loadAndDisplayAllSessions() {
   const listaGravacoesDiv = document.getElementById('lista-gravacoes');
-  listaGravacoesDiv.innerHTML = '<p>Carregando sessões...</p>';
-
-  const localSessions = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
-  const dbSessions = await fetchDbSessions();
-
-  const allSessionsMap = new Map();
-
-  localSessions.forEach(session => {
-    allSessionsMap.set(session.id, { ...session, source: 'local', inLocal: true });
-  });
-
-  dbSessions.forEach(dbSession => {
-    const existingSession = allSessionsMap.get(dbSession.id);
-    if (existingSession) {
-      // Detectar conflito: comparar data_modificacao
-      const localModified = existingSession.data_modificacao ? new Date(existingSession.data_modificacao) : new Date(0);
-      const dbModified = dbSession.data_modificacao ? new Date(dbSession.data_modificacao) : new Date(0);
-
-      const hasConflict = Math.abs(localModified - dbModified) > 1000; // Diferença maior que 1 segundo
-
-      allSessionsMap.set(dbSession.id, {
-        ...existingSession,
-        ...dbSession,
-        source: 'both',
-        inDb: true,
-        hasConflict: hasConflict,
-        localModified: existingSession.data_modificacao,
-        dbModified: dbSession.data_modificacao
-      });
-    } else {
-      allSessionsMap.set(dbSession.id, { ...dbSession, source: 'db', inDb: true });
-    }
-  });
-
-  const combinedSessions = Array.from(allSessionsMap.values()).sort((a, b) => b.id - a.id);
-
-  if (combinedSessions.length === 0) {
-    listaGravacoesDiv.innerHTML = '<p>Nenhuma gravação encontrada (local ou no banco de dados).</p>';
+  if (!listaGravacoesDiv) {
+    console.error('[loadAndDisplayAllSessions] Elemento #lista-gravacoes não encontrado no DOM');
     return;
   }
+  
+  listaGravacoesDiv.innerHTML = '<p>Carregando sessões...</p>';
 
-  // Para sessões do DB sem dadosTabela, buscar as leituras
-  for (const session of combinedSessions) {
-    if (session.inDb && (!session.dadosTabela || session.dadosTabela.length === 0)) {
-      try {
-        const readingsResp = await apiFetch(`/api/sessoes/${session.id}/leituras`);
-        if (readingsResp.ok) {
-          const dbReadings = await readingsResp.json();
-          session.dadosTabela = dbReadings.map(r => ({
-            timestamp: formatUtcDdMm(parseDbTimestampToUTC(r.timestamp)),
-            tempo_esp: r.tempo,
-            newtons: r.forca,
-            grama_forca: (r.forca / 9.80665 * 1000),
-            quilo_forca: (r.forca / 9.80665)
-          }));
-        }
-      } catch (e) {
-        console.warn(`Não foi possível carregar leituras da sessão ${session.id}:`, e);
-      }
+  try {
+    let localSessions = [];
+    try {
+      localSessions = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+    } catch (e) {
+      console.error('[loadAndDisplayAllSessions] Erro ao fazer parse do localStorage:', e);
+      localSessions = [];
     }
-  }
+    
+    const dbSessions = await fetchDbSessions(); // This now returns sessions with summary data
+
+    console.log(`[loadAndDisplayAllSessions] Sessões locais encontradas: ${localSessions.length}`);
+    console.log(`[loadAndDisplayAllSessions] Sessões no DB encontradas: ${dbSessions.length}`);
+
+    const allSessionsMap = new Map();
+
+    // Process local sessions: they need local calculation
+    localSessions.forEach((session, index) => {
+      try {
+        if (session.dadosTabela && session.dadosTabela.length > 0) {
+            const dados = processarDadosSimples(session.dadosTabela);
+            const impulsoData = calcularAreaSobCurva(dados.tempos, dados.newtons, false);
+            const metricasPropulsao = calcularMetricasPropulsao(impulsoData);
+            session.impulsoTotal = impulsoData.impulsoTotal;
+            session.motorClass = metricasPropulsao.classificacaoMotor.classe;
+            session.classColor = metricasPropulsao.classificacaoMotor.cor;
+        } else {
+            session.impulsoTotal = 0;
+            session.motorClass = 'N/A';
+            session.classColor = '#95a5a6';
+        }
+        allSessionsMap.set(session.id, { ...session, source: 'local', inLocal: true });
+      } catch (error) {
+        console.error(`[loadAndDisplayAllSessions] Erro ao processar sessão local ${index} (ID: ${session.id}):`, error);
+        // Ainda assim adiciona a sessão ao mapa com dados padrão
+        session.impulsoTotal = 0;
+        session.motorClass = 'Erro';
+        session.classColor = '#e74c3c';
+        allSessionsMap.set(session.id, { ...session, source: 'local', inLocal: true });
+      }
+    });
+
+    console.log(`[loadAndDisplayAllSessions] Sessões locais processadas e adicionadas ao mapa`);
+
+    // Process DB sessions: they should have summary data from the server
+    dbSessions.forEach(dbSession => {
+      try {
+        const existingSession = allSessionsMap.get(dbSession.id);
+        if (existingSession) {
+          // Conflict detection logic (can be kept)
+          const localModified = existingSession.data_modificacao ? new Date(existingSession.data_modificacao) : new Date(0);
+          const dbModified = dbSession.data_modificacao ? new Date(dbSession.data_modificacao) : new Date(0);
+          const hasConflict = Math.abs(localModified - dbModified) > 1000;
+
+          allSessionsMap.set(dbSession.id, {
+            ...existingSession,
+            ...dbSession, // DB data (with summary) overwrites local
+            source: 'both',
+            inDb: true,
+            hasConflict: hasConflict,
+            localModified: existingSession.data_modificacao,
+            dbModified: dbSession.data_modificacao
+          });
+        } else {
+          allSessionsMap.set(dbSession.id, { ...dbSession, source: 'db', inDb: true });
+        }
+      } catch (error) {
+        console.error(`[loadAndDisplayAllSessions] Erro ao processar sessão do DB (ID: ${dbSession.id}):`, error);
+      }
+    });
+
+    const combinedSessions = Array.from(allSessionsMap.values()).sort((a, b) => b.id - a.id);
+
+    console.log(`[loadAndDisplayAllSessions] Total de sessões combinadas (local + DB): ${combinedSessions.length}`);
+
+    if (combinedSessions.length === 0) {
+      console.log(`[loadAndDisplayAllSessions] Nenhuma sessão encontrada`);
+      listaGravacoesDiv.innerHTML = '<p>Nenhuma gravação encontrada (local ou no banco de dados).</p>';
+      return;
+    }
+
+  // THE LOOP THAT FETCHED READINGS IS NOW GONE.
 
   listaGravacoesDiv.innerHTML = combinedSessions.map(session => {
-    const sourceIcons = `${session.inLocal ? '<span title="Salvo Localmente" style="margin-right: 5px;">💾</span>' : ''}${session.inDb ? '<span title="Salvo no Banco de Dados" style="margin-right: 5px;">☁️</span>' : ''}`;
-  const baseStart = session.data_inicio || session.timestamp;
-  const dataInicio = baseStart ? parseDbTimestampToUTC(baseStart).toLocaleString('pt-BR') : 'N/D';
+    try {
+      // Função auxiliar para escapar caracteres HTML
+      const escapeHtml = (text) => {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      };
+      
+      const sourceIcons = `${session.inLocal ? '<span title="Salvo Localmente" style="margin-right: 5px;">💾</span>' : ''}${session.inDb ? '<span title="Salvo no Banco de Dados" style="margin-right: 5px;">☁️</span>' : ''}`;
+      const baseStart = session.data_inicio || session.timestamp;
+      const dataInicio = baseStart ? parseDbTimestampToUTC(baseStart).toLocaleString('pt-BR') : 'N/D';
 
-    let impulsoTotal = 'N/A';
-    let motorClass = 'N/A';
-    let classColor = '#95a5a6'; // Default gray color
+      // Use the pre-calculated values directly
+      const impulsoTotal = session.impulsoTotal ? Number(session.impulsoTotal).toFixed(2) : 'N/A';
+      const motorClass = session.motorClass || 'N/A';
+      const classColor = session.classColor || '#95a5a6';
 
-    if (session.dadosTabela && session.dadosTabela.length > 0) {
-      const dados = processarDadosSimples(session.dadosTabela);
-      const impulsoData = calcularAreaSobCurva(dados.tempos, dados.newtons, false);
-      const metricasPropulsao = calcularMetricasPropulsao(impulsoData);
-      impulsoTotal = impulsoData.impulsoTotal.toFixed(2);
-      motorClass = metricasPropulsao.classificacaoMotor.classe;
-      classColor = metricasPropulsao.classificacaoMotor.cor; // Get color from classification
-    }
+      // Metadados do motor
+      const meta = session.metadadosMotor || {};
+      const hasMeta = meta.diameter || meta.length || meta.manufacturer || meta.propweight || meta.totalweight;
+      const metadadosDisplay = hasMeta ? `
+        <p style="font-size: 0.75rem; color: var(--cor-texto-secundario); margin-top: 5px;">
+          🚀 Motor: ${escapeHtml(meta.description) || escapeHtml(meta.manufacturer) || 'N/D'} • ⌀${meta.diameter || 'N/D'}mm • L${meta.length || 'N/D'}mm •
+          Prop: ${meta.propweight || 'N/D'}kg • Total: ${meta.totalweight || 'N/D'}kg
+        </p> 
+      ` : '';
 
-    // Metadados do motor
-    const meta = session.metadadosMotor || {};
-    const metadadosDisplay = meta.name ? `
-      <p style="font-size: 0.75rem; color: var(--cor-texto-secundario); margin-top: 5px;">
-        🚀 Motor: ${meta.name || 'N/D'} • ⌀${meta.diameter || 'N/D'}mm • L${meta.length || 'N/D'}mm •
-        Prop: ${meta.propweight || 'N/D'}kg • Total: ${meta.totalweight || 'N/D'}kg • ${meta.manufacturer || 'N/D'}
-      </p> 
-    ` : '';
+      // Indicador de conflito
+      const conflictIndicator = session.hasConflict ? `
+        <span style="background: #e74c3c; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 8px;">
+          ⚠️ CONFLITO
+        </span>
+      ` : '';
 
-    // Indicador de conflito
-    const conflictIndicator = session.hasConflict ? `
-      <span style="background: #e74c3c; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 8px;">
-        ⚠️ CONFLITO
-      </span>
-    ` : '';
-
-    return `
-      <div class="card-gravacao" style="display: flex; justify-content: space-between; align-items: center; background: var(--cor-fundo-card); padding: 15px; border-radius: 8px; box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 10px; margin-bottom: 10px; border-left: 5px solid ${classColor};" id="session-${session.id}">
-        <div style="flex: 1;">
-            <p style="font-weight: 600; margin-bottom: 5px;">${sourceIcons}${session.nome} <span style="font-size: 0.75rem; background: ${classColor}; color: white; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">CLASSE ${motorClass}</span>${conflictIndicator}</p>
-            <p style="font-size: 0.875rem; color: var(--cor-texto-secundario);">
-                ${dataInicio} • Impulso Total: ${impulsoTotal} N⋅s
-            </p>
-            ${metadadosDisplay}
-        </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            ${session.hasConflict
-        ? `<button onclick="resolverConflito(${session.id})" title="Resolver Conflito de Sincronização" class="btn btn-aviso">⚠️ Resolver Conflito</button>`
-        : ''}
-            <button onclick="visualizarSessao(${session.id}, '${session.source}')" title="Carregar para Análise/Gráfico" class="btn btn-info">️ Ver</button>
-            <button onclick="editarMetadadosMotor(${session.id})" title="Editar Metadados do Motor" class="btn btn-secundario">⚙️ Metadados</button>
-            <button onclick="exportarImagemSessao(${session.id}, '${session.source}')" title="Exportar Gráfico em PNG" class="btn btn-primario">️ PNG</button>
-            <button onclick="gerarRelatorioPdf(${session.id}, '${session.source}')" title="Exportar Relatório PDF" class="btn btn-secundario"> PDF</button>
-            <button onclick="exportarJSON(${session.id}, '${session.source}')" title="Exportar Dados em JSON" class="btn btn-sucesso"> JSON</button>
-            <button onclick="exportarCSV(${session.id}, '${session.source}')" title="Exportar Dados em CSV" class="btn btn-sucesso"> CSV</button>
-            <button onclick="exportarEng(${session.id}, '${session.source}')" title="Exportar Curva de Empuxo para OpenRocket/RASAero" class="btn btn-aviso"> ENG</button>
-            ${session.inLocal && !session.inDb
-        ? `<button class="btn btn-info btn-small"
-                ${!isMysqlConnected ? 'disabled title="MySQL desconectado"' : 'title="Salvar do LocalStorage para o Banco de Dados"'}
+      return `
+        <div class="card-gravacao" style="display: flex; justify-content: space-between; align-items: center; background: var(--cor-fundo-card); padding: 15px; border-radius: 8px; box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 10px; margin-bottom: 10px; border-left: 5px solid ${classColor};" id="session-${session.id}">
+          <div style="flex: 1;">
+              <p style="font-weight: 600; margin-bottom: 5px;">${sourceIcons}${escapeHtml(session.nome)} <span style="font-size: 0.75rem; background: ${classColor}; color: white; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">CLASSE ${motorClass}</span>${conflictIndicator}</p>
+              <p style="font-size: 0.875rem; color: var(--cor-texto-secundario);">
+                  ${dataInicio} • Impulso Total: ${impulsoTotal} N⋅s
+              </p>
+              ${metadadosDisplay}
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              ${session.hasConflict
+          ? `<button onclick="resolverConflito(${session.id})" title="Resolver Conflito de Sincronização" class="btn btn-aviso">⚠️ Resolver Conflito</button>`
+          : ''}
+              <button onclick="visualizarSessao(${session.id}, '${session.source}')" title="Carregar para Análise/Gráfico" class="btn btn-info">️ Ver</button>
+              <button onclick="abrirModalBurnAnalysis(${session.id}, '${session.source}')" title="Analisar Pontos de Queima" class="btn btn-aviso">🔥 Análise</button>
+              <button onclick="editarMetadadosMotor(${session.id})" title="Editar Metadados do Motor" class="btn btn-secundario">⚙️ Metadados</button>
+              <button onclick="exportarImagemSessao(${session.id}, '${session.source}')" title="Exportar Gráfico em PNG" class="btn btn-primario">️ PNG</button>
+              <button onclick="gerarRelatorioPdf(${session.id}, '${session.source}')" title="Exportar Relatório PDF" class="btn btn-secundario"> PDF</button>
+              <button onclick="exportarJSON(${session.id}, '${session.source}')" title="Exportar Dados em JSON" class="btn btn-sucesso"> JSON</button>
+              <button onclick="exportarCSV(${session.id}, '${session.source}')" title="Exportar Dados em CSV" class="btn btn-sucesso"> CSV</button>
+              <button onclick="exportarEng(${session.id}, '${session.source}')" title="Exportar Curva de Empuxo para OpenRocket/RASAero" class="btn btn-aviso"> ENG</button>
+              ${session.inLocal && !session.inDb
+          ? `<button class="btn btn-info btn-small"
+                  ${!isMysqlConnected ? 'disabled title="MySQL desconectado"' : 'title="Salvar do LocalStorage para o Banco de Dados"'}
                 onclick="salvarNoDB(${session.id})">
                 💾 ➜ ☁️ Salvar no BD
              </button>
@@ -2394,8 +2523,19 @@ async function loadAndDisplayAllSessions() {
         </div>
       </div>
     `;
-
+    } catch (error) {
+      console.error(`[loadAndDisplayAllSessions] Erro ao renderizar sessão ${session.id}:`, error);
+      return `
+        <div class="card-gravacao" style="background: var(--cor-fundo-card); padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #e74c3c;">
+          <p style="color: #e74c3c;">Erro ao carregar sessão: ${session.nome}</p>
+        </div>
+      `;
+    }
   }).join('');
+  } catch (error) {
+    console.error('[loadAndDisplayAllSessions] Erro ao renderizar sessões:', error);
+    listaGravacoesDiv.innerHTML = `<p style="color: #e74c3c;">Erro ao carregar sessões. Verifique o console para mais detalhes.</p>`;
+  }
 }
 
 /** Ordem dos botões  para salvar 
@@ -2674,6 +2814,8 @@ async function getSessionDataForExport(sessionId, source) {
 
   if (!sessionData && (source === 'db' || source === 'both')) { // Try DB if local not found or explicitly DB
     try {
+      showLoading(); // Mostra loader enquanto busca dados
+      
       const dbSessionResponse = await apiFetch(`/api/sessoes/${sessionId}`);
       if (!dbSessionResponse.ok) throw new Error('Falha ao carregar detalhes da sessão do DB para exportação.');
       const dbSession = await dbSessionResponse.json();
@@ -2687,6 +2829,8 @@ async function getSessionDataForExport(sessionId, source) {
           id: dbSession.id,
           nome: dbSession.nome,
           timestamp: dbSession.data_inicio,
+          data_inicio: dbSession.data_inicio,
+          data_fim: dbSession.data_fim,
           data_modificacao: dbSession.data_modificacao || new Date().toISOString(),
           dadosTabela: dbReadings.map(r => ({
             timestamp: formatUtcDdMm(parseDbTimestampToUTC(r.timestamp)),
@@ -2696,15 +2840,25 @@ async function getSessionDataForExport(sessionId, source) {
             quilo_forca: (r.forca / 9.80665)
           })),
           metadadosMotor: dbSession.metadadosMotor || {},
+          burnMetadata: dbSession.burnMetadata || {},
           savedToMysql: true
         };
       }
+      
+      hideLoading(); // Esconde loader após sucesso
     } catch (error) {
+      hideLoading(); // Esconde loader em caso de erro
       console.error('Erro ao buscar sessão do DB para exportação:', error);
       showNotification('error', 'Erro ao carregar sessão ' + sessionId + ' do DB para exportação.');
       return null;
     }
   }
+  
+  // Se carregou localmente, esconde o loader também
+  if (sessionData && !source.includes('db')) {
+    hideLoading();
+  }
+  
   return sessionData;
 }
 // Visualiza uma sessão salva (gráfico + tabela) garantindo eixo X numérico e ordenado
@@ -2866,15 +3020,23 @@ async function exportarEng(sessionId, source) {
     showNotification('error', 'Sessão não encontrada para exportação .ENG.');
     return;
   }
-  
+
+  // Aplica pontos de queima salvos pelo usuário (se existirem)
+  const burnData = aplicarPontosDeQueima(session);
+
+  if (!burnData) {
+    showNotification('error', 'Erro ao processar dados da sessão.');
+    return;
+  }
+
   // Extrai metadados do motor
   const metadados = session.metadadosMotor || {};
   const nomeArquivo = (metadados.name || session.nome.replace(/[^a-zA-Z0-9_]/g, '_')) + '.eng';
-  
+
   // Constrói cabeçalho no formato RASP/OpenRocket
   // Comentário com especificação dos campos
   let engContent = ';name\tdiameter\tlength\tdelay\tpropweight\ttotalweight\tmanufacturer\n';
-  
+
   // Linha de metadados do motor (em mm, s, kg)
   engContent += (metadados.name || 'Motor').trim() + '\t';
   engContent += (metadados.diameter || 45).toFixed(1) + '\t';      // mm
@@ -2883,28 +3045,39 @@ async function exportarEng(sessionId, source) {
   engContent += (metadados.propweight || 0.1).toFixed(5) + '\t';   // kg
   engContent += (metadados.totalweight || 0.25).toFixed(5) + '\t'; // kg
   engContent += (metadados.manufacturer || 'GFIG').trim() + '\n';
-  
+
   // Comentários informativos
   engContent += ';\n';
   engContent += '; Arquivo gerado pelo sistema GFIG\n';
   engContent += '; Data: ' + new Date().toLocaleString('pt-BR') + '\n';
   engContent += '; Sessão: ' + session.nome + '\n';
-  
+
   // Se houver massa de propelente, adiciona informação
   if (metadados.massaPropelente) {
     engContent += '; Massa de propelente informada: ' + metadados.massaPropelente.toFixed(2) + ' g\n';
   }
-  
-  engContent += '; Número de leituras: ' + session.dadosTabela.length + '\n';
+
+  // Informação sobre pontos de queima
+  if (burnData.usandoPontosPersonalizados) {
+    engContent += '; USANDO PONTOS DE QUEIMA PERSONALIZADOS\n';
+    engContent += '; Início da queima: ' + burnData.startTime.toFixed(3) + ' s\n';
+    engContent += '; Fim da queima: ' + burnData.endTime.toFixed(3) + ' s\n';
+    engContent += '; Duração da queima: ' + burnData.duration.toFixed(3) + ' s\n';
+  } else {
+    engContent += '; Pontos de queima detectados automaticamente\n';
+    engContent += '; Início: ' + burnData.startTime.toFixed(3) + ' s, Fim: ' + burnData.endTime.toFixed(3) + ' s\n';
+  }
+
+  engContent += '; Número de leituras (filtradas): ' + burnData.dadosFiltrados.tempos.length + '\n';
   engContent += ';\n';
-  
-  // Dados de impulso (tempo em segundos, força em Newtons)
+
+  // Dados de impulso (tempo em segundos, força em Newtons) - APENAS DO INTERVALO DE QUEIMA
   // Formato: tempo(s)  força(N)
-  session.dadosTabela.forEach(leitura => {
-    const tempo = parseFloat(leitura.tempo_esp) || 0;
-    const newtons = parseFloat(leitura.newtons) || 0;
+  for (let i = 0; i < burnData.dadosFiltrados.tempos.length; i++) {
+    const tempo = burnData.dadosFiltrados.tempos[i];
+    const newtons = burnData.dadosFiltrados.newtons[i];
     engContent += tempo.toFixed(5) + '\t' + newtons.toFixed(5) + '\n';
-  });
+  }
   
   // Download do arquivo
   const blob = new Blob([engContent], { type: 'text/plain;charset=utf-8' });
@@ -2922,46 +3095,94 @@ async function exportarEng(sessionId, source) {
 
 
 async function gerarRelatorioPdf(sessionId, source) {
-  const session = await getSessionDataForExport(sessionId, source);
-  if (!session) {
-    showNotification('error', 'Sessão não encontrada para relatório PDF.');
-    return;
-  }
+  try {
+    const session = await getSessionDataForExport(sessionId, source);
+    if (!session) {
+      showNotification('error', 'Sessão não encontrada para relatório PDF.');
+      return;
+    }
 
-  showNotification('info', 'Gerando relatório PDF com gráfico...', 2000);
+    showNotification('info', 'Gerando relatório PDF com gráfico...', 2000);
 
-  // Processa dados
-  const dados = processarDadosSimples(session.dadosTabela);
-  const impulsoData = calcularAreaSobCurva(dados.tempos, dados.newtons, false);
-  
+    // Aplica pontos de queima salvos pelo usuário (se existirem)
+    const burnData = aplicarPontosDeQueima(session);
+
+    if (!burnData) {
+      showNotification('error', 'Erro ao processar dados da sessão.');
+      return;
+    }
+
+    // Dados totais do teste (não filtrados)
+    const dadosTotais = processarDadosSimples(session.dadosTabela);
+
+    // Usa dados filtrados pelos pontos de queima
+    const dados = burnData.dadosFiltrados;
+
+    console.log('[PDF DEBUG] dados:', {
+      tempos: dados.tempos?.length,
+      newtons: dados.newtons?.length,
+      hasTempos: !!dados.tempos,
+      hasNewtons: !!dados.newtons
+    });
+
+    if (!dados.tempos || !dados.newtons || dados.tempos.length === 0) {
+      showNotification('error', 'Dados filtrados estão vazios ou inválidos.');
+      return;
+    }
+
+    const impulsoData = calcularAreaSobCurva(dados.tempos, dados.newtons, false);
+
   // Obtém massa do propelente em kg (converte de gramas se necessário)
   let massaPropelente = null;
   if (session.metadadosMotor && session.metadadosMotor.massaPropelente) {
     massaPropelente = session.metadadosMotor.massaPropelente / 1000; // Converte de gramas para kg
   }
-  
+
   const metricasPropulsao = calcularMetricasPropulsao(impulsoData, massaPropelente);
 
+  // Adiciona informação sobre pontos personalizados
+  const burnInfo = {
+    usandoPontosPersonalizados: burnData.usandoPontosPersonalizados,
+    startTime: burnData.startTime,
+    endTime: burnData.endTime,
+    duration: burnData.endTime - burnData.startTime
+  };
+
+  // Cria uma cópia temporária da sessão com dados filtrados
+  const sessionParaPDF = { ...session };
+
+  console.log('[PDF DEBUG] session.dadosTabela:', session.dadosTabela?.length, 'items');
+  console.log('[PDF DEBUG] burnData times:', burnData.startTime, 'to', burnData.endTime);
+
+  sessionParaPDF.dadosTabela = session.dadosTabela.filter(d => {
+    const tempo = parseFloat(d.tempo_esp) || 0;
+    return tempo >= burnData.startTime && tempo <= burnData.endTime;
+  });
+
+  console.log('[PDF DEBUG] sessionParaPDF.dadosTabela filtered:', sessionParaPDF.dadosTabela?.length, 'items');
+
+  if (!sessionParaPDF.dadosTabela || sessionParaPDF.dadosTabela.length === 0) {
+    showNotification('error', 'Nenhum dado encontrado no intervalo de queima.');
+    return;
+  }
+
   // Gera o gráfico em canvas e converte para imagem
-  gerarGraficoParaPDF(session, dados, impulsoData, metricasPropulsao, (imagemBase64) => {
+  gerarGraficoParaPDF(sessionParaPDF, dados, impulsoData, metricasPropulsao, (imagemBase64) => {
     // Cria janela de impressão com o gráfico
     const printWindow = window.open('', '_blank');
 
     // Gera HTML do relatório COM a imagem do gráfico
-    const html = gerarHTMLRelatorioCompleto(session, dados, impulsoData, metricasPropulsao, imagemBase64);
+    const html = gerarHTMLRelatorioCompleto(sessionParaPDF, dados, impulsoData, metricasPropulsao, imagemBase64, burnInfo, dadosTotais);
 
     printWindow.document.write(html);
     printWindow.document.close();
 
-    // Aguarda carregamento e abre diálogo de impressão
-    printWindow.onload = function () {
-      setTimeout(() => {
-        printWindow.print();
-      }, 500);
-    };
-
-    showNotification('success', 'Relatório pronto! Use "Salvar como PDF" no diálogo', 5000);
+    showNotification('success', 'Relatório PDF gerado com sucesso!', 3000);
   });
+  } catch (error) {
+    console.error('Erro ao gerar PDF:', error);
+    showNotification('error', 'Erro ao gerar PDF: ' + error.message);
+  }
 }
 
 async function exportarCSV(sessionId, source) {
@@ -3037,6 +3258,8 @@ async function saveDbSessionToLocal(sessionId) {
       id: dbSession.id,
       nome: dbSession.nome,
       timestamp: dbSession.data_inicio,
+      data_inicio: dbSession.data_inicio,
+      data_fim: dbSession.data_fim,
       data_modificacao: dbSession.data_modificacao || new Date().toISOString(),
       dadosTabela: dbReadings.map(r => ({
         timestamp: formatUtcDdMm(parseDbTimestampToUTC(r.timestamp)),
@@ -3046,6 +3269,7 @@ async function saveDbSessionToLocal(sessionId) {
         quilo_forca: (r.forca / 9.80665)
       })),
       metadadosMotor: dbSession.metadadosMotor || {},
+      burnMetadata: dbSession.burnMetadata || {},
       savedToMysql: true // Mark as saved to MySQL since it came from there
     };
 

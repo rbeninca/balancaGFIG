@@ -11,6 +11,7 @@
   <script src="script_grafico_sessao.js" defer></script>
   <script src="funcoespdf.js" defer></script>
   <script src="script.js" defer></script>
+  <script src="burn_analysis.js" defer></script>
   <script src="martelo-do-thor.js" defer></script>
 </head>
 
@@ -22,6 +23,20 @@
       <div id="countdown-hand"></div>
     </div>
     <button id="btn-cancelar-countdown" class="btn btn-perigo">Cancelar Gravação</button>
+  </div>
+
+  <!-- Loading Overlay para Fetch de Dados -->
+  <div id="loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999; flex-direction: column; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 2rem; border-radius: 8px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+      <div style="display: inline-block; width: 50px; height: 50px; border: 4px solid var(--cor-primaria); border-top: 4px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1rem;"></div>
+      <p style="margin: 0; color: var(--cor-texto-secundario); font-size: 0.95rem;">Carregando dados da sessão...</p>
+      <button id="btn-fechar-loader" style="margin-top: 1rem; padding: 0.5rem 1rem; background-color: var(--cor-alerta); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">Fechar</button>
+    </div>
+    <style>
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
   </div>
 
   <div class="container">
@@ -681,6 +696,137 @@
         <div class="wizard-footer">
           <button onclick="fecharModalNovaSessao()" class="btn btn-secundario">Cancelar</button>
           <button onclick="iniciarSessaoAvancado()" class="btn btn-sucesso">▶ Iniciar Gravação</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Visualização de Queima -->
+    <div id="modal-burn-analysis" class="wizard-modal" style="display: none;">
+      <div class="wizard-content" style="max-width: 90%; max-height: 90vh;">
+        <div class="wizard-header" style="padding: 0.3rem 0.5rem;">
+          <h2 style="margin: 0; font-size: 0.95rem;">🔥 <span id="burn-modal-session-name"></span>    <button onclick="resetBurnPoints()" class="btn btn-secundario">🔄 Resetar para Detecção Automática
+            </button>  <button onclick="fecharModalBurnAnalysis()" class="btn btn-secundario" style="flex: 1; padding: 0.3rem; font-size: 0.75rem;">Cancelar</button>
+          <button onclick="salvarPontosQueima()" class="btn btn-sucesso" style="flex: 1; padding: 0.3rem; font-size: 0.75rem;">💾 Salvar</button>
+              <p style="color: var(--cor-texto-secundario); font-size: 0.75rem; margin: 0;"></p></h2>
+          <button class="wizard-close" onclick="fecharModalBurnAnalysis()" style="font-size: 1.2rem; padding: 0.2rem 0.4rem;">&times;</button>
+        </div>
+        <div class="wizard-body" style="overflow-y: auto;">
+          
+
+          <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--cor-fundo-secundario); border-radius: 8px; border: 2px solid var(--cor-primaria);">
+            
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem;">
+              
+              <div>
+                <div style="background: var(--cor-primaria); color: white; padding: 0.4rem 0.5rem; border-radius: 4px 4px 0 0; font-weight: bold; font-size: 0.8rem;">
+                  📅 Teste Estático (Completo)
+                </div>
+                <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid var(--cor-borda); font-size: 0.75rem;">
+                  <tr style="border-bottom: 1px solid var(--cor-borda);">
+                    <td style="padding: 0.3rem 0.4rem; width: 50%;"><strong>Horário</strong></td>
+                    <td style="padding: 0.3rem 0.4rem; width: 50%; text-align: right;"><strong>Tempo</strong></td>
+                  </tr>
+                  <tr style="background: rgba(52, 152, 219, 0.05); border-bottom: 1px solid var(--cor-borda);">
+                    <td style="padding: 0.3rem 0.4rem; font-family: monospace; font-size: 0.7rem;" id="burn-test-start-time-absolute">---</td>
+                    <td style="padding: 0.3rem 0.4rem; font-family: monospace; font-weight: bold; color: var(--cor-primaria); text-align: right; font-size: 0.7rem;">00:00.000s</td>
+                  </tr>
+                  <tr style="background: rgba(52, 152, 219, 0.05);">
+                    <td style="padding: 0.3rem 0.4rem; font-family: monospace; font-size: 0.7rem;" id="burn-test-end-time-absolute">---</td>
+                    <td style="padding: 0.3rem 0.4rem; font-family: monospace; font-weight: bold; color: var(--cor-primaria); text-align: right; font-size: 0.7rem;" id="burn-test-end-time-relative">---</td>
+                  </tr>
+                </table>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.3rem; margin-top: 0.4rem;">
+                  <div style="background: white; padding: 0.3rem; border: 1px solid var(--cor-borda); border-radius: 3px; text-align: center;">
+                    <div style="font-size: 0.65rem; color: var(--cor-texto-secundario);">DURAÇÃO</div>
+                    <div style="font-size: 0.8rem; font-weight: bold; color: var(--cor-primaria);" id="burn-test-duration">---</div>
+                  </div>
+                  <div style="background: white; padding: 0.3rem; border: 1px solid var(--cor-borda); border-radius: 3px; text-align: center;">
+                    <div style="font-size: 0.65rem; color: var(--cor-texto-secundario);">LEITURAS</div>
+                    <div style="font-size: 0.8rem; font-weight: bold; color: var(--cor-primaria);" id="burn-test-total-readings">---</div>
+                  </div>
+                  <div style="background: white; padding: 0.3rem; border: 1px solid var(--cor-borda); border-radius: 3px; text-align: center;">
+                    <div style="font-size: 0.65rem; color: var(--cor-texto-secundario);">FREQ</div>
+                    <div style="font-size: 0.8rem; font-weight: bold; color: var(--cor-primaria);" id="burn-test-readings-per-sec">---</div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div style="background: var(--cor-sucesso); color: white; padding: 0.4rem 0.5rem; border-radius: 4px 4px 0 0; font-weight: bold; font-size: 0.8rem;">
+                  🔥 Queima Detectada
+                </div>
+                <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid var(--cor-borda); font-size: 0.75rem;">
+                  <tr style="border-bottom: 1px solid var(--cor-borda);">
+                    <td style="padding: 0.3rem 0.4rem; width: 50%;"><strong>Horário</strong></td>
+                    <td style="padding: 0.3rem 0.4rem; width: 50%; text-align: right;"><strong>Tempo</strong></td>
+                  </tr>
+                  <tr style="background: rgba(39, 174, 96, 0.05); border-bottom: 1px solid var(--cor-borda);">
+                    <td style="padding: 0.3rem 0.4rem; font-family: monospace; font-size: 0.7rem;" id="burn-detected-start-time-absolute">---</td>
+                    <td style="padding: 0.3rem 0.4rem; font-family: monospace; font-weight: bold; color: var(--cor-sucesso); text-align: right; font-size: 0.7rem;" id="burn-detected-start-time-relative">---</td>
+                  </tr>
+                  <tr style="background: rgba(39, 174, 96, 0.05);">
+                    <td style="padding: 0.3rem 0.4rem; font-family: monospace; font-size: 0.7rem;" id="burn-detected-end-time-absolute">---</td>
+                    <td style="padding: 0.3rem 0.4rem; font-family: monospace; font-weight: bold; color: var(--cor-sucesso); text-align: right; font-size: 0.7rem;" id="burn-detected-end-time-relative">---</td>
+                  </tr>
+                </table>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.3rem; margin-top: 0.4rem;">
+                  <div style="background: white; padding: 0.3rem; border: 1px solid var(--cor-borda); border-radius: 3px; text-align: center;">
+                    <div style="font-size: 0.65rem; color: var(--cor-texto-secundario);">DURAÇÃO</div>
+                    <div style="font-size: 0.8rem; font-weight: bold; color: var(--cor-sucesso);" id="burn-detected-duration">---</div>
+                  </div>
+                  <div style="background: white; padding: 0.3rem; border: 1px solid var(--cor-borda); border-radius: 3px; text-align: center;">
+                    <div style="font-size: 0.65rem; color: var(--cor-texto-secundario);">LEITURAS</div>
+                    <div style="font-size: 0.8rem; font-weight: bold; color: var(--cor-sucesso);" id="burn-detected-total-readings">---</div>
+                  </div>
+                  <div style="background: white; padding: 0.3rem; border: 1px solid var(--cor-borda); border-radius: 3px; text-align: center;">
+                    <div style="font-size: 0.65rem; color: var(--cor-texto-secundario);">FREQ</div>
+                    <div style="font-size: 0.8rem; font-weight: bold; color: var(--cor-sucesso);" id="burn-detected-readings-per-sec">---</div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div style="background: var(--cor-primaria); color: white; padding: 0.4rem 0.5rem; border-radius: 4px 4px 0 0; font-weight: bold; font-size: 0.8rem;">
+                  📊 Métricas da Queima
+                </div>
+                <div style="background: white; border: 1px solid var(--cor-borda); border-radius: 0 0 4px 4px; padding: 0.4rem; font-size: 0.75rem;">
+                  <div style="padding: 0.3rem 0; border-bottom: 1px solid rgba(52, 152, 219, 0.2);">
+                    <div style="font-size: 0.65rem; color: var(--cor-texto-secundario); margin-bottom: 0.2rem;">Duração</div>
+                    <div style="font-weight: bold; color: var(--cor-primaria); font-size: 0.85rem;" id="burn-duration-display">---</div>
+                  </div>
+                  <div style="padding: 0.3rem 0; border-bottom: 1px solid rgba(52, 152, 219, 0.2);">
+                    <div style="font-size: 0.65rem; color: var(--cor-texto-secundario); margin-bottom: 0.2rem;">Impulso Total</div>
+                    <div style="font-weight: bold; color: var(--cor-primaria); font-size: 0.85rem;" id="burn-impulse-display">---</div>
+                  </div>
+                  <div style="padding: 0.3rem 0; border-bottom: 1px solid rgba(52, 152, 219, 0.2);">
+                    <div style="font-size: 0.65rem; color: var(--cor-texto-secundario); margin-bottom: 0.2rem;">Classificação</div>
+                    <div style="font-weight: bold; color: var(--cor-primaria); font-size: 0.85rem;" id="burn-class-display">---</div>
+                  </div>
+                  <div style="padding: 0.3rem 0; border-bottom: 1px solid rgba(52, 152, 219, 0.2);">
+                    <div style="font-size: 0.65rem; color: var(--cor-texto-secundario); margin-bottom: 0.2rem;">Força Média</div>
+                    <div style="font-weight: bold; color: var(--cor-primaria); font-size: 0.85rem;" id="burn-avg-force-display">---</div>
+                  </div>
+                  <div style="padding: 0.3rem 0;">
+                    <div style="font-size: 0.65rem; color: var(--cor-texto-secundario); margin-bottom: 0.2rem;">Força Máxima</div>
+                    <div style="font-weight: bold; color: var(--cor-primaria); font-size: 0.85rem;" id="burn-max-force-display">---</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="burn-analysis-chart" style="width: 100%; height: 400px;"></div>
+
+          <div style="margin-top: 1rem;">
+            <button onclick="resetBurnPoints()" class="btn btn-secundario">
+              🔄 Resetar para Detecção Automática
+            </button>
+          </div>
+        </div>
+        <div class="wizard-footer" style="padding: 0.3rem; gap: 0.3rem;">
+          <button onclick="fecharModalBurnAnalysis()" class="btn btn-secundario" style="flex: 1; padding: 0.3rem; font-size: 0.75rem;">Cancelar</button>
+          <button onclick="salvarPontosQueima()" class="btn btn-sucesso" style="flex: 1; padding: 0.3rem; font-size: 0.75rem;">💾 Salvar</button>
         </div>
       </div>
     </div>

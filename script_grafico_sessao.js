@@ -393,8 +393,31 @@ function exportarImagemSessaoAvancada(sessionId, config) {
 
     showNotification('info', `Gerando análise de propulsão de "${sessao.nome}"...`, 2000);
 
+    // Aplica pontos de queima personalizados se existirem
+    let dadosParaProcessar = sessao.dadosTabela;
+    let burnInfo = null;
+
+    if (typeof aplicarPontosDeQueima === 'function') {
+      const burnData = aplicarPontosDeQueima(sessao);
+      if (burnData) {
+        burnInfo = {
+          usandoPontosPersonalizados: burnData.usandoPontosPersonalizados,
+          startTime: burnData.startTime,
+          endTime: burnData.endTime
+        };
+
+        // Filtra dadosTabela para usar apenas dados dentro do intervalo de queima
+        dadosParaProcessar = sessao.dadosTabela.filter(d => {
+          const tempo = parseFloat(d.tempo_esp) || 0;
+          return tempo >= burnData.startTime && tempo <= burnData.endTime;
+        });
+
+        if (config.debug) console.log('[PNG] Usando pontos de queima:', burnInfo);
+      }
+    }
+
     // Processa dados COM cálculos de impulso
-    const dados = processarDadosSimples(sessao.dadosTabela);
+    const dados = processarDadosSimples(dadosParaProcessar);
 
     if (config.debug) console.log('[PNG] Dados processados:', {
       pontos: dados.pontos,
@@ -403,7 +426,7 @@ function exportarImagemSessaoAvancada(sessionId, config) {
     });
 
     // Gera relatório com configurações avançadas
-    criarRelatorioComImpulsoAvancado(sessao, dados, config);
+    criarRelatorioComImpulsoAvancado(sessao, dados, config, burnInfo);
 
     if (config.debug) {
       const elapsed = performance.now() - startTime;
@@ -471,7 +494,7 @@ function processarDadosSimples(dadosTabela) {
  * @param {Object} dados - Dados processados
  * @param {Object} config - Configurações de exportação
  */
-function criarRelatorioComImpulsoAvancado(sessao, dados, config) {
+function criarRelatorioComImpulsoAvancado(sessao, dados, config, burnInfo = null) {
   try {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -522,12 +545,21 @@ function criarRelatorioComImpulsoAvancado(sessao, dados, config) {
     const classificacao = dados.propulsao.classificacaoMotor;
     ctx.fillText(`💥 Impulso Total: ${impulsoTotal.toFixed(2)} N⋅s | Motor Classe ${classificacao.classe}`, w/2, 155);
 
+    // Nota sobre pontos de queima personalizados
+    let yOffset = 180;
+    if (burnInfo && burnInfo.usandoPontosPersonalizados) {
+      ctx.fillStyle = cor.laranja || '#ff9800';
+      ctx.font = '14px Arial';
+      ctx.fillText(`🔥 Usando pontos de queima personalizados: ${burnInfo.startTime.toFixed(3)}s - ${burnInfo.endTime.toFixed(3)}s`, w/2, 185);
+      yOffset = 210;
+    }
+
     // Linha
     ctx.strokeStyle = cor.cinza;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(w*0.1, 180);
-    ctx.lineTo(w*0.9, 180);
+    ctx.moveTo(w*0.1, yOffset);
+    ctx.lineTo(w*0.9, yOffset);
     ctx.stroke();
 
     // 3. LOGO (se habilitado)
@@ -537,16 +569,16 @@ function criarRelatorioComImpulsoAvancado(sessao, dados, config) {
 
     // 4. GRÁFICO COM ÁREA PREENCHIDA
     if (dados.kgf.length > 0) {
-      desenharGraficoComArea(ctx, dados, cor, w, h);
+      desenharGraficoComArea(ctx, dados, cor, w, h, yOffset);
     }
 
     // 5. ESTATÍSTICAS + IMPULSO
     if (dados.stats) {
-      desenharEstatisticasCompletas(ctx, dados, cor, w, h);
+      desenharEstatisticasCompletas(ctx, dados, cor, w, h, yOffset);
     }
 
     // 6. TABELA DE MÉTRICAS
-    desenharTabelaImpulso(ctx, dados, cor, w, h);
+    desenharTabelaImpulso(ctx, dados, cor, w, h, yOffset);
 
     // 7. RODAPÉ
     ctx.fillStyle = cor.subtitulo;
@@ -743,10 +775,10 @@ function criarRelatorioComImpulso(sessao, dados) {
 }
 
 
-function desenharGraficoComArea(ctx, dados, cor, w, h) {
+function desenharGraficoComArea(ctx, dados, cor, w, h, yOffset = 180) {
   // Área do gráfico
   const gx = 100;
-  const gy = 220;
+  const gy = yOffset + 40;
   const gw = w - 200;
   const gh = 400;
   
@@ -914,8 +946,8 @@ function desenharGraficoComArea(ctx, dados, cor, w, h) {
   ctx.fillText(`${dados.impulso.impulsoTotal.toFixed(2)} N⋅s`, legX + 35, legY + 30);
 }
 
-function desenharEstatisticasCompletas(ctx, dados, cor, w, h) {
-  const sy = 650;
+function desenharEstatisticasCompletas(ctx, dados, cor, w, h, yOffset = 180) {
+  const sy = yOffset + 470;
   
   // Título
   ctx.fillStyle = cor.titulo;
@@ -996,8 +1028,8 @@ function desenharEstatisticasCompletas(ctx, dados, cor, w, h) {
   ctx.fillText(classificacao.faixa, bx + 70, classY + 28);
 }
 
-function desenharTabelaImpulso(ctx, dados, cor, w, h) {
-  const ty = 880;
+function desenharTabelaImpulso(ctx, dados, cor, w, h, yOffset = 180) {
+  const ty = yOffset + 700;
   
   ctx.fillStyle = cor.titulo;
   ctx.font = 'bold 18px Arial';
