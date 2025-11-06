@@ -2258,26 +2258,39 @@ async function loadAndDisplayAllSessions() {
   listaGravacoesDiv.innerHTML = '<p>Carregando sessões...</p>';
 
   const localSessions = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
-  const dbSessions = await fetchDbSessions();
+  const dbSessions = await fetchDbSessions(); // This now returns sessions with summary data
 
   const allSessionsMap = new Map();
 
+  // Process local sessions: they need local calculation
   localSessions.forEach(session => {
+    if (session.dadosTabela && session.dadosTabela.length > 0) {
+        const dados = processarDadosSimples(session.dadosTabela);
+        const impulsoData = calcularAreaSobCurva(dados.tempos, dados.newtons, false);
+        const metricasPropulsao = calcularMetricasPropulsao(impulsoData);
+        session.impulsoTotal = impulsoData.impulsoTotal;
+        session.motorClass = metricasPropulsao.classificacaoMotor.classe;
+        session.classColor = metricasPropulsao.classificacaoMotor.cor;
+    } else {
+        session.impulsoTotal = 0;
+        session.motorClass = 'N/A';
+        session.classColor = '#95a5a6';
+    }
     allSessionsMap.set(session.id, { ...session, source: 'local', inLocal: true });
   });
 
+  // Process DB sessions: they should have summary data from the server
   dbSessions.forEach(dbSession => {
     const existingSession = allSessionsMap.get(dbSession.id);
     if (existingSession) {
-      // Detectar conflito: comparar data_modificacao
+      // Conflict detection logic (can be kept)
       const localModified = existingSession.data_modificacao ? new Date(existingSession.data_modificacao) : new Date(0);
       const dbModified = dbSession.data_modificacao ? new Date(dbSession.data_modificacao) : new Date(0);
-
-      const hasConflict = Math.abs(localModified - dbModified) > 1000; // Diferença maior que 1 segundo
+      const hasConflict = Math.abs(localModified - dbModified) > 1000;
 
       allSessionsMap.set(dbSession.id, {
         ...existingSession,
-        ...dbSession,
+        ...dbSession, // DB data (with summary) overwrites local
         source: 'both',
         inDb: true,
         hasConflict: hasConflict,
@@ -2296,44 +2309,17 @@ async function loadAndDisplayAllSessions() {
     return;
   }
 
-  // Para sessões do DB sem dadosTabela, buscar as leituras
-  for (const session of combinedSessions) {
-    if (session.inDb && (!session.dadosTabela || session.dadosTabela.length === 0)) {
-      try {
-        const readingsResp = await apiFetch(`/api/sessoes/${session.id}/leituras`);
-        if (readingsResp.ok) {
-          const dbReadings = await readingsResp.json();
-          session.dadosTabela = dbReadings.map(r => ({
-            timestamp: formatUtcDdMm(parseDbTimestampToUTC(r.timestamp)),
-            tempo_esp: r.tempo,
-            newtons: r.forca,
-            grama_forca: (r.forca / 9.80665 * 1000),
-            quilo_forca: (r.forca / 9.80665)
-          }));
-        }
-      } catch (e) {
-        console.warn(`Não foi possível carregar leituras da sessão ${session.id}:`, e);
-      }
-    }
-  }
+  // THE LOOP THAT FETCHED READINGS IS NOW GONE.
 
   listaGravacoesDiv.innerHTML = combinedSessions.map(session => {
     const sourceIcons = `${session.inLocal ? '<span title="Salvo Localmente" style="margin-right: 5px;">💾</span>' : ''}${session.inDb ? '<span title="Salvo no Banco de Dados" style="margin-right: 5px;">☁️</span>' : ''}`;
-  const baseStart = session.data_inicio || session.timestamp;
-  const dataInicio = baseStart ? parseDbTimestampToUTC(baseStart).toLocaleString('pt-BR') : 'N/D';
+    const baseStart = session.data_inicio || session.timestamp;
+    const dataInicio = baseStart ? parseDbTimestampToUTC(baseStart).toLocaleString('pt-BR') : 'N/D';
 
-    let impulsoTotal = 'N/A';
-    let motorClass = 'N/A';
-    let classColor = '#95a5a6'; // Default gray color
-
-    if (session.dadosTabela && session.dadosTabela.length > 0) {
-      const dados = processarDadosSimples(session.dadosTabela);
-      const impulsoData = calcularAreaSobCurva(dados.tempos, dados.newtons, false);
-      const metricasPropulsao = calcularMetricasPropulsao(impulsoData);
-      impulsoTotal = impulsoData.impulsoTotal.toFixed(2);
-      motorClass = metricasPropulsao.classificacaoMotor.classe;
-      classColor = metricasPropulsao.classificacaoMotor.cor; // Get color from classification
-    }
+    // Use the pre-calculated values directly
+    const impulsoTotal = session.impulsoTotal ? Number(session.impulsoTotal).toFixed(2) : 'N/A';
+    const motorClass = session.motorClass || 'N/A';
+    const classColor = session.classColor || '#95a5a6';
 
     // Metadados do motor
     const meta = session.metadadosMotor || {};

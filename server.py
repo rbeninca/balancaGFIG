@@ -16,6 +16,61 @@ import pymysql.cursors
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+# ================== Calculation Helpers ==================
+def classificar_motor(impulso_ns):
+    """Classifica um motor baseado no seu impulso total em Ns."""
+    EPS = 1e-6
+    classificacoes = [
+        {"min": 0.00, "max": 0.3125, "classe": 'Micro 1/8A', "cor": '#8e44ad'},
+        {"min": 0.3126, "max": 0.625, "classe": '¼A', "cor": '#9b59b6'},
+        {"min": 0.626, "max": 1.25, "classe": '½A', "cor": '#e74c3c'},
+        {"min": 1.26, "max": 2.50, "classe": 'A', "cor": '#e67e22'},
+        {"min": 2.51, "max": 5.00, "classe": 'B', "cor": '#f39c12'},
+        {"min": 5.01, "max": 10.00, "classe": 'C', "cor": '#f1c40f'},
+        {"min": 10.01, "max": 20.00, "classe": 'D', "cor": '#2ecc71'},
+        {"min": 20.01, "max": 40.00, "classe": 'E', "cor": '#1abc9c'},
+        {"min": 40.01, "max": 80.00, "classe": 'F', "cor": '#3498db'},
+        {"min": 80.01, "max": 160.00, "classe": 'G', "cor": '#9b59b6'},
+        {"min": 160.01, "max": 320.00, "classe": 'H', "cor": '#e74c3c'},
+        {"min": 320.01, "max": 640.00, "classe": 'I', "cor": '#e67e22'},
+        {"min": 640.01, "max": 1280.00, "classe": 'J', "cor": '#f39c12'},
+        {"min": 1280.01, "max": 2560.00, "classe": 'K', "cor": '#2ecc71'},
+        {"min": 2560.01, "max": 5120.00, "classe": 'L', "cor": '#3498db'},
+        {"min": 5120.01, "max": 10240.00, "classe": 'M', "cor": '#9b59b6'},
+        {"min": 10240.01, "max": 20480.00, "classe": 'N', "cor": '#e74c3c'},
+        {"min": 20480.01, "max": 40960.00, "classe": 'O', "cor": '#c0392b'},
+    ]
+    if impulso_ns is None:
+        return {"classe": 'Indefinido', "cor": '#95a5a6'}
+    for c in classificacoes:
+        if (c["min"] - EPS) <= impulso_ns <= (c["max"] + EPS):
+            return {"classe": c["classe"], "cor": c["cor"]}
+    return {"classe": 'Indefinido', "cor": '#95a5a6'}
+
+def calcular_impulso_total(tempos, forcas):
+    """Calcula o impulso total positivo de uma série de leituras de força."""
+    if not tempos or not forcas or len(tempos) != len(forcas) or len(tempos) < 2:
+        return 0
+    
+    impulso_total_positivo = 0
+    for i in range(len(tempos) - 1):
+        # Garante que os valores são numéricos
+        try:
+            delta_t = float(tempos[i+1]) - float(tempos[i])
+            f1 = float(forcas[i])
+            f2 = float(forcas[i+1])
+        except (ValueError, TypeError):
+            continue # Pula iteração se houver dados inválidos
+
+        # Apenas considera a área do trapézio se ela for positiva
+        # Isso corresponde à lógica do frontend que usa `areaPositiva`
+        area_trap = delta_t * (f1 + f2) / 2
+        if area_trap > 0:
+            impulso_total_positivo += area_trap
+            
+    return impulso_total_positivo
+
+
 """
 Binary Protocol Server - Balança GFIG (IPv4 + IPv6)
 - Supports multiple binary packet types
@@ -154,7 +209,10 @@ def init_mysql_db():
                     motor_totalweight FLOAT,
                     motor_manufacturer VARCHAR(255),
                     motor_description TEXT,
-                    motor_observations TEXT
+                    motor_observations TEXT,
+                    impulso_total FLOAT,
+                    motor_class VARCHAR(50),
+                    class_color VARCHAR(20)
                 )
                 """
                 cursor.execute(sql_sessoes_create)
@@ -170,7 +228,10 @@ def init_mysql_db():
                     ('motor_totalweight', 'FLOAT'),
                     ('motor_manufacturer', 'VARCHAR(255)'),
                     ('motor_description', 'TEXT'),
-                    ('motor_observations', 'TEXT')
+                    ('motor_observations', 'TEXT'),
+                    ('impulso_total', 'FLOAT'),
+                    ('motor_class', 'VARCHAR(50)'),
+                    ('class_color', 'VARCHAR(20)')
                 ]
 
                 for column_name, column_type in motor_columns:
@@ -198,11 +259,77 @@ def init_mysql_db():
 
             mysql_connection.commit()
             logging.info(f"Banco de dados '{MYSQL_DB}' e tabelas 'sessoes', 'leituras' verificadas/criadas.")
+
+            # Migrate existing sessions to calculate impulse if not already calculated
+            migrate_existing_sessions()
+
         except pymysql.Error as e:
             logging.error(f"Erro ao inicializar o banco de dados MySQL: {e}")
             mysql_connected = False
     else:
         logging.warning("Não foi possível inicializar o banco de dados MySQL: conexão não estabelecida.")
+
+def migrate_existing_sessions():
+    """Calculate and update impulso_total, motor_class, and class_color for existing sessions"""
+    global mysql_connection
+    if not mysql_connection or not mysql_connection.open:
+        return
+
+    try:
+        with mysql_connection.cursor() as cursor:
+            # Find sessions without calculated impulse
+            cursor.execute("""
+                SELECT id FROM sessoes
+                WHERE impulso_total IS NULL OR motor_class IS NULL
+            """)
+            sessions_to_migrate = cursor.fetchall()
+
+            if not sessions_to_migrate:
+                logging.info("Nenhuma sessão precisa de migração de impulso.")
+                return
+
+            logging.info(f"Migrando {len(sessions_to_migrate)} sessões para calcular impulso...")
+
+            for session in sessions_to_migrate:
+                session_id = session['id']
+
+                # Fetch readings for this session
+                cursor.execute("""
+                    SELECT tempo, forca FROM leituras
+                    WHERE sessao_id = %s ORDER BY tempo ASC
+                """, (session_id,))
+                leituras = cursor.fetchall()
+
+                if leituras:
+                    tempos = [float(l['tempo']) for l in leituras if l['tempo'] is not None]
+                    forcas = [float(l['forca']) for l in leituras if l['forca'] is not None]
+
+                    impulso_total = calcular_impulso_total(tempos, forcas)
+                    classificacao = classificar_motor(impulso_total)
+
+                    # Update session with calculated values
+                    cursor.execute("""
+                        UPDATE sessoes
+                        SET impulso_total = %s, motor_class = %s, class_color = %s
+                        WHERE id = %s
+                    """, (impulso_total, classificacao['classe'], classificacao['cor'], session_id))
+
+                    logging.info(f"Sessão {session_id}: Impulso={impulso_total:.2f} Ns, Classe={classificacao['classe']}")
+                else:
+                    # No readings, set default values
+                    cursor.execute("""
+                        UPDATE sessoes
+                        SET impulso_total = 0, motor_class = 'N/A', class_color = '#95a5a6'
+                        WHERE id = %s
+                    """, (session_id,))
+
+            mysql_connection.commit()
+            logging.info(f"Migração concluída: {len(sessions_to_migrate)} sessões atualizadas.")
+
+    except pymysql.Error as e:
+        logging.error(f"Erro durante migração de sessões: {e}")
+        if mysql_connection:
+            mysql_connection.rollback()
 
 async def save_session_to_mysql_db(session_data: Dict[str, Any]):
     global mysql_connection, mysql_connected
@@ -262,11 +389,30 @@ async def save_session_to_mysql_db(session_data: Dict[str, Any]):
                         f"delay={motor_delay}, propweight={motor_propweight}, totalweight={motor_totalweight}, "
                         f"manufacturer={motor_manufacturer}")
 
+            # Calculate impulse and classification from readings
+            impulso_total = 0
+            motor_class = 'N/A'
+            class_color = '#95a5a6'
+
+            if dados_tabela:
+                try:
+                    tempos = [float(l.get('tempo_esp', 0)) for l in dados_tabela if l.get('tempo_esp') is not None]
+                    forcas = [float(l.get('newtons', 0)) for l in dados_tabela if l.get('newtons') is not None]
+
+                    if tempos and forcas and len(tempos) == len(forcas):
+                        impulso_total = calcular_impulso_total(tempos, forcas)
+                        classificacao = classificar_motor(impulso_total)
+                        motor_class = classificacao['classe']
+                        class_color = classificacao['cor']
+                        logging.info(f"Impulso calculado: {impulso_total:.2f} Ns, Classe: {motor_class}")
+                except (ValueError, TypeError, KeyError) as e:
+                    logging.warning(f"Erro ao calcular impulso: {e}")
+
             sql_sessoes = """
             INSERT INTO sessoes (id, nome, data_inicio, data_fim, motor_name, motor_diameter,
                                 motor_length, motor_delay, motor_propweight, motor_totalweight, motor_manufacturer,
-                                motor_description, motor_observations)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                motor_description, motor_observations, impulso_total, motor_class, class_color)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 nome = VALUES(nome),
                 data_inicio = VALUES(data_inicio),
@@ -279,13 +425,16 @@ async def save_session_to_mysql_db(session_data: Dict[str, Any]):
                 motor_totalweight = VALUES(motor_totalweight),
                 motor_manufacturer = VALUES(motor_manufacturer),
                 motor_description = VALUES(motor_description),
-                motor_observations = VALUES(motor_observations)
+                motor_observations = VALUES(motor_observations),
+                impulso_total = VALUES(impulso_total),
+                motor_class = VALUES(motor_class),
+                class_color = VALUES(class_color)
             """
             try:
                 cursor.execute(sql_sessoes, (session_data['id'], session_data['nome'], data_inicio, data_fim,
                                             motor_name, motor_diameter, motor_length, motor_delay,
                                             motor_propweight, motor_totalweight, motor_manufacturer,
-                                            motor_description, motor_observations))
+                                            motor_description, motor_observations, impulso_total, motor_class, class_color))
                 logging.info(f"Sessão inserida/atualizada: {session_data['nome']}")
             except pymysql.Error as e:
                 logging.error(f"Erro ao inserir sessão: {type(e).__name__}: {e}")
@@ -445,12 +594,19 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
                     SELECT id, nome, data_inicio, data_fim, data_modificacao,
                            motor_name, motor_diameter, motor_length, motor_delay,
                            motor_propweight, motor_totalweight, motor_manufacturer,
-                           motor_description, motor_observations
+                           motor_description, motor_observations,
+                           impulso_total, motor_class, class_color
                     FROM sessoes ORDER BY data_inicio DESC
                 """)
                 sessoes = cursor.fetchall()
-                # Transform motor fields into metadadosMotor object
+
                 for sessao in sessoes:
+                    # Use pre-calculated values from database
+                    sessao['impulsoTotal'] = sessao.pop('impulso_total', 0) or 0
+                    sessao['motorClass'] = sessao.pop('motor_class', 'N/A') or 'N/A'
+                    sessao['classColor'] = sessao.pop('class_color', '#95a5a6') or '#95a5a6'
+
+                    # Transform motor fields into metadadosMotor object
                     sessao['metadadosMotor'] = {
                         'name': sessao.pop('motor_name', None),
                         'diameter': sessao.pop('motor_diameter', None),
