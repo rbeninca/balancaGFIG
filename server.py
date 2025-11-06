@@ -212,7 +212,9 @@ def init_mysql_db():
                     motor_observations TEXT,
                     impulso_total FLOAT,
                     motor_class VARCHAR(50),
-                    class_color VARCHAR(20)
+                    class_color VARCHAR(20),
+                    burn_start_time FLOAT,
+                    burn_end_time FLOAT
                 )
                 """
                 cursor.execute(sql_sessoes_create)
@@ -231,7 +233,9 @@ def init_mysql_db():
                     ('motor_observations', 'TEXT'),
                     ('impulso_total', 'FLOAT'),
                     ('motor_class', 'VARCHAR(50)'),
-                    ('class_color', 'VARCHAR(20)')
+                    ('class_color', 'VARCHAR(20)'),
+                    ('burn_start_time', 'FLOAT'),
+                    ('burn_end_time', 'FLOAT')
                 ]
 
                 for column_name, column_type in motor_columns:
@@ -548,6 +552,8 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.handle_post_sessao()
             elif self.path == '/api/time/sync':
                 self.handle_sync_time()
+            elif self.path.startswith('/api/sessoes/') and self.path.endswith('/burn-metadata'):
+                self.handle_update_burn_metadata()
             else:
                 self.send_error(404, "Not Found")
         except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError) as e:
@@ -658,7 +664,8 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
                         SELECT id, nome, data_inicio, data_fim, data_modificacao,
                                motor_name, motor_diameter, motor_length, motor_delay,
                                motor_propweight, motor_totalweight, motor_manufacturer,
-                               motor_description, motor_observations
+                               motor_description, motor_observations,
+                               burn_start_time, burn_end_time
                         FROM sessoes WHERE id = %s
                     """, (sessao_id,))
                     sessao = cursor.fetchone()
@@ -674,6 +681,11 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
                             'manufacturer': sessao.pop('motor_manufacturer', None),
                             'description': sessao.pop('motor_description', None),
                             'observations': sessao.pop('motor_observations', None)
+                        }
+                        # Add burn metadata
+                        sessao['burnMetadata'] = {
+                            'burnStartTime': sessao.pop('burn_start_time', None),
+                            'burnEndTime': sessao.pop('burn_end_time', None)
                         }
                         self.send_json_response(200, sessao)
                     else:
@@ -771,6 +783,53 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
             ]
         }
         self.send_json_response(200, info)
+
+    def handle_update_burn_metadata(self):
+        """Atualiza os metadados de queima (burn_start_time e burn_end_time) de uma sessão"""
+        try:
+            sessao_id = int(self.path.split('/')[-2])
+        except (ValueError, IndexError):
+            self.send_error(400, "Invalid Session ID")
+            return
+
+        if not mysql_connected:
+            self.send_error(503, "MySQL Service Unavailable")
+            return
+
+        try:
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            data = json.loads(post_data)
+
+            burn_start_time = data.get('burn_start_time')
+            burn_end_time = data.get('burn_end_time')
+
+            if burn_start_time is None or burn_end_time is None:
+                self.send_error(400, "Missing burn_start_time or burn_end_time")
+                return
+
+            with mysql_connection.cursor() as cursor:
+                cursor.execute("""
+                    UPDATE sessoes
+                    SET burn_start_time = %s, burn_end_time = %s
+                    WHERE id = %s
+                """, (float(burn_start_time), float(burn_end_time), sessao_id))
+
+                mysql_connection.commit()
+
+                if cursor.rowcount > 0:
+                    logging.info(f"Metadados de queima atualizados para sessão {sessao_id}: "
+                               f"início={burn_start_time}s, fim={burn_end_time}s")
+                    self.send_json_response(200, {"message": "Burn metadata updated successfully"})
+                else:
+                    self.send_error(404, "Session Not Found")
+
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            logging.error(f"Erro ao processar dados de burn metadata: {e}")
+            self.send_error(400, "Invalid JSON or data format")
+        except pymysql.Error as e:
+            logging.error(f"API Error (update_burn_metadata): {e}")
+            self.send_error(500, "Internal Server Error")
 
     def handle_sync_time(self):
         """Sincroniza a hora do servidor com a hora recebida do cliente"""

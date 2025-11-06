@@ -11,6 +11,7 @@
   <script src="script_grafico_sessao.js" defer></script>
   <script src="funcoespdf.js" defer></script>
   <script src="script.js" defer></script>
+  <script src="burn_analysis.js" defer></script>
   <script src="martelo-do-thor.js" defer></script>
 </head>
 
@@ -681,6 +682,78 @@
         <div class="wizard-footer">
           <button onclick="fecharModalNovaSessao()" class="btn btn-secundario">Cancelar</button>
           <button onclick="iniciarSessaoAvancado()" class="btn btn-sucesso">▶ Iniciar Gravação</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Visualização de Queima -->
+    <div id="modal-burn-analysis" class="wizard-modal" style="display: none;">
+      <div class="wizard-content" style="max-width: 90%; max-height: 90vh;">
+        <div class="wizard-header">
+          <h2>🔥 Análise de Queima - <span id="burn-modal-session-name"></span></h2>
+          <button class="wizard-close" onclick="fecharModalBurnAnalysis()">&times;</button>
+        </div>
+        <div class="wizard-body" style="overflow-y: auto;">
+          <div style="margin-bottom: 1rem;">
+            <p style="color: var(--cor-texto-secundario); font-size: 0.9rem;">
+              Arraste as linhas verticais para ajustar o início e fim da queima. Os cálculos de impulso serão atualizados automaticamente.
+            </p>
+          </div>
+
+          <!-- Gráfico de Análise de Queima -->
+          <div id="burn-analysis-chart" style="width: 100%; height: 400px;"></div>
+
+          <!-- Controles de Pontos de Queima -->
+          <div class="grid-container" style="gap: 1rem; margin-top: 1.5rem;">
+            <div>
+              <label for="burn-start-input">⏱️ Início da Queima (s)</label>
+              <input type="number" id="burn-start-input" step="0.001" placeholder="Auto"
+                     title="Tempo de início da queima em segundos">
+            </div>
+            <div>
+              <label for="burn-end-input">⏱️ Fim da Queima (s)</label>
+              <input type="number" id="burn-end-input" step="0.001" placeholder="Auto"
+                     title="Tempo de fim da queima em segundos">
+            </div>
+          </div>
+
+          <!-- Métricas Calculadas -->
+          <div style="margin-top: 1.5rem; padding: 1rem; background: var(--cor-fundo-card); border-radius: 8px; border-left: 4px solid var(--cor-primaria);">
+            <h3 style="margin-bottom: 1rem;">📊 Métricas da Queima</h3>
+            <div class="grid-container" style="gap: 1rem;">
+              <div>
+                <strong>Duração da Queima:</strong>
+                <p id="burn-duration-display">---</p>
+              </div>
+              <div>
+                <strong>Impulso Total:</strong>
+                <p id="burn-impulse-display">---</p>
+              </div>
+              <div>
+                <strong>Classificação:</strong>
+                <p id="burn-class-display">---</p>
+              </div>
+              <div>
+                <strong>Força Média:</strong>
+                <p id="burn-avg-force-display">---</p>
+              </div>
+              <div>
+                <strong>Força Máxima:</strong>
+                <p id="burn-max-force-display">---</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Botão de Reset -->
+          <div style="margin-top: 1rem;">
+            <button onclick="resetBurnPoints()" class="btn btn-secundario">
+              🔄 Resetar para Detecção Automática
+            </button>
+          </div>
+        </div>
+        <div class="wizard-footer">
+          <button onclick="fecharModalBurnAnalysis()" class="btn btn-secundario">Cancelar</button>
+          <button onclick="salvarPontosQueima()" class="btn btn-sucesso">💾 Salvar Ajustes</button>
         </div>
       </div>
     </div>

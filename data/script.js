@@ -2351,6 +2351,7 @@ async function loadAndDisplayAllSessions() {
         ? `<button onclick="resolverConflito(${session.id})" title="Resolver Conflito de Sincronização" class="btn btn-aviso">⚠️ Resolver Conflito</button>`
         : ''}
             <button onclick="visualizarSessao(${session.id}, '${session.source}')" title="Carregar para Análise/Gráfico" class="btn btn-info">️ Ver</button>
+            <button onclick="abrirModalBurnAnalysis(${session.id}, '${session.source}')" title="Analisar Pontos de Queima" class="btn btn-aviso">🔥 Análise</button>
             <button onclick="editarMetadadosMotor(${session.id})" title="Editar Metadados do Motor" class="btn btn-secundario">⚙️ Metadados</button>
             <button onclick="exportarImagemSessao(${session.id}, '${session.source}')" title="Exportar Gráfico em PNG" class="btn btn-primario">️ PNG</button>
             <button onclick="gerarRelatorioPdf(${session.id}, '${session.source}')" title="Exportar Relatório PDF" class="btn btn-secundario"> PDF</button>
@@ -2852,15 +2853,23 @@ async function exportarEng(sessionId, source) {
     showNotification('error', 'Sessão não encontrada para exportação .ENG.');
     return;
   }
-  
+
+  // Aplica pontos de queima salvos pelo usuário (se existirem)
+  const burnData = aplicarPontosDeQueima(session);
+
+  if (!burnData) {
+    showNotification('error', 'Erro ao processar dados da sessão.');
+    return;
+  }
+
   // Extrai metadados do motor
   const metadados = session.metadadosMotor || {};
   const nomeArquivo = (metadados.name || session.nome.replace(/[^a-zA-Z0-9_]/g, '_')) + '.eng';
-  
+
   // Constrói cabeçalho no formato RASP/OpenRocket
   // Comentário com especificação dos campos
   let engContent = ';name\tdiameter\tlength\tdelay\tpropweight\ttotalweight\tmanufacturer\n';
-  
+
   // Linha de metadados do motor (em mm, s, kg)
   engContent += (metadados.name || 'Motor').trim() + '\t';
   engContent += (metadados.diameter || 45).toFixed(1) + '\t';      // mm
@@ -2869,28 +2878,39 @@ async function exportarEng(sessionId, source) {
   engContent += (metadados.propweight || 0.1).toFixed(5) + '\t';   // kg
   engContent += (metadados.totalweight || 0.25).toFixed(5) + '\t'; // kg
   engContent += (metadados.manufacturer || 'GFIG').trim() + '\n';
-  
+
   // Comentários informativos
   engContent += ';\n';
   engContent += '; Arquivo gerado pelo sistema GFIG\n';
   engContent += '; Data: ' + new Date().toLocaleString('pt-BR') + '\n';
   engContent += '; Sessão: ' + session.nome + '\n';
-  
+
   // Se houver massa de propelente, adiciona informação
   if (metadados.massaPropelente) {
     engContent += '; Massa de propelente informada: ' + metadados.massaPropelente.toFixed(2) + ' g\n';
   }
-  
-  engContent += '; Número de leituras: ' + session.dadosTabela.length + '\n';
+
+  // Informação sobre pontos de queima
+  if (burnData.usandoPontosPersonalizados) {
+    engContent += '; USANDO PONTOS DE QUEIMA PERSONALIZADOS\n';
+    engContent += '; Início da queima: ' + burnData.startTime.toFixed(3) + ' s\n';
+    engContent += '; Fim da queima: ' + burnData.endTime.toFixed(3) + ' s\n';
+    engContent += '; Duração da queima: ' + burnData.duration.toFixed(3) + ' s\n';
+  } else {
+    engContent += '; Pontos de queima detectados automaticamente\n';
+    engContent += '; Início: ' + burnData.startTime.toFixed(3) + ' s, Fim: ' + burnData.endTime.toFixed(3) + ' s\n';
+  }
+
+  engContent += '; Número de leituras (filtradas): ' + burnData.dadosFiltrados.tempos.length + '\n';
   engContent += ';\n';
-  
-  // Dados de impulso (tempo em segundos, força em Newtons)
+
+  // Dados de impulso (tempo em segundos, força em Newtons) - APENAS DO INTERVALO DE QUEIMA
   // Formato: tempo(s)  força(N)
-  session.dadosTabela.forEach(leitura => {
-    const tempo = parseFloat(leitura.tempo_esp) || 0;
-    const newtons = parseFloat(leitura.newtons) || 0;
+  for (let i = 0; i < burnData.dadosFiltrados.tempos.length; i++) {
+    const tempo = burnData.dadosFiltrados.tempos[i];
+    const newtons = burnData.dadosFiltrados.newtons[i];
     engContent += tempo.toFixed(5) + '\t' + newtons.toFixed(5) + '\n';
-  });
+  }
   
   // Download do arquivo
   const blob = new Blob([engContent], { type: 'text/plain;charset=utf-8' });
@@ -2908,46 +2928,91 @@ async function exportarEng(sessionId, source) {
 
 
 async function gerarRelatorioPdf(sessionId, source) {
-  const session = await getSessionDataForExport(sessionId, source);
-  if (!session) {
-    showNotification('error', 'Sessão não encontrada para relatório PDF.');
-    return;
-  }
+  try {
+    const session = await getSessionDataForExport(sessionId, source);
+    if (!session) {
+      showNotification('error', 'Sessão não encontrada para relatório PDF.');
+      return;
+    }
 
-  showNotification('info', 'Gerando relatório PDF com gráfico...', 2000);
+    showNotification('info', 'Gerando relatório PDF com gráfico...', 2000);
 
-  // Processa dados
-  const dados = processarDadosSimples(session.dadosTabela);
-  const impulsoData = calcularAreaSobCurva(dados.tempos, dados.newtons, false);
-  
+    // Aplica pontos de queima salvos pelo usuário (se existirem)
+    const burnData = aplicarPontosDeQueima(session);
+
+    if (!burnData) {
+      showNotification('error', 'Erro ao processar dados da sessão.');
+      return;
+    }
+
+    // Usa dados filtrados pelos pontos de queima
+    const dados = burnData.dadosFiltrados;
+
+    console.log('[PDF DEBUG] dados:', {
+      tempos: dados.tempos?.length,
+      newtons: dados.newtons?.length,
+      hasTempos: !!dados.tempos,
+      hasNewtons: !!dados.newtons
+    });
+
+    if (!dados.tempos || !dados.newtons || dados.tempos.length === 0) {
+      showNotification('error', 'Dados filtrados estão vazios ou inválidos.');
+      return;
+    }
+
+    const impulsoData = calcularAreaSobCurva(dados.tempos, dados.newtons, false);
+
   // Obtém massa do propelente em kg (converte de gramas se necessário)
   let massaPropelente = null;
   if (session.metadadosMotor && session.metadadosMotor.massaPropelente) {
     massaPropelente = session.metadadosMotor.massaPropelente / 1000; // Converte de gramas para kg
   }
-  
+
   const metricasPropulsao = calcularMetricasPropulsao(impulsoData, massaPropelente);
 
+  // Adiciona informação sobre pontos personalizados
+  const burnInfo = {
+    usandoPontosPersonalizados: burnData.usandoPontosPersonalizados,
+    startTime: burnData.startTime,
+    endTime: burnData.endTime,
+    duration: burnData.endTime - burnData.startTime
+  };
+
+  // Cria uma cópia temporária da sessão com dados filtrados
+  const sessionParaPDF = { ...session };
+
+  console.log('[PDF DEBUG] session.dadosTabela:', session.dadosTabela?.length, 'items');
+  console.log('[PDF DEBUG] burnData times:', burnData.startTime, 'to', burnData.endTime);
+
+  sessionParaPDF.dadosTabela = session.dadosTabela.filter(d => {
+    const tempo = parseFloat(d.tempo_esp) || 0;
+    return tempo >= burnData.startTime && tempo <= burnData.endTime;
+  });
+
+  console.log('[PDF DEBUG] sessionParaPDF.dadosTabela filtered:', sessionParaPDF.dadosTabela?.length, 'items');
+
+  if (!sessionParaPDF.dadosTabela || sessionParaPDF.dadosTabela.length === 0) {
+    showNotification('error', 'Nenhum dado encontrado no intervalo de queima.');
+    return;
+  }
+
   // Gera o gráfico em canvas e converte para imagem
-  gerarGraficoParaPDF(session, dados, impulsoData, metricasPropulsao, (imagemBase64) => {
+  gerarGraficoParaPDF(sessionParaPDF, dados, impulsoData, metricasPropulsao, (imagemBase64) => {
     // Cria janela de impressão com o gráfico
     const printWindow = window.open('', '_blank');
 
     // Gera HTML do relatório COM a imagem do gráfico
-    const html = gerarHTMLRelatorioCompleto(session, dados, impulsoData, metricasPropulsao, imagemBase64);
+    const html = gerarHTMLRelatorioCompleto(sessionParaPDF, dados, impulsoData, metricasPropulsao, imagemBase64);
 
     printWindow.document.write(html);
     printWindow.document.close();
 
-    // Aguarda carregamento e abre diálogo de impressão
-    printWindow.onload = function () {
-      setTimeout(() => {
-        printWindow.print();
-      }, 500);
-    };
-
-    showNotification('success', 'Relatório pronto! Use "Salvar como PDF" no diálogo', 5000);
+    showNotification('success', 'Relatório PDF gerado com sucesso!', 3000);
   });
+  } catch (error) {
+    console.error('Erro ao gerar PDF:', error);
+    showNotification('error', 'Erro ao gerar PDF: ' + error.message);
+  }
 }
 
 async function exportarCSV(sessionId, source) {
