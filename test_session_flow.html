@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Fluxo de Sessões</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 20px auto;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .test-item {
+            padding: 10px;
+            margin: 10px 0;
+            background: #f9f9f9;
+            border-left: 3px solid #007bff;
+            border-radius: 4px;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .info {
+            color: #17a2b8;
+            font-weight: bold;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        button.danger:hover {
+            background: #c82333;
+        }
+        .result {
+            background: #e9ecef;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste Completo de Fluxo de Sessões</h1>
+
+    <div class="test-section">
+        <h2>1️⃣ Diagnosticar localStorage</h2>
+        <button onclick="testLocalStorage()">Verificar localStorage</button>
+        <div id="result-localStorage" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2️⃣ Criar Sessão de Teste</h2>
+        <button onclick="createTestSession()">Criar Sessão Fictícia</button>
+        <div id="result-create" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3️⃣ Verificar Processamento de Dados</h2>
+        <button onclick="testDataProcessing()">Testar Processamento</button>
+        <div id="result-processing" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4️⃣ Listar Todas as Sessões</h2>
+        <button onclick="testListSessions()">Listar Sessões</button>
+        <div id="result-list" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5️⃣ Testar Funções Críticas</h2>
+        <button onclick="testEscapeHtml()">Testar Escape HTML</button>
+        <button onclick="testDateParsing()">Testar Parse de Data</button>
+        <div id="result-functions" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>⚙️ Limpeza</h2>
+        <button class="danger" onclick="clearAllData()">Limpar Todas as Sessões</button>
+        <div id="result-cleanup" class="result"></div>
+    </div>
+
+    <script>
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString('pt-BR');
+            const prefix = type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ';
+            const line = `[${timestamp}] ${prefix} ${message}`;
+            element.innerHTML += `<div class="${type}">${line}</div>`;
+            console.log(line);
+        }
+
+        function clearResult(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+
+        function testLocalStorage() {
+            clearResult('result-localStorage');
+            log('result-localStorage', 'Iniciando teste de localStorage...', 'info');
+
+            try {
+                const data = localStorage.getItem('balancaGravacoes');
+                if (!data) {
+                    log('result-localStorage', 'localStorage está vazio', 'info');
+                    return;
+                }
+
+                const sessions = JSON.parse(data);
+                log('result-localStorage', `✓ localStorage contém ${sessions.length} sessão(ões)`, 'success');
+
+                sessions.forEach((session, idx) => {
+                    log('result-localStorage', `  Sessão ${idx + 1}: ID=${session.id}, Nome="${session.nome}", Linhas=${session.dadosTabela?.length || 0}`, 'info');
+                });
+            } catch (e) {
+                log('result-localStorage', `Erro ao ler localStorage: ${e.message}`, 'error');
+            }
+        }
+
+        function createTestSession() {
+            clearResult('result-create');
+            log('result-create', 'Criando sessão fictícia de teste...', 'info');
+
+            try {
+                // Cria dados fictícios
+                const testData = [];
+                for (let i = 0; i < 10; i++) {
+                    testData.push({
+                        timestamp: `${i}ms`,
+                        tempo_esp: `${i * 50}ms`,
+                        newtons: (100 + Math.random() * 50).toFixed(2),
+                        grama_forca: (10 + Math.random() * 5).toFixed(1),
+                        quilo_forca: (0.01 + Math.random() * 0.005).toFixed(4)
+                    });
+                }
+
+                const testSession = {
+                    id: Date.now(),
+                    nome: `🧪 Teste - ${new Date().toLocaleTimeString('pt-BR')}`,
+                    timestamp: new Date().toISOString(),
+                    data_inicio: new Date().toISOString(),
+                    data_fim: new Date().toISOString(),
+                    data_modificacao: new Date().toISOString(),
+                    dadosTabela: testData,
+                    metadadosMotor: {
+                        diameter: 54,
+                        length: 70,
+                        manufacturer: 'AeroTech',
+                        propweight: 1.5,
+                        totalweight: 3.2,
+                        description: 'Motor de Teste',
+                        observations: 'Criado para teste automatizado'
+                    },
+                    savedToMysql: false
+                };
+
+                // Salva no localStorage
+                let sessions = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+                sessions.push(testSession);
+                localStorage.setItem('balancaGravacoes', JSON.stringify(sessions));
+
+                log('result-create', `✓ Sessão criada com sucesso!`, 'success');
+                log('result-create', `  ID: ${testSession.id}`, 'info');
+                log('result-create', `  Nome: ${testSession.nome}`, 'info');
+                log('result-create', `  Linhas de dados: ${testData.length}`, 'info');
+                log('result-create', `  Total de sessões agora: ${sessions.length}`, 'success');
+            } catch (e) {
+                log('result-create', `Erro ao criar sessão: ${e.message}`, 'error');
+            }
+        }
+
+        function testDataProcessing() {
+            clearResult('result-processing');
+            log('result-processing', 'Testando processamento de dados...', 'info');
+
+            try {
+                const data = localStorage.getItem('balancaGravacoes');
+                if (!data) {
+                    log('result-processing', 'Nenhuma sessão encontrada. Crie uma primeira!', 'error');
+                    return;
+                }
+
+                const sessions = JSON.parse(data);
+                const session = sessions[0];
+
+                if (!session.dadosTabela || session.dadosTabela.length === 0) {
+                    log('result-processing', 'Primeira sessão não tem dados', 'error');
+                    return;
+                }
+
+                // Simula processamento básico
+                const tempos = session.dadosTabela.map(d => parseFloat(d.tempo_esp) || 0);
+                const newtons = session.dadosTabela.map(d => parseFloat(d.newtons) || 0);
+
+                log('result-processing', `✓ Dados extraídos com sucesso`, 'success');
+                log('result-processing', `  Tempos: ${tempos.length} pontos`, 'info');
+                log('result-processing', `  Força: ${newtons.length} pontos`, 'info');
+                log('result-processing', `  Força mínima: ${Math.min(...newtons).toFixed(2)} N`, 'info');
+                log('result-processing', `  Força máxima: ${Math.max(...newtons).toFixed(2)} N`, 'info');
+                log('result-processing', `  Força média: ${(newtons.reduce((a, b) => a + b, 0) / newtons.length).toFixed(2)} N`, 'info');
+            } catch (e) {
+                log('result-processing', `Erro ao processar: ${e.message}`, 'error');
+            }
+        }
+
+        function testListSessions() {
+            clearResult('result-list');
+            log('result-list', 'Listando todas as sessões...', 'info');
+
+            try {
+                const data = localStorage.getItem('balancaGravacoes');
+                if (!data) {
+                    log('result-list', 'Nenhuma sessão no localStorage', 'error');
+                    return;
+                }
+
+                const sessions = JSON.parse(data);
+                log('result-list', `✓ Total de ${sessions.length} sessão(ões)`, 'success');
+
+                sessions.forEach((s, idx) => {
+                    const linhas = s.dadosTabela?.length || 0;
+                    const meta = s.metadadosMotor || {};
+                    log('result-list', `${idx + 1}. "${s.nome}" (ID: ${s.id}) - ${linhas} linhas`, 'info');
+                    if (meta.manufacturer) {
+                        log('result-list', `   🚀 ${meta.manufacturer} ⌀${meta.diameter}mm L${meta.length}mm`, 'info');
+                    }
+                });
+            } catch (e) {
+                log('result-list', `Erro ao listar: ${e.message}`, 'error');
+            }
+        }
+
+        function testEscapeHtml() {
+            clearResult('result-functions');
+            log('result-functions', 'Testando escapeHtml...', 'info');
+
+            const escapeHtml = (text) => {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            };
+
+            const testCases = [
+                '<script>alert("XSS")<\/script>',
+                'Motor "Teste" & Análise',
+                'Normal text',
+                null,
+                undefined,
+                ''
+            ];
+
+            testCases.forEach(test => {
+                const result = escapeHtml(test);
+                log('result-functions', `  Input: ${test !== null && test !== undefined ? JSON.stringify(test) : test} → Output: ${result}`, 'success');
+            });
+        }
+
+        function testDateParsing() {
+            clearResult('result-functions');
+            log('result-functions', 'Testando parse de data...', 'info');
+
+            const parseDbTimestampToUTC = (timestamp) => {
+                try {
+                    const date = new Date(timestamp);
+                    return date instanceof Date && !isNaN(date) ? date : new Date(parseInt(timestamp));
+                } catch {
+                    return new Date();
+                }
+            };
+
+            const testDates = [
+                new Date().toISOString(),
+                Date.now(),
+                '2024-01-15T10:30:45Z',
+                'invalid-date'
+            ];
+
+            testDates.forEach(test => {
+                try {
+                    const result = parseDbTimestampToUTC(test);
+                    log('result-functions', `  Parse de ${typeof test === 'string' ? test.substring(0, 20) + '...' : test}: ✓`, 'success');
+                } catch (e) {
+                    log('result-functions', `  Parse falhou: ${e.message}`, 'error');
+                }
+            });
+        }
+
+        function clearAllData() {
+            clearResult('result-cleanup');
+            if (confirm('Tem certeza que deseja limpar TODAS as sessões do localStorage?')) {
+                try {
+                    localStorage.removeItem('balancaGravacoes');
+                    log('result-cleanup', '✓ Todas as sessões foram removidas do localStorage', 'success');
+                } catch (e) {
+                    log('result-cleanup', `Erro ao limpar: ${e.message}`, 'error');
+                }
+            }
+        }
+
+        // Auto-run first test
+        window.addEventListener('load', () => {
+            log('result-localStorage', 'Página carregada. Clique em "Verificar localStorage" para começar.', 'info');
+        });
+    </script>
+</body>
+</html>

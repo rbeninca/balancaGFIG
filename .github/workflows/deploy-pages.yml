@@ -1,0 +1,36 @@
+name: Deploy GitHub Pages from data/
+
+on:
+  push:
+    branches:
+      - master
+      - main          # mantém compatível caso mude a branch padrão
+    paths:
+      - 'data/**'     # só dispara se algo dentro de data/ mudar
+      - '.github/workflows/deploy-pages.yml'  # e se você mudar o próprio workflow
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4 (pinned)
+
+      - name: Preparar artefatos do site
+        run: |
+          mkdir public
+          cp -r data/* public/
+          # Evita processamento do Jekyll no GitHub Pages (necessário para pastas/arquivos com underscore)
+          touch public/.nojekyll
+
+      - name: Publicar na branch gh-pages
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0 (pinned)
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          publish_branch: gh-pages
