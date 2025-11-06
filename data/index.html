@@ -548,17 +548,21 @@
             <p class="wizard-explanation">Informe os dados nominais da sua célula de carga. Essas informações são encontradas na folha de dados (datasheet) do componente.</p>
             <div>
               <label for="wizard-capacidade-maxima">Limite da Célula de Carga (Capacidade)</label>
-              <input type="number" id="wizard-capacidade-maxima" placeholder="Ex: 5000 para 5kg">
-              <select id="wizard-capacidade-unidade">
-                <option value="g" selected>gramas (g)</option>
-                <option value="kg">quilogramas (kg)</option>
-                <option value="N">Newtons (N)</option>
-        </select>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="number" id="wizard-capacidade-maxima" placeholder="Ex: 5000 para 5kg" style="flex: 1;">
+                <select id="wizard-capacidade-unidade" style="width: auto;">
+                  <option value="g" selected>gramas (g)</option>
+                  <option value="kg">quilogramas (kg)</option>
+                  <option value="N">Newtons (N)</option>
+                </select>
+              </div>
+              <small id="wizard-capacidade-em-gramas" style="display: block; color: var(--cor-texto-secundario); margin-top: 0.25rem;">≈ 5000 g</small>
               <small>Capacidade máxima que a célula de carga suporta. Nunca exceda este valor.</small>
             </div>
             <div>
               <label for="wizard-acuracia">Acurácia/Erro da Célula (%)</label>
-              <input type="number" id="wizard-acuracia" step="0.001" placeholder="Ex: 0.05">
+              <input type="number" id="wizard-acuracia" step="0.001" placeholder="Ex: 0.05" oninput="updateWizardErroEmGramas()">
+              <small id="wizard-erro-em-gramas" style="display: block; color: var(--cor-info); margin-top: 0.25rem; font-weight: 600;">Erro: ± 2.50 g</small>
               <small>Classe de precisão ou erro percentual da célula. Ex: 0.05% para uma célula comum.</small>
             </div>
           </div>
@@ -573,19 +577,28 @@
             </div>
             <div>
               <label for="wizard-tolerancia">Tolerância de Calibração (em gramas)</label>
-              <input type="number" id="wizard-tolerancia" step="any" placeholder="Ex: 0.5">
+              <input type="number" id="wizard-tolerancia" step="any" placeholder="Ex: 0.5" oninput="validateWizardTolerancia()">
+              <small id="wizard-tolerancia-warning" style="display: none; color: var(--cor-alerta); font-weight: 600; margin-top: 0.25rem;">⚠️ CRÍTICO: Tolerância abaixo do erro da célula! Pode ser impossível concluir a calibração.</small>
+              <small id="wizard-tolerancia-sugestao" style="display: block; color: var(--cor-info); margin-top: 0.25rem;"></small>
               <small>Variação máxima permitida entre as leituras. Se a calibração falhar, tente aumentar este valor.</small>
-              <small id="wizard-tolerancia-sugestao" style="color: var(--cor-info);"></small>
             </div>
             <div>
               <label for="wizard-timeout">Timeout de Calibração (ms)</label>
-              <input type="number" id="wizard-timeout" placeholder="Ex: 5000">
-              <small>Tempo máximo de espera para a balança estabilizar antes de abortar a calibração.</small>
+              <input type="number" id="wizard-timeout" placeholder="Ex: 10000" oninput="validateWizardTimeout()">
+              <small id="wizard-timeout-warning" style="display: none; color: var(--cor-aviso); font-weight: 600; margin-top: 0.25rem;">⚠️ Recomendável usar valores maiores que 5000ms (5 segundos) para melhor estabilização.</small>
+              <small>Tempo máximo de espera para a balança estabilizar antes de abortar a calibração. Sugestão: 10000ms (10 segundos)</small>
             </div>
           </div>
           <!-- Etapa 3: Tara e Calibração -->
           <div class="wizard-step" id="wizard-step-3" style="display: none;">
             <h4>Etapa 3: Guia de Tara e Calibração</h4>
+
+            <div style="background: var(--cor-info-light); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border-left: 4px solid var(--cor-info);">
+              <strong>📊 Leitura Atual da Balança:</strong>
+              <div style="font-size: 1.5rem; font-weight: bold; color: var(--cor-primaria); margin-top: 0.5rem;" id="wizard-leitura-atual">--- N</div>
+              <small style="color: var(--cor-texto-secundario);">Leitura em tempo real da célula de carga</small>
+            </div>
+
             <div class="wizard-substep">
               <p><strong>1. Posicione a Célula:</strong> Coloque a célula de carga na posição vertical de teste, firmemente fixada.</p>
             </div>
@@ -595,9 +608,17 @@
               <span id="wizard-tare-status"></span>
             </div>
             <div class="wizard-substep">
-              <p><strong>3. Calibração:</strong> Coloque um peso de massa conhecida e estável sobre a célula.</p>
+              <p><strong>3. Calibração com Massa Conhecida:</strong></p>
+              <p style="background: var(--cor-aviso-light); padding: 0.75rem; border-radius: 0.5rem; border-left: 4px solid var(--cor-aviso);">
+                <strong>⚠️ Importante:</strong> Utilize uma massa conhecida e precisa para calibração, como por exemplo:
+                <br>• 1 kg = 1000 g
+                <br>• 500 g
+                <br>• 2 kg = 2000 g
+                <br>Quanto maior e mais precisa a massa, melhor será a calibração.
+              </p>
+              <p>Coloque o peso de massa conhecida sobre a célula e informe o valor em gramas:</p>
               <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <input type="number" id="wizard-massa-calibracao" placeholder="Massa em gramas">
+                <input type="number" id="wizard-massa-calibracao" placeholder="Ex: 1000 (para 1kg)">
                 <button onclick="wizardCalibrate()" class="btn btn-aviso">Calibrar com esta Massa</button>
               </div>
               <span id="wizard-calibrate-status"></span>
