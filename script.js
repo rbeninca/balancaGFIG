@@ -47,6 +47,7 @@ function closeWizard() {
   const modal = document.getElementById('wizard-modal');
   modal.style.display = 'none';
   clearTimeout(configTimeout);
+  stopWizardRealtimeReading(); // Remove listener ao fechar
 }
 
 function wizardGoToStep(direction) {
@@ -67,7 +68,7 @@ function wizardGoToStep(direction) {
 function goToStep(stepNumber) {
   // Esconde todas as etapas
   document.querySelectorAll('.wizard-step').forEach(step => step.style.display = 'none');
-  
+
   // Mostra a etapa atual
   const currentStepEl = document.getElementById(`wizard-step-${stepNumber}`);
   if (currentStepEl) {
@@ -76,6 +77,52 @@ function goToStep(stepNumber) {
 
   wizardCurrentStep = stepNumber;
   updateWizardUI();
+
+  // Se está entrando na etapa 2, atualiza a sugestão de tolerância baseado nos valores da etapa 1
+  if (stepNumber === 2) {
+    updateWizardToleranceSuggestion();
+  }
+
+  // Se está na etapa 3, ativa a atualização da leitura em tempo real
+  if (stepNumber === 3) {
+    startWizardRealtimeReading();
+  } else {
+    stopWizardRealtimeReading();
+  }
+}
+
+// Variável para armazenar o listener de leitura em tempo real
+let wizardRealtimeListener = null;
+
+function startWizardRealtimeReading() {
+  const leituraEl = document.getElementById('wizard-leitura-atual');
+
+  if (!leituraEl) return;
+
+  // Remove listener anterior se existir
+  stopWizardRealtimeReading();
+
+  // Cria novo listener
+  wizardRealtimeListener = (event) => {
+    const { type, payload } = event.data;
+    if (type === 'dadosDisponiveis' && payload && payload[0]) {
+      const forca = payload[0].forca;
+      const kgf = (forca / 9.80665).toFixed(3);
+      leituraEl.textContent = `${forca.toFixed(3)} N (${kgf} kgf)`;
+    }
+  };
+
+  // Adiciona listener ao dataWorker se ele existir
+  if (typeof dataWorker !== 'undefined') {
+    dataWorker.addEventListener('message', wizardRealtimeListener);
+  }
+}
+
+function stopWizardRealtimeReading() {
+  if (wizardRealtimeListener && typeof dataWorker !== 'undefined') {
+    dataWorker.removeEventListener('message', wizardRealtimeListener);
+    wizardRealtimeListener = null;
+  }
 }
 
 function updateWizardUI() {
@@ -144,7 +191,11 @@ function saveStepState(step) {
   }
   if (step === 2) {
     wizardState.numAmostrasMedia = parseInt(document.getElementById('wizard-num-amostras').value);
-    wizardState.toleranciaEstabilidade = parseFloat(document.getElementById('wizard-tolerancia').value);
+
+    // Converte tolerância de gramas para Newtons para salvar no ESP
+    const toleranciaEmGramas = parseFloat(document.getElementById('wizard-tolerancia').value);
+    wizardState.toleranciaEstabilidade = (toleranciaEmGramas * 9.80665) / 1000; // Converte g para N
+
     wizardState.timeoutCalibracao = parseInt(document.getElementById('wizard-timeout').value);
   }
 }
@@ -161,10 +212,9 @@ function populateWizardForm(config) {
   const capacidadeInput = document.getElementById('wizard-capacidade-maxima');
   const unidadeSelect = document.getElementById('wizard-capacidade-unidade');
   const acuraciaInput = document.getElementById('wizard-acuracia');
-  const erroEmGramas = document.createElement('small');
-  acuraciaInput.parentElement.appendChild(erroEmGramas);
 
-  const updateErroEmGramas = () => {
+  // Atualiza a exibição de capacidade em gramas e erro
+  const updateCapacidadeDisplay = () => {
     const capacidade = parseFloat(capacidadeInput.value) || 0;
     const unidade = unidadeSelect.value;
     let capacidadeEmGramas = capacidade;
@@ -172,46 +222,148 @@ function populateWizardForm(config) {
     if (unidade === 'kg') {
       capacidadeEmGramas = capacidade * 1000;
     } else if (unidade === 'N') {
-      // Assuming g = 9.80665
       capacidadeEmGramas = (capacidade / 9.80665) * 1000;
     }
 
-    const acuracia = parseFloat(acuraciaInput.value) || 0;
-    const erro = capacidadeEmGramas * (acuracia / 100);
-    erroEmGramas.textContent = `(± ${erro.toFixed(2)} g)`;
+    document.getElementById('wizard-capacidade-em-gramas').textContent = `≈ ${capacidadeEmGramas.toFixed(2)} g`;
+    updateWizardErroEmGramas();
   };
 
-  capacidadeInput.addEventListener('input', updateErroEmGramas);
-  acuraciaInput.addEventListener('input', updateErroEmGramas);
-  updateErroEmGramas();
-
-  unidadeSelect.addEventListener('change', () => {
-    const capacidade = parseFloat(capacidadeInput.value);
-    const unidade = unidadeSelect.value;
-    if (isNaN(capacidade)) return;
-
-    if (unidade === 'kg') {
-      capacidadeInput.value = capacidade / 1000;
-    } else if (unidade === 'g') {
-      capacidadeInput.value = capacidade * 1000;
-    }
-  });
-
+  capacidadeInput.addEventListener('input', updateCapacidadeDisplay);
+  unidadeSelect.addEventListener('change', updateCapacidadeDisplay);
+  updateCapacidadeDisplay();
 
   // Etapa 2
   document.getElementById('wizard-num-amostras').value = config.numAmostrasMedia || 10;
-  document.getElementById('wizard-timeout').value = config.timeoutCalibracao || 5000;
+  document.getElementById('wizard-timeout').value = config.timeoutCalibracao || 10000; // Mudado de 5000 para 10000
 
-  // Sugestão de tolerância
-  const capacidade = parseFloat(document.getElementById('wizard-capacidade-maxima').value);
-  const acuracia = parseFloat(document.getElementById('wizard-acuracia').value) / 100;
-  const erroAbsoluto = capacidade * acuracia;
-  const sugestaoTolerancia = (erroAbsoluto * 1.5).toFixed(2);
-  document.getElementById('wizard-tolerancia').value = config.toleranciaEstabilidade || sugestaoTolerancia;
-  document.getElementById('wizard-tolerancia-sugestao').textContent = `Sugestão: ${sugestaoTolerancia} g (baseado em 1.5x o erro da célula)`;
+  // Converte tolerância de Newtons para gramas (se config.toleranciaEstabilidade estiver em Newtons)
+  const toleranciaEmNewtons = config.toleranciaEstabilidade || 0;
+  const toleranciaEmGramas = (toleranciaEmNewtons * 1000) / 9.80665;
+
+  // Define o valor de tolerância (será recalculado quando entrar na etapa 2)
+  document.getElementById('wizard-tolerancia').value = toleranciaEmGramas > 0 ? toleranciaEmGramas.toFixed(2) : '';
 
   // Avança para a primeira etapa real
   wizardGoToStep(1);
+}
+
+// Função para atualizar o erro em gramas
+function updateWizardErroEmGramas() {
+  const capacidadeInput = document.getElementById('wizard-capacidade-maxima');
+  const unidadeSelect = document.getElementById('wizard-capacidade-unidade');
+  const acuraciaInput = document.getElementById('wizard-acuracia');
+
+  const capacidade = parseFloat(capacidadeInput.value) || 0;
+  const unidade = unidadeSelect.value;
+  let capacidadeEmGramas = capacidade;
+
+  if (unidade === 'kg') {
+    capacidadeEmGramas = capacidade * 1000;
+  } else if (unidade === 'N') {
+    capacidadeEmGramas = (capacidade / 9.80665) * 1000;
+  }
+
+  const acuracia = parseFloat(acuraciaInput.value) || 0;
+  const erro = capacidadeEmGramas * (acuracia / 100);
+  document.getElementById('wizard-erro-em-gramas').textContent = `Erro: ± ${erro.toFixed(2)} g`;
+
+  // Atualiza validação de tolerância se estiver na etapa 2
+  if (wizardCurrentStep === 2) {
+    validateWizardTolerancia();
+  }
+}
+
+// Função para validar a tolerância em relação ao erro da célula
+function validateWizardTolerancia() {
+  const capacidadeInput = document.getElementById('wizard-capacidade-maxima');
+  const unidadeSelect = document.getElementById('wizard-capacidade-unidade');
+  const acuraciaInput = document.getElementById('wizard-acuracia');
+  const toleranciaInput = document.getElementById('wizard-tolerancia');
+  const warningEl = document.getElementById('wizard-tolerancia-warning');
+
+  const capacidade = parseFloat(capacidadeInput.value) || 0;
+  const unidade = unidadeSelect.value;
+  let capacidadeEmGramas = capacidade;
+
+  if (unidade === 'kg') {
+    capacidadeEmGramas = capacidade * 1000;
+  } else if (unidade === 'N') {
+    capacidadeEmGramas = (capacidade / 9.80665) * 1000;
+  }
+
+  const acuracia = parseFloat(acuraciaInput.value) || 0;
+  const erroEmGramas = capacidadeEmGramas * (acuracia / 100);
+  const tolerancia = parseFloat(toleranciaInput.value) || 0;
+
+  if (tolerancia < erroEmGramas) {
+    warningEl.style.display = 'block';
+    toleranciaInput.style.borderColor = 'var(--cor-alerta)';
+    toleranciaInput.style.background = 'rgba(231, 76, 60, 0.1)';
+  } else {
+    warningEl.style.display = 'none';
+    toleranciaInput.style.borderColor = '';
+    toleranciaInput.style.background = '';
+  }
+}
+
+// Função para validar o timeout de calibração
+function validateWizardTimeout() {
+  const timeoutInput = document.getElementById('wizard-timeout');
+  const warningEl = document.getElementById('wizard-timeout-warning');
+  const timeout = parseInt(timeoutInput.value) || 0;
+
+  if (timeout < 5000 && timeout > 0) {
+    warningEl.style.display = 'block';
+    timeoutInput.style.borderColor = 'var(--cor-aviso)';
+    timeoutInput.style.background = 'rgba(243, 156, 18, 0.1)';
+  } else {
+    warningEl.style.display = 'none';
+    timeoutInput.style.borderColor = '';
+    timeoutInput.style.background = '';
+  }
+}
+
+// Função para atualizar a sugestão de tolerância baseado nos valores da Etapa 1
+function updateWizardToleranceSuggestion() {
+  const capacidadeInput = document.getElementById('wizard-capacidade-maxima');
+  const unidadeSelect = document.getElementById('wizard-capacidade-unidade');
+  const acuraciaInput = document.getElementById('wizard-acuracia');
+  const toleranciaInput = document.getElementById('wizard-tolerancia');
+  const sugestaoEl = document.getElementById('wizard-tolerancia-sugestao');
+
+  if (!capacidadeInput || !unidadeSelect || !acuraciaInput || !toleranciaInput || !sugestaoEl) {
+    console.warn('Elementos do wizard não encontrados');
+    return;
+  }
+
+  const capacidade = parseFloat(capacidadeInput.value) || 0;
+  const unidade = unidadeSelect.value;
+  let capacidadeEmGramas = capacidade;
+
+  // Converte para gramas conforme a unidade
+  if (unidade === 'kg') {
+    capacidadeEmGramas = capacidade * 1000;
+  } else if (unidade === 'N') {
+    capacidadeEmGramas = (capacidade / 9.80665) * 1000;
+  }
+  // Se já está em gramas, não precisa converter
+
+  const acuracia = parseFloat(acuraciaInput.value) / 100 || 0;
+  const erroAbsolutoEmGramas = capacidadeEmGramas * acuracia;
+  const sugestaoTolerancia = (erroAbsolutoEmGramas * 1.5).toFixed(2);
+
+  // Atualiza o campo de tolerância com a sugestão (apenas se estiver vazio ou com valor muito baixo)
+  const valorAtual = parseFloat(toleranciaInput.value) || 0;
+  if (valorAtual === 0 || valorAtual < erroAbsolutoEmGramas * 0.5) {
+    toleranciaInput.value = sugestaoTolerancia;
+  }
+
+  // Atualiza o texto de sugestão
+  sugestaoEl.textContent = `💡 Sugestão: ${sugestaoTolerancia} g (baseado em 1.5x o erro da célula de ${erroAbsolutoEmGramas.toFixed(2)} g)`;
+
+  // Valida a tolerância após atualizar
+  validateWizardTolerancia();
 }
 
 // Sobrescreve a função de update para também popular o wizard
@@ -3724,23 +3876,34 @@ async function syncServerTime() {
   // Pega a hora LOCAL do navegador (a hora real que o usuário está vendo)
   const clientTime = new Date();
   
+  // Obtém o timezone offset do cliente em minutos (diferença em relação a UTC)
+  const timezoneOffset = clientTime.getTimezoneOffset(); // Retorna em minutos
+  const timezoneOffsetSeconds = timezoneOffset * 60; // Converter para segundos
+  
+  // Obtém o nome do timezone do cliente
+  const timezoneName = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  
   // Formata a hora local para exibição (HH:MM:SS)
   const hours = String(clientTime.getHours()).padStart(2, '0');
   const minutes = String(clientTime.getMinutes()).padStart(2, '0');
   const seconds = String(clientTime.getSeconds()).padStart(2, '0');
   const displayedTime = `${hours}:${minutes}:${seconds}`;
 
-  if (!confirm(`Sincronizar hora do servidor com a hora atual do navegador?\n\nHora do Navegador: ${displayedTime}\n\nATENÇÃO: Isso irá ajustar a hora do sistema do servidor!`)) {
+  if (!confirm(`Sincronizar hora do servidor com a hora atual do navegador?\n\nHora do Navegador: ${displayedTime}\nTimezone: ${timezoneName}\n\nATENÇÃO: Isso irá ajustar a hora do sistema do servidor!`)) {
     return;
   }
 
   try {
-    // Envia a hora LOCAL do navegador para o servidor
-    // O servidor receberá em GMT/UTC e ajustará conforme seu timezone
+    // Envia a hora LOCAL do navegador junto com informações de timezone
     const response = await apiFetch('/api/time/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ time: clientTime.toISOString() })
+      body: JSON.stringify({ 
+        time: clientTime.toISOString(),
+        timezoneOffset: timezoneOffsetSeconds,  // offset em segundos
+        timezoneName: timezoneName,
+        localTime: displayedTime  // hora formatada localmente para referência
+      })
     });
 
     if (response.ok) {
