@@ -90,10 +90,6 @@ async function abrirModalBurnAnalysis(sessionId, source) {
     burnStartTime = burnMetadata.burnStartTime || detectBurnStart(dadosProcessados);
     burnEndTime = burnMetadata.burnEndTime || detectBurnEnd(dadosProcessados);
 
-    // Atualizar inputs
-    document.getElementById('burn-start-input').value = burnStartTime.toFixed(3);
-    document.getElementById('burn-end-input').value = burnEndTime.toFixed(3);
-
     // Atualizar informações de tempo do teste
     updateTestTimeInfo(session, dadosProcessados, burnStartTime, burnEndTime);
 
@@ -277,10 +273,8 @@ function renderBurnAnalysisChart(dados) {
 
             if (distStart < distEnd) {
               burnStartTime = clickedTime;
-              document.getElementById('burn-start-input').value = burnStartTime.toFixed(3);
             } else {
               burnEndTime = clickedTime;
-              document.getElementById('burn-end-input').value = burnEndTime.toFixed(3);
             }
 
             updateBurnChart();
@@ -434,35 +428,7 @@ function updateBurnMetrics(dados) {
   }
 }
 
-// Listener para inputs de tempo
-document.addEventListener('DOMContentLoaded', () => {
-  const burnStartInput = document.getElementById('burn-start-input');
-  const burnEndInput = document.getElementById('burn-end-input');
-
-  if (burnStartInput) {
-    burnStartInput.addEventListener('change', function() {
-      const newValue = parseFloat(this.value);
-      if (!isNaN(newValue) && currentBurnSession) {
-        burnStartTime = newValue;
-        updateBurnChart();
-        const dados = processarDadosSimples(currentBurnSession.dadosTabela);
-        updateBurnMetrics(dados);
-      }
-    });
-  }
-
-  if (burnEndInput) {
-    burnEndInput.addEventListener('change', function() {
-      const newValue = parseFloat(this.value);
-      if (!isNaN(newValue) && currentBurnSession) {
-        burnEndTime = newValue;
-        updateBurnChart();
-        const dados = processarDadosSimples(currentBurnSession.dadosTabela);
-        updateBurnMetrics(dados);
-      }
-    });
-  }
-});
+// Listener para inputs de tempo (removido - inputs não existem mais)
 
 function resetBurnPoints() {
   if (!currentBurnSession) return;
@@ -470,9 +436,6 @@ function resetBurnPoints() {
   const dados = processarDadosSimples(currentBurnSession.dadosTabela);
   burnStartTime = detectBurnStart(dados);
   burnEndTime = detectBurnEnd(dados);
-
-  document.getElementById('burn-start-input').value = burnStartTime.toFixed(3);
-  document.getElementById('burn-end-input').value = burnEndTime.toFixed(3);
 
   updateBurnChart();
   updateBurnMetrics(dados);
