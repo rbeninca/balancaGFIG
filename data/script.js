@@ -3724,23 +3724,34 @@ async function syncServerTime() {
   // Pega a hora LOCAL do navegador (a hora real que o usuário está vendo)
   const clientTime = new Date();
   
+  // Obtém o timezone offset do cliente em minutos (diferença em relação a UTC)
+  const timezoneOffset = clientTime.getTimezoneOffset(); // Retorna em minutos
+  const timezoneOffsetSeconds = timezoneOffset * 60; // Converter para segundos
+  
+  // Obtém o nome do timezone do cliente
+  const timezoneName = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  
   // Formata a hora local para exibição (HH:MM:SS)
   const hours = String(clientTime.getHours()).padStart(2, '0');
   const minutes = String(clientTime.getMinutes()).padStart(2, '0');
   const seconds = String(clientTime.getSeconds()).padStart(2, '0');
   const displayedTime = `${hours}:${minutes}:${seconds}`;
 
-  if (!confirm(`Sincronizar hora do servidor com a hora atual do navegador?\n\nHora do Navegador: ${displayedTime}\n\nATENÇÃO: Isso irá ajustar a hora do sistema do servidor!`)) {
+  if (!confirm(`Sincronizar hora do servidor com a hora atual do navegador?\n\nHora do Navegador: ${displayedTime}\nTimezone: ${timezoneName}\n\nATENÇÃO: Isso irá ajustar a hora do sistema do servidor!`)) {
     return;
   }
 
   try {
-    // Envia a hora LOCAL do navegador para o servidor
-    // O servidor receberá em GMT/UTC e ajustará conforme seu timezone
+    // Envia a hora LOCAL do navegador junto com informações de timezone
     const response = await apiFetch('/api/time/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ time: clientTime.toISOString() })
+      body: JSON.stringify({ 
+        time: clientTime.toISOString(),
+        timezoneOffset: timezoneOffsetSeconds,  // offset em segundos
+        timezoneName: timezoneName,
+        localTime: displayedTime  // hora formatada localmente para referência
+      })
     });
 
     if (response.ok) {

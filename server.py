@@ -13,7 +13,7 @@ import struct
 import time
 from typing import Optional, Dict, Any
 import pymysql.cursors
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 # ================== Calculation Helpers ==================
@@ -842,7 +842,7 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(500, "Internal Server Error")
 
     def handle_sync_time(self):
-        """Sincroniza a hora do servidor com a hora recebida do cliente"""
+        """Sincroniza a hora do servidor com a hora recebida do cliente considerando timezone"""
         logging.info("Requisição de sincronização de hora recebida")
         try:
             content_length = int(self.headers['Content-Length'])
@@ -851,18 +851,34 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
             data = json.loads(post_data)
 
             new_time_str = data.get('time')
+            timezone_offset = data.get('timezoneOffset', 0)  # offset em segundos
+            timezone_name = data.get('timezoneName', 'Unknown')
+            local_time = data.get('localTime', 'Unknown')
+            
             if not new_time_str:
                 logging.error("Campo 'time' não fornecido")
                 self.send_json_response(400, {"error": "Missing 'time' field"})
                 return
 
-            # Parse a nova hora
-            new_time = datetime.fromisoformat(new_time_str.replace('Z', '+00:00'))
-            logging.info(f"Hora a ser sincronizada: {new_time}")
+            logging.info(f"Timezone do cliente: {timezone_name} (offset: {timezone_offset}s)")
+            logging.info(f"Hora local do cliente: {local_time}")
+
+            # Parse a nova hora (vem em UTC/ISO)
+            new_time_utc = datetime.fromisoformat(new_time_str.replace('Z', '+00:00'))
+            logging.info(f"Hora ISO recebida (UTC): {new_time_utc}")
+
+            # Ajusta para a hora local do cliente aplicando o offset inverso
+            # Se o cliente tem offset de -10800 (UTC-3), precisamos ADD 10800 segundos
+            # para voltar de UTC para a hora local do cliente
+            adjusted_time = new_time_utc + timedelta(seconds=-timezone_offset)
+            
+            logging.info(f"Hora ajustada para timezone do cliente: {adjusted_time}")
+            logging.info(f"Interpretação: o cliente está em UTC{-timezone_offset//3600:+d}, "
+                        f"portanto a hora {new_time_utc} em UTC = {adjusted_time} no timezone do cliente")
 
             # Formata para o comando date do Linux
             # Formato: MMDDhhmmYYYY.ss
-            time_str = new_time.strftime('%m%d%H%M%Y.%S')
+            time_str = adjusted_time.strftime('%m%d%H%M%Y.%S')
             logging.info(f"Comando date: date {time_str}")
 
             # Tenta ajustar a hora do sistema (requer privilégios)
@@ -877,11 +893,13 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
                                       capture_output=True,
                                       text=True,
                                       check=True)
-                logging.info(f"Hora do servidor sincronizada para: {new_time}")
+                logging.info(f"Hora do servidor sincronizada para: {adjusted_time}")
                 logging.info(f"Saída do comando: {result.stdout}")
                 self.send_json_response(200, {
                     "message": "Hora sincronizada com sucesso!",
-                    "new_time": new_time.isoformat()
+                    "new_time": adjusted_time.isoformat(),
+                    "client_timezone": timezone_name,
+                    "client_local_time": local_time
                 })
             except subprocess.CalledProcessError as e:
                 error_msg = e.stderr.strip() if e.stderr else str(e)
@@ -902,20 +920,26 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_json_response(403, {
                         "error": "Permissão negada",
                         "message": help_msg,
-                        "requested_time": new_time.isoformat()
+                        "requested_time": adjusted_time.isoformat(),
+                        "client_timezone": timezone_name,
+                        "client_local_time": local_time
                     })
                 else:
                     self.send_json_response(500, {
                         "error": error_msg,
                         "message": "Falha ao executar comando 'date'.",
-                        "requested_time": new_time.isoformat()
+                        "requested_time": adjusted_time.isoformat(),
+                        "client_timezone": timezone_name,
+                        "client_local_time": local_time
                     })
             except FileNotFoundError:
                 # Se o comando 'date' não existir (Windows, etc)
                 logging.warning("Comando 'date' não disponível - sincronização apenas simulada")
                 self.send_json_response(200, {
                     "message": "Sincronização simulada (comando 'date' não disponível no sistema)",
-                    "new_time": new_time.isoformat(),
+                    "new_time": adjusted_time.isoformat(),
+                    "client_timezone": timezone_name,
+                    "client_local_time": local_time,
                     "warning": "Sistema operacional não suporta comando 'date'"
                 })
 
