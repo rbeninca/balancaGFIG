@@ -3066,6 +3066,9 @@ async function gerarRelatorioPdf(sessionId, source) {
       return;
     }
 
+    // Dados totais do teste (não filtrados)
+    const dadosTotais = processarDadosSimples(session.dadosTabela);
+
     // Usa dados filtrados pelos pontos de queima
     const dados = burnData.dadosFiltrados;
 
@@ -3123,7 +3126,7 @@ async function gerarRelatorioPdf(sessionId, source) {
     const printWindow = window.open('', '_blank');
 
     // Gera HTML do relatório COM a imagem do gráfico
-    const html = gerarHTMLRelatorioCompleto(sessionParaPDF, dados, impulsoData, metricasPropulsao, imagemBase64, burnInfo);
+    const html = gerarHTMLRelatorioCompleto(sessionParaPDF, dados, impulsoData, metricasPropulsao, imagemBase64, burnInfo, dadosTotais);
 
     printWindow.document.write(html);
     printWindow.document.close();

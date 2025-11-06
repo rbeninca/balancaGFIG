@@ -486,7 +486,7 @@ function gerarBarraVisualClassificacao(impulsoTestado, classificacao) {
 /**
  * Gera HTML completo do relatório com gráfico embutido e todos os dados
  */
-function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsao, imagemGrafico, burnInfo = null) {
+function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsao, imagemGrafico, burnInfo = null, dadosTotais = null) {
   const dataSessao = new Date(sessao.timestamp).toLocaleString('pt-BR');
   const classificacao = metricasPropulsao.classificacaoMotor;
   
@@ -831,6 +831,16 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
         </tr>
         <tr style="border-bottom: 1px solid #dee2e6; background: rgba(52, 152, 219, 0.05);">
           <td style="padding: 8px; font-family: monospace;">
+            ${sessao.data_inicio ? (() => {
+              const startDate = new Date(sessao.data_inicio);
+              return startDate.toLocaleTimeString('pt-BR') + '.' + String(startDate.getMilliseconds()).padStart(3, '0');
+            })() : '---'}
+          </td>
+          <td style="padding: 8px; font-family: monospace; font-weight: bold; color: #3498db;">00:00.000s</td>
+          <td style="padding: 8px; text-align: right;">Início do teste</td>
+        </tr>
+        <tr style="background: rgba(52, 152, 219, 0.05);">
+          <td style="padding: 8px; font-family: monospace;">
             ${sessao.data_fim && dados.tempos && dados.tempos.length > 0 ? (() => {
               const totalDuration = Math.max(...dados.tempos) - Math.min(...dados.tempos);
               const endDate = new Date(sessao.data_fim);
@@ -851,15 +861,15 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 8px;">
         <div style="background: white; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; text-align: center;">
           <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Duração Total</div>
-          <div style="font-size: 13px; font-weight: bold; color: #3498db;">${dados.duracao.toFixed(3)} s</div>
+          <div style="font-size: 13px; font-weight: bold; color: #3498db;">${dadosTotais ? dadosTotais.duracao.toFixed(3) : dados.duracao.toFixed(3)} s</div>
         </div>
         <div style="background: white; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; text-align: center;">
           <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Total de Leituras</div>
-          <div style="font-size: 13px; font-weight: bold; color: #3498db;">${dados.tempos ? dados.tempos.length : 0} leituras</div>
+          <div style="font-size: 13px; font-weight: bold; color: #3498db;">${dadosTotais ? dadosTotais.tempos.length : (dados.tempos ? dados.tempos.length : 0)} leituras</div>
         </div>
         <div style="background: white; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; text-align: center;">
           <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Frequência</div>
-          <div style="font-size: 13px; font-weight: bold; color: #3498db;">${dados.tempos && dados.duracao > 0 ? (dados.tempos.length / dados.duracao).toFixed(1) : '0.0'}/s</div>
+          <div style="font-size: 13px; font-weight: bold; color: #3498db;">${dadosTotais && dadosTotais.duracao > 0 ? (dadosTotais.tempos.length / dadosTotais.duracao).toFixed(1) : (dados.tempos && dados.duracao > 0 ? (dados.tempos.length / dados.duracao).toFixed(1) : '0.0')}/s</div>
         </div>
       </div>
     </div>
@@ -939,29 +949,13 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
         <div style="background: white; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; text-align: center;">
           <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Leituras na Queima</div>
           <div style="font-size: 13px; font-weight: bold; color: #27ae60;">
-            ${burnInfo && dados.tempos ? (() => {
-              let count = 0;
-              for (let i = 0; i < dados.tempos.length; i++) {
-                if (dados.tempos[i] >= burnInfo.startTime && dados.tempos[i] <= burnInfo.endTime) {
-                  count++;
-                }
-              }
-              return count + ' leituras';
-            })() : '---'}
+            ${dados.tempos ? dados.tempos.length + ' leituras' : '---'}
           </div>
         </div>
         <div style="background: white; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; text-align: center;">
           <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Frequência</div>
           <div style="font-size: 13px; font-weight: bold; color: #27ae60;">
-            ${burnInfo && impulsoData.duracaoQueima > 0 ? (() => {
-              let count = 0;
-              for (let i = 0; i < dados.tempos.length; i++) {
-                if (dados.tempos[i] >= burnInfo.startTime && dados.tempos[i] <= burnInfo.endTime) {
-                  count++;
-                }
-              }
-              return (count / impulsoData.duracaoQueima).toFixed(1) + '/s';
-            })() : '0.0/s'}
+            ${dados.tempos && impulsoData.duracaoQueima > 0 ? (dados.tempos.length / impulsoData.duracaoQueima).toFixed(1) + '/s' : '0.0/s'}
           </div>
         </div>
       </div>
