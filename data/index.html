@@ -18,9 +18,13 @@
 <body>
   <!-- Overlay para Contagem Regressiva -->
   <div id="countdown-overlay">
-    <div id="countdown-circle">
-      <div id="countdown-number"></div>
-      <div id="countdown-hand"></div>
+    <div style="text-align: center;">
+      <p id="countdown-status" style="font-size: 2.5rem; color: white; margin-bottom: 2rem; font-weight: bold;">Gravando...</p>
+      <div id="countdown-circle">
+        <div id="countdown-number"></div>
+        <div id="countdown-hand"></div>
+      </div>
+      <p id="countdown-label" style="font-size: 1.8rem; color: #e0e0e0; margin-top: 2rem; font-weight: 500;">Tempo restante</p>
     </div>
     <button id="btn-cancelar-countdown" class="btn btn-perigo">Cancelar Gravação</button>
   </div>
@@ -102,8 +106,11 @@
 
         <!-- Mensagem de Gravação -->
         <div id="mensagem-gravacao" style="display: none;">
-          <span class="record-dot"></span>
-          <span id="tempo-gravacao">Gravando 0s...</span>
+          <div style="display: flex; align-items: center; gap: 0.8rem; justify-content: center;">
+            <span class="record-dot"></span>
+            <span id="tempo-gravacao" style="font-size: 1.8rem;">Gravando 0s...</span>
+          </div>
+          <span id="tempo-restante" style="display: none; font-size: 3.5rem; font-weight: bold; color: white; margin-top: 1rem;">0</span>
         </div>
 
         <div class="grafico-e-controles" style="display: flex; align-items: flex-start; gap: 1rem; flex-wrap: nowrap;">
