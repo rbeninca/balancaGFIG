@@ -1336,6 +1336,8 @@ function iniciarContagemRegressiva(segundos, callback) {
   const numberEl = document.getElementById('countdown-number');
   const handEl = document.getElementById('countdown-hand');
   const cancelButton = document.getElementById('btn-cancelar-countdown');
+  const statusEl = document.getElementById('countdown-status');
+  const labelEl = document.getElementById('countdown-label');
 
   if (!overlay || !numberEl || !handEl) {
     console.error('Elementos do countdown não encontrados!');
@@ -1351,12 +1353,21 @@ function iniciarContagemRegressiva(segundos, callback) {
 
   if (contagemIntervalId) clearInterval(contagemIntervalId);
   contagemIntervalId = setInterval(() => {
-    if (contador > 1) {
-      numberEl.textContent = contador;
-      tocarBeep(800, 100, 0.1); // Beep suave a cada segundo
-    } else {
-      numberEl.textContent = ''; // Último segundo é só o beep final
-      tocarBeep(1200, 200, 0.3); // Beep mais forte no final
+    // Formata o tempo restante em MM:SS
+    const minutos = Math.floor(contador / 60);
+    const segs = contador % 60;
+    const tempoFormatado = `${String(minutos).padStart(2, '0')}:${String(segs).padStart(2, '0')}`;
+    
+    if (contador > 0) {
+      numberEl.textContent = tempoFormatado;
+      statusEl.textContent = 'Começando a gravar em:';
+      labelEl.textContent = '';
+      
+      if (contador > 1) {
+        tocarBeep(800, 100, 0.1); // Beep suave a cada segundo
+      } else {
+        tocarBeep(1200, 200, 0.3); // Beep mais forte no final
+      }
     }
 
     contador--;
@@ -1397,7 +1408,17 @@ function iniciarSessaoAvancado() {
 
     const msgGravacaoEl = document.getElementById('mensagem-gravacao');
     const tempoGravacaoEl = document.getElementById('tempo-gravacao');
+    const tempoRestanteEl = document.getElementById('tempo-restante');
     msgGravacaoEl.style.display = 'flex';
+    
+    // Mostra tempo restante apenas se há duração configurada
+    if (tempoRestanteEl && duracaoSegundos > 0) {
+      tempoRestanteEl.style.display = 'block';
+      tempoRestanteEl.textContent = duracaoSegundos;
+    } else if (tempoRestanteEl) {
+      tempoRestanteEl.style.display = 'none';
+    }
+    
     let tempoDecorrido = 0;
     tempoGravacaoEl.textContent = `Gravando ${tempoDecorrido}s...`;
 
@@ -1405,6 +1426,12 @@ function iniciarSessaoAvancado() {
     temporizadorGravacaoId = setInterval(() => {
       tempoDecorrido++;
       tempoGravacaoEl.textContent = `Gravando ${tempoDecorrido}s...`;
+      
+      // Se há duração configurada, mostra o tempo restante
+      if (duracaoSegundos > 0 && tempoRestanteEl) {
+        const tempoRest = Math.max(0, duracaoSegundos - tempoDecorrido);
+        tempoRestanteEl.textContent = tempoRest;
+      }
     }, 1000);
 
     showNotification('success', `Sessão "${nomeSessao}" iniciada!`);
@@ -1445,7 +1472,9 @@ async function encerrarSessao() {
 
   // Esconde mensagem de gravação
   const msgGravacaoEl = document.getElementById('mensagem-gravacao');
+  const tempoRestanteEl = document.getElementById('tempo-restante');
   if(msgGravacaoEl) msgGravacaoEl.style.display = 'none';
+  if(tempoRestanteEl) tempoRestanteEl.style.display = 'none';
 
   const nomeSessao = document.getElementById('sessao-nome').value.trim();
   const tabela = document.getElementById("tabela").querySelector("tbody");
