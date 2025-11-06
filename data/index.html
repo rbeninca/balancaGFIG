@@ -700,6 +700,87 @@
             </p>
           </div>
 
+          <!-- Informações de Tempo do Teste - Novo Layout Estruturado -->
+          <div style="margin-bottom: 1rem; padding: 1rem; background: var(--cor-fundo-secundario); border-radius: 8px; border: 2px solid var(--cor-primaria);">
+            <h3 style="margin: 0 0 1rem 0; color: var(--cor-primaria); font-size: 1rem;">⏱️ Análise de Tempo da Sessão</h3>
+            
+            <!-- Tabela: Teste Completo -->
+            <div style="margin-bottom: 1.5rem;">
+              <div style="background: var(--cor-primaria); color: white; padding: 0.5rem 0.75rem; border-radius: 4px 4px 0 0; font-weight: bold; font-size: 0.9rem;">
+                📅 Teste Estático (Completo)
+              </div>
+              <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid var(--cor-borda); font-size: 0.85rem;">
+                <tr style="border-bottom: 1px solid var(--cor-borda);">
+                  <td style="padding: 0.5rem 0.75rem; width: 40%;"><strong>Horário Absoluto</strong></td>
+                  <td style="padding: 0.5rem 0.75rem; width: 30%;"><strong>Tempo Relativo</strong></td>
+                  <td style="padding: 0.5rem 0.75rem; width: 30%; text-align: right;"><strong>Descrição</strong></td>
+                </tr>
+                <tr style="background: rgba(52, 152, 219, 0.05); border-bottom: 1px solid var(--cor-borda);">
+                  <td style="padding: 0.5rem 0.75rem; font-family: monospace;" id="burn-test-start-time-absolute">---</td>
+                  <td style="padding: 0.5rem 0.75rem; font-family: monospace; font-weight: bold; color: var(--cor-primaria);">00:00.000s</td>
+                  <td style="padding: 0.5rem 0.75rem; text-align: right;">Início do teste</td>
+                </tr>
+                <tr style="background: rgba(52, 152, 219, 0.05); border-bottom: 1px solid var(--cor-borda);">
+                  <td style="padding: 0.5rem 0.75rem; font-family: monospace;" id="burn-test-end-time-absolute">---</td>
+                  <td style="padding: 0.5rem 0.75rem; font-family: monospace; font-weight: bold; color: var(--cor-primaria);" id="burn-test-end-time-relative">---</td>
+                  <td style="padding: 0.5rem 0.75rem; text-align: right;">Fim do teste</td>
+                </tr>
+              </table>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem;">
+                <div style="background: white; padding: 0.5rem 0.75rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+                  <div style="font-size: 0.75rem; color: var(--cor-texto-secundario);">DURAÇÃO TOTAL</div>
+                  <div style="font-size: 1rem; font-weight: bold; color: var(--cor-primaria);" id="burn-test-duration">---</div>
+                </div>
+                <div style="background: white; padding: 0.5rem 0.75rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+                  <div style="font-size: 0.75rem; color: var(--cor-texto-secundario);">TOTAL DE LEITURAS</div>
+                  <div style="font-size: 1rem; font-weight: bold; color: var(--cor-primaria);" id="burn-test-total-readings">---</div>
+                </div>
+                <div style="background: white; padding: 0.5rem 0.75rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+                  <div style="font-size: 0.75rem; color: var(--cor-texto-secundario);">FREQUÊNCIA</div>
+                  <div style="font-size: 1rem; font-weight: bold; color: var(--cor-primaria);" id="burn-test-readings-per-sec">---</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabela: Queima Detectada -->
+            <div>
+              <div style="background: var(--cor-sucesso); color: white; padding: 0.5rem 0.75rem; border-radius: 4px 4px 0 0; font-weight: bold; font-size: 0.9rem;">
+                🔥 Queima Detectada (Intervalo Selecionado)
+              </div>
+              <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid var(--cor-borda); font-size: 0.85rem;">
+                <tr style="border-bottom: 1px solid var(--cor-borda);">
+                  <td style="padding: 0.5rem 0.75rem; width: 40%;"><strong>Horário Absoluto</strong></td>
+                  <td style="padding: 0.5rem 0.75rem; width: 30%;"><strong>Tempo Relativo ao Teste</strong></td>
+                  <td style="padding: 0.5rem 0.75rem; width: 30%; text-align: right;"><strong>Descrição</strong></td>
+                </tr>
+                <tr style="background: rgba(39, 174, 96, 0.05); border-bottom: 1px solid var(--cor-borda);">
+                  <td style="padding: 0.5rem 0.75rem; font-family: monospace;" id="burn-detected-start-time-absolute">---</td>
+                  <td style="padding: 0.5rem 0.75rem; font-family: monospace; font-weight: bold; color: var(--cor-sucesso);" id="burn-detected-start-time-relative">---</td>
+                  <td style="padding: 0.5rem 0.75rem; text-align: right;">Início da queima</td>
+                </tr>
+                <tr style="background: rgba(39, 174, 96, 0.05); border-bottom: 1px solid var(--cor-borda);">
+                  <td style="padding: 0.5rem 0.75rem; font-family: monospace;" id="burn-detected-end-time-absolute">---</td>
+                  <td style="padding: 0.5rem 0.75rem; font-family: monospace; font-weight: bold; color: var(--cor-sucesso);" id="burn-detected-end-time-relative">---</td>
+                  <td style="padding: 0.5rem 0.75rem; text-align: right;">Fim da queima</td>
+                </tr>
+              </table>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem;">
+                <div style="background: white; padding: 0.5rem 0.75rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+                  <div style="font-size: 0.75rem; color: var(--cor-texto-secundario);">DURAÇÃO QUEIMA</div>
+                  <div style="font-size: 1rem; font-weight: bold; color: var(--cor-sucesso);" id="burn-detected-duration">---</div>
+                </div>
+                <div style="background: white; padding: 0.5rem 0.75rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+                  <div style="font-size: 0.75rem; color: var(--cor-texto-secundario);">LEITURAS NA QUEIMA</div>
+                  <div style="font-size: 1rem; font-weight: bold; color: var(--cor-sucesso);" id="burn-detected-total-readings">---</div>
+                </div>
+                <div style="background: white; padding: 0.5rem 0.75rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+                  <div style="font-size: 0.75rem; color: var(--cor-texto-secundario);">FREQUÊNCIA</div>
+                  <div style="font-size: 1rem; font-weight: bold; color: var(--cor-sucesso);" id="burn-detected-readings-per-sec">---</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Gráfico de Análise de Queima -->
           <div id="burn-analysis-chart" style="width: 100%; height: 400px;"></div>
 

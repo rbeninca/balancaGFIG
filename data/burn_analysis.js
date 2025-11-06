@@ -94,6 +94,9 @@ async function abrirModalBurnAnalysis(sessionId, source) {
     document.getElementById('burn-start-input').value = burnStartTime.toFixed(3);
     document.getElementById('burn-end-input').value = burnEndTime.toFixed(3);
 
+    // Atualizar informações de tempo do teste
+    updateTestTimeInfo(session, dadosProcessados, burnStartTime, burnEndTime);
+
     // Renderizar gráfico
     renderBurnAnalysisChart(dadosProcessados);
 
@@ -103,6 +106,84 @@ async function abrirModalBurnAnalysis(sessionId, source) {
   } catch (error) {
     console.error('Erro ao abrir modal de análise:', error);
     showNotification('error', 'Erro ao carregar análise de queima.');
+  }
+}
+
+function updateTestTimeInfo(session, dados, burnStart, burnEnd) {
+  // Informações do teste estático (gravação completa)
+  const testStartTime = session.data_inicio || session.timestamp;
+  const testEndTime = session.data_fim;
+
+  if (dados.tempos && dados.tempos.length > 0) {
+    const firstReadingTime = Math.min(...dados.tempos);
+    const lastReadingTime = Math.max(...dados.tempos);
+    const totalDuration = lastReadingTime - firstReadingTime;
+    const totalReadings = dados.tempos.length;
+    const readingsPerSecond = totalDuration > 0 ? (totalReadings / totalDuration).toFixed(1) : '0.0';
+
+    // Formatar tempo relativo no formato MM:SS.mmm
+    const formatRelativeTime = (seconds) => {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${String(mins).padStart(2, '0')}:${secs.toFixed(3).padStart(6, '0')}s`;
+    };
+
+    // ======== TESTE COMPLETO ========
+    if (testStartTime) {
+      const startDate = new Date(testStartTime);
+      // Mostrar apenas horário absoluto - tempo relativo é sempre 00:00.000s
+      document.getElementById('burn-test-start-time-absolute').textContent = 
+        startDate.toLocaleTimeString('pt-BR') + '.' + String(startDate.getMilliseconds()).padStart(3, '0');
+    }
+
+    if (testEndTime) {
+      const endDate = new Date(testEndTime);
+      const relativeTime = formatRelativeTime(totalDuration);
+      document.getElementById('burn-test-end-time-absolute').textContent = 
+        endDate.toLocaleTimeString('pt-BR') + '.' + String(endDate.getMilliseconds()).padStart(3, '0');
+      document.getElementById('burn-test-end-time-relative').textContent = relativeTime;
+    }
+
+    document.getElementById('burn-test-duration').textContent = `${totalDuration.toFixed(3)} s`;
+    document.getElementById('burn-test-total-readings').textContent = `${totalReadings} leituras`;
+    document.getElementById('burn-test-readings-per-sec').textContent = `${readingsPerSecond}/s`;
+
+    // ======== QUEIMA DETECTADA ========
+    const burnDuration = burnEnd - burnStart;
+
+    // Contar leituras dentro do intervalo de queima
+    let burnReadings = 0;
+    for (let i = 0; i < dados.tempos.length; i++) {
+      if (dados.tempos[i] >= burnStart && dados.tempos[i] <= burnEnd) {
+        burnReadings++;
+      }
+    }
+    const burnReadingsPerSecond = burnDuration > 0 ? (burnReadings / burnDuration).toFixed(1) : '0.0';
+
+    // Calcular horário absoluto da queima e tempo relativo ao início do teste
+    if (testStartTime) {
+      const testStartDate = new Date(testStartTime);
+
+      // Tempo relativo ao início do teste (não ao primeiro reading)
+      const burnStartRelative = burnStart - firstReadingTime;
+      const burnEndRelative = burnEnd - firstReadingTime;
+
+      // Início da queima
+      const burnStartAbsolute = new Date(testStartDate.getTime() + burnStartRelative * 1000);
+      document.getElementById('burn-detected-start-time-absolute').textContent =
+        burnStartAbsolute.toLocaleTimeString('pt-BR') + '.' + String(burnStartAbsolute.getMilliseconds()).padStart(3, '0');
+      document.getElementById('burn-detected-start-time-relative').textContent = formatRelativeTime(burnStartRelative);
+
+      // Fim da queima
+      const burnEndAbsolute = new Date(testStartDate.getTime() + burnEndRelative * 1000);
+      document.getElementById('burn-detected-end-time-absolute').textContent =
+        burnEndAbsolute.toLocaleTimeString('pt-BR') + '.' + String(burnEndAbsolute.getMilliseconds()).padStart(3, '0');
+      document.getElementById('burn-detected-end-time-relative').textContent = formatRelativeTime(burnEndRelative);
+    }
+
+    document.getElementById('burn-detected-duration').textContent = `${burnDuration.toFixed(3)} s`;
+    document.getElementById('burn-detected-total-readings').textContent = `${burnReadings} leituras`;
+    document.getElementById('burn-detected-readings-per-sec').textContent = `${burnReadingsPerSecond}/s`;
   }
 }
 
@@ -346,6 +427,11 @@ function updateBurnMetrics(dados) {
   `;
   document.getElementById('burn-avg-force-display').textContent = `${avgForce.toFixed(2)} N`;
   document.getElementById('burn-max-force-display').textContent = `${maxForce.toFixed(2)} N`;
+
+  // Atualizar informações de tempo da queima detectada
+  if (currentBurnSession) {
+    updateTestTimeInfo(currentBurnSession, dados, burnStartTime, burnEndTime);
+  }
 }
 
 // Listener para inputs de tempo

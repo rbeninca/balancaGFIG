@@ -486,7 +486,7 @@ function gerarBarraVisualClassificacao(impulsoTestado, classificacao) {
 /**
  * Gera HTML completo do relatório com gráfico embutido e todos os dados
  */
-function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsao, imagemGrafico) {
+function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsao, imagemGrafico, burnInfo = null) {
   const dataSessao = new Date(sessao.timestamp).toLocaleString('pt-BR');
   const classificacao = metricasPropulsao.classificacaoMotor;
   
@@ -812,6 +812,161 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
     <div style="margin-top: 8px; font-size: 13px;">
       ${classificacao.tipo} • ${classificacao.nivel}
     </div>
+  </div>
+
+  <!-- INFORMAÇÕES DE TEMPO - Novo Layout Estruturado -->
+  <div class="secao avoid-break" style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin: 16px 0;">
+    <h2 style="margin-bottom: 12px;">⏱️ Análise de Tempo da Sessão</h2>
+    
+    <!-- Teste Completo -->
+    <div style="margin-bottom: 16px;">
+      <div style="background: #3498db; color: white; padding: 8px 12px; border-radius: 4px 4px 0 0; font-weight: bold; font-size: 12px;">
+        📅 Teste Estático (Completo)
+      </div>
+      <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #dee2e6; font-size: 11px;">
+        <tr style="border-bottom: 1px solid #dee2e6; background: #f8f9fa;">
+          <td style="padding: 8px; width: 35%; font-weight: bold;">Horário Absoluto</td>
+          <td style="padding: 8px; width: 30%; font-weight: bold;">Tempo Relativo</td>
+          <td style="padding: 8px; width: 35%; font-weight: bold; text-align: right;">Descrição</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #dee2e6; background: rgba(52, 152, 219, 0.05);">
+          <td style="padding: 8px; font-family: monospace;">
+            ${sessao.data_fim && dados.tempos && dados.tempos.length > 0 ? (() => {
+              const totalDuration = Math.max(...dados.tempos) - Math.min(...dados.tempos);
+              const endDate = new Date(sessao.data_fim);
+              return endDate.toLocaleTimeString('pt-BR') + '.' + String(endDate.getMilliseconds()).padStart(3, '0');
+            })() : '---'}
+          </td>
+          <td style="padding: 8px; font-family: monospace; font-weight: bold; color: #3498db;">
+            ${dados.tempos && dados.tempos.length > 0 ? (() => {
+              const totalDuration = Math.max(...dados.tempos) - Math.min(...dados.tempos);
+              const mins = Math.floor(totalDuration / 60);
+              const secs = totalDuration % 60;
+              return String(mins).padStart(2, '0') + ':' + secs.toFixed(3).padStart(6, '0') + 's';
+            })() : '---'}
+          </td>
+          <td style="padding: 8px; text-align: right;">Fim do teste</td>
+        </tr>
+      </table>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 8px;">
+        <div style="background: white; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; text-align: center;">
+          <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Duração Total</div>
+          <div style="font-size: 13px; font-weight: bold; color: #3498db;">${dados.duracao.toFixed(3)} s</div>
+        </div>
+        <div style="background: white; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; text-align: center;">
+          <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Total de Leituras</div>
+          <div style="font-size: 13px; font-weight: bold; color: #3498db;">${dados.tempos ? dados.tempos.length : 0} leituras</div>
+        </div>
+        <div style="background: white; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; text-align: center;">
+          <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Frequência</div>
+          <div style="font-size: 13px; font-weight: bold; color: #3498db;">${dados.tempos && dados.duracao > 0 ? (dados.tempos.length / dados.duracao).toFixed(1) : '0.0'}/s</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Queima Detectada -->
+    <div>
+      <div style="background: #27ae60; color: white; padding: 8px 12px; border-radius: 4px 4px 0 0; font-weight: bold; font-size: 12px;">
+        🔥 Queima Detectada (Intervalo Selecionado)${burnInfo && burnInfo.usandoPontosPersonalizados ? ' - Personalizado' : ' - Auto-detectado'}
+      </div>
+      <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #dee2e6; font-size: 11px;">
+        <tr style="border-bottom: 1px solid #dee2e6; background: #f8f9fa;">
+          <td style="padding: 8px; width: 35%; font-weight: bold;">Horário Absoluto</td>
+          <td style="padding: 8px; width: 30%; font-weight: bold;">Tempo Relativo ao Teste</td>
+          <td style="padding: 8px; width: 35%; font-weight: bold; text-align: right;">Descrição</td>
+        </tr>
+        ${burnInfo && sessao.data_inicio && dados.tempos && dados.tempos.length > 0 ? `
+        <tr style="border-bottom: 1px solid #dee2e6; background: rgba(39, 174, 96, 0.05);">
+          <td style="padding: 8px; font-family: monospace;">
+            ${(() => {
+              const testStart = new Date(sessao.data_inicio);
+              const firstReading = Math.min(...dados.tempos);
+              const burnStartRelative = burnInfo.startTime - firstReading;
+              const burnStart = new Date(testStart.getTime() + burnStartRelative * 1000);
+              return burnStart.toLocaleTimeString('pt-BR') + '.' + String(burnStart.getMilliseconds()).padStart(3, '0');
+            })()}
+          </td>
+          <td style="padding: 8px; font-family: monospace; font-weight: bold; color: #27ae60;">
+            ${(() => {
+              const firstReading = Math.min(...dados.tempos);
+              const burnStartRelative = burnInfo.startTime - firstReading;
+              const mins = Math.floor(burnStartRelative / 60);
+              const secs = burnStartRelative % 60;
+              return String(mins).padStart(2, '0') + ':' + secs.toFixed(3).padStart(6, '0') + 's';
+            })()}
+          </td>
+          <td style="padding: 8px; text-align: right;">Início da queima</td>
+        </tr>
+        <tr style="background: rgba(39, 174, 96, 0.05);">
+          <td style="padding: 8px; font-family: monospace;">
+            ${(() => {
+              const testStart = new Date(sessao.data_inicio);
+              const firstReading = Math.min(...dados.tempos);
+              const burnEndRelative = burnInfo.endTime - firstReading;
+              const burnEnd = new Date(testStart.getTime() + burnEndRelative * 1000);
+              return burnEnd.toLocaleTimeString('pt-BR') + '.' + String(burnEnd.getMilliseconds()).padStart(3, '0');
+            })()}
+          </td>
+          <td style="padding: 8px; font-family: monospace; font-weight: bold; color: #27ae60;">
+            ${(() => {
+              const firstReading = Math.min(...dados.tempos);
+              const burnEndRelative = burnInfo.endTime - firstReading;
+              const mins = Math.floor(burnEndRelative / 60);
+              const secs = burnEndRelative % 60;
+              return String(mins).padStart(2, '0') + ':' + secs.toFixed(3).padStart(6, '0') + 's';
+            })()}
+          </td>
+          <td style="padding: 8px; text-align: right;">Fim da queima</td>
+        </tr>
+        ` : `
+        <tr style="border-bottom: 1px solid #dee2e6; background: rgba(39, 174, 96, 0.05);">
+          <td style="padding: 8px; font-family: monospace;">---</td>
+          <td style="padding: 8px; font-family: monospace; font-weight: bold; color: #27ae60;">${impulsoData.tempoIgnicao?.toFixed(3) || '0.000'}s</td>
+          <td style="padding: 8px; text-align: right;">Início da queima</td>
+        </tr>
+        <tr style="background: rgba(39, 174, 96, 0.05);">
+          <td style="padding: 8px; font-family: monospace;">---</td>
+          <td style="padding: 8px; font-family: monospace; font-weight: bold; color: #27ae60;">${impulsoData.tempoBurnout?.toFixed(3) || '0.000'}s</td>
+          <td style="padding: 8px; text-align: right;">Fim da queima</td>
+        </tr>
+        `}
+      </table>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 8px;">
+        <div style="background: white; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; text-align: center;">
+          <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Duração Queima</div>
+          <div style="font-size: 13px; font-weight: bold; color: #27ae60;">${impulsoData.duracaoQueima.toFixed(3)} s</div>
+        </div>
+        <div style="background: white; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; text-align: center;">
+          <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Leituras na Queima</div>
+          <div style="font-size: 13px; font-weight: bold; color: #27ae60;">
+            ${burnInfo && dados.tempos ? (() => {
+              let count = 0;
+              for (let i = 0; i < dados.tempos.length; i++) {
+                if (dados.tempos[i] >= burnInfo.startTime && dados.tempos[i] <= burnInfo.endTime) {
+                  count++;
+                }
+              }
+              return count + ' leituras';
+            })() : '---'}
+          </div>
+        </div>
+        <div style="background: white; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; text-align: center;">
+          <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Frequência</div>
+          <div style="font-size: 13px; font-weight: bold; color: #27ae60;">
+            ${burnInfo && impulsoData.duracaoQueima > 0 ? (() => {
+              let count = 0;
+              for (let i = 0; i < dados.tempos.length; i++) {
+                if (dados.tempos[i] >= burnInfo.startTime && dados.tempos[i] <= burnInfo.endTime) {
+                  count++;
+                }
+              }
+              return (count / impulsoData.duracaoQueima).toFixed(1) + '/s';
+            })() : '0.0/s'}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   </div>
 
   <!-- MÉTRICAS PRINCIPAIS -->

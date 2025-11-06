@@ -368,14 +368,24 @@ async def save_session_to_mysql_db(session_data: Dict[str, Any]):
                 logging.error(f"Erro ao converter timestamp '{session_data.get('timestamp')}': {e}")
                 return False
 
+            # Parse data_fim - prefer direct field, fallback to last reading's timestamp
             data_fim = None
-            if dados_tabela:
+            if 'data_fim' in session_data and session_data['data_fim']:
+                try:
+                    data_fim = datetime.fromisoformat(session_data['data_fim'].replace('Z', '+00:00'))
+                except (ValueError, KeyError) as e:
+                    logging.warning(f"Erro ao converter data_fim direto: {e}")
+
+            if not data_fim and dados_tabela:
                 try:
                     # Timestamp format from frontend: '27/10/2025 15:13:06.334'
                     data_fim = datetime.strptime(dados_tabela[-1]['timestamp'], '%d/%m/%Y %H:%M:%S.%f')
                 except (ValueError, IndexError, KeyError) as e:
-                    logging.warning(f"Erro ao converter data_fim, usando data_inicio: {e}")
+                    logging.warning(f"Erro ao converter data_fim from reading, usando data_inicio: {e}")
                     data_fim = data_inicio
+
+            if not data_fim:
+                data_fim = data_inicio
 
             # Extract motor metadata
             metadados = session_data.get('metadadosMotor', {})
