@@ -1581,6 +1581,41 @@ function showNotification(type, message, duration = 5000) {
   }, duration);
 }
 
+/**
+ * Mostra overlay de carregamento
+ */
+function showLoading() {
+  const loader = document.getElementById('loading-overlay');
+  if (loader) {
+    loader.style.display = 'flex';
+    // Força o reflow para garantir que a mudança seja aplicada
+    loader.offsetHeight;
+  }
+}
+
+/**
+ * Esconde overlay de carregamento
+ */
+function hideLoading() {
+  const loader = document.getElementById('loading-overlay');
+  if (loader) {
+    loader.style.display = 'none';
+  }
+}
+
+/**
+ * Configura event listener para botão de fechamento manual do loader
+ */
+document.addEventListener('DOMContentLoaded', () => {
+  const btnFecharLoader = document.getElementById('btn-fechar-loader');
+  if (btnFecharLoader) {
+    btnFecharLoader.addEventListener('click', () => {
+      hideLoading();
+      showNotification('warning', 'Carregamento interrompido manualmente.');
+    });
+  }
+});
+
 function convertForce(valueN, unit) {
   const g_force_conversion = 101.9716;
   if (unit === 'gf') return valueN * g_force_conversion;
@@ -2779,6 +2814,8 @@ async function getSessionDataForExport(sessionId, source) {
 
   if (!sessionData && (source === 'db' || source === 'both')) { // Try DB if local not found or explicitly DB
     try {
+      showLoading(); // Mostra loader enquanto busca dados
+      
       const dbSessionResponse = await apiFetch(`/api/sessoes/${sessionId}`);
       if (!dbSessionResponse.ok) throw new Error('Falha ao carregar detalhes da sessão do DB para exportação.');
       const dbSession = await dbSessionResponse.json();
@@ -2807,12 +2844,21 @@ async function getSessionDataForExport(sessionId, source) {
           savedToMysql: true
         };
       }
+      
+      hideLoading(); // Esconde loader após sucesso
     } catch (error) {
+      hideLoading(); // Esconde loader em caso de erro
       console.error('Erro ao buscar sessão do DB para exportação:', error);
       showNotification('error', 'Erro ao carregar sessão ' + sessionId + ' do DB para exportação.');
       return null;
     }
   }
+  
+  // Se carregou localmente, esconde o loader também
+  if (sessionData && !source.includes('db')) {
+    hideLoading();
+  }
+  
   return sessionData;
 }
 // Visualiza uma sessão salva (gráfico + tabela) garantindo eixo X numérico e ordenado
