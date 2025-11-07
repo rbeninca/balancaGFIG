@@ -710,66 +710,87 @@ sudo chmod 666 /dev/ttyUSB0</pre>
     </div>
   <!-- Modal de Nova Sessão -->
     <div id="modal-nova-sessao" class="wizard-modal">
-      <div class="wizard-content">
-        <div class="wizard-header">
-          <h2>🚀 Nova Sessão de Teste</h2>
+      <div class="wizard-content" style="max-width: 1000px;">
+        <div class="wizard-header" style="padding: 0.75rem 1rem;">
+          <h2 style="margin: 0; font-size: 1.25rem;">🚀 Nova Sessão de Teste</h2>
           <button class="wizard-close" onclick="fecharModalNovaSessao()">&times;</button>
         </div>
-        <div class="wizard-body">
+        <div class="wizard-body" style="padding: 1rem;">
           <div class="wizard-step" style="display: block;">
-            <div>
-              <label for="sessao-nome">Nome da Sessão</label>
+            <div style="margin-bottom: 0.75rem;">
+              <label for="sessao-nome" style="margin-bottom: 0.25rem;">Nome da Sessão</label>
               <input type="text" id="sessao-nome" placeholder="Ex: Teste Motor XYZ v1">
             </div>
-            
-            <details class="collapsible-section" style="margin-top: 1.5rem;">
-              <summary>⚙️ Metadados do Motor (Opcional)</summary>
-              <div class="grid-container" style="gap: 1rem; margin-top: 1rem;">
-                <div>
-                  <label for="sessao-meta-diametro">Diâmetro (mm)</label>
-                  <input type="number" id="sessao-meta-diametro" placeholder="Ex: 50">
-                </div>
-                <div>
-                  <label for="sessao-meta-comprimento">Comprimento (mm)</label>
-                  <input type="number" id="sessao-meta-comprimento" placeholder="Ex: 200">
-                </div>
-                <div>
-                  <label for="sessao-meta-fabricante">Fabricante</label>
-                  <input type="text" id="sessao-meta-fabricante" placeholder="Ex: Grupo de Foguetes - Campus Gaspar IFSC">
-                </div>
-                <div>
-                  <label for="sessao-meta-propelente">Peso do Propelente (g)</label>
-                  <input type="number" id="sessao-meta-propelente" placeholder="Ex: 150.5">
-                </div>
-                <div>
-                  <label for="sessao-meta-peso-total">Peso Total (g)</label>
-                  <input type="number" id="sessao-meta-peso-total" placeholder="Ex: 350.2">
-                </div>
-              </div>
-              <div style="margin-top: 1rem;">
-                <label for="sessao-meta-descricao">Descrição</label>
-                <textarea id="sessao-meta-descricao" rows="2" placeholder="Breve descrição do motor ou do teste."></textarea>
-              </div>
-              <div style="margin-top: 1rem;">
-                <label for="sessao-meta-observacoes">Observações</label>
-                <textarea id="sessao-meta-observacoes" rows="3" placeholder="Detalhes sobre o teste, condições, resultados inesperados, etc."></textarea>
-              </div>
-            </details>
 
-            <div class="grid-container" style="gap: 1rem; margin-top: 1.5rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem; padding: 0.75rem; background: var(--cor-info-light, #e3f2fd); border-radius: 8px; border-left: 4px solid var(--cor-info, #2196f3);">
               <div>
-                <label for="sessao-delay">Delay para Iniciar (s)</label>
-                <input type="number" id="sessao-delay" value="0" min="0" step="1" title="Tempo em segundos para aguardar antes de iniciar a gravação.">
+                <label for="sessao-delay" style="font-size: 0.85rem; margin-bottom: 0.2rem; font-weight: 600;">⏱️ Delay para Iniciar (s)</label>
+                <input type="number" id="sessao-delay" value="0" min="0" step="1" style="padding: 0.4rem;" title="Tempo em segundos para aguardar antes de iniciar a gravação">
+                <small style="display: block; color: var(--cor-texto-secundario); margin-top: 0.2rem; font-size: 0.75rem;">Tempo de espera antes de iniciar</small>
               </div>
               <div>
-                <label for="sessao-timer">Duração da Gravação (s)</label>
-                <input type="number" id="sessao-timer" value="0" min="0" step="1" title="Tempo total da gravação. Deixe em 0 para gravação manual (sem temporizador).">
-                <small>Deixe em 0 para encerrar manualmente.</small>
+                <label for="sessao-timer" style="font-size: 0.85rem; margin-bottom: 0.2rem; font-weight: 600;">⏲️ Duração da Gravação (s)</label>
+                <input type="number" id="sessao-timer" value="0" min="0" step="1" style="padding: 0.4rem;" title="Tempo total da gravação. Deixe em 0 para gravação manual">
+                <small style="display: block; color: var(--cor-texto-secundario); margin-top: 0.2rem; font-size: 0.75rem;">0 = encerrar manualmente</small>
               </div>
             </div>
+
+            <details class="collapsible-section" style="margin-top: 0.5rem;" open>
+              <summary style="margin-bottom: 0.5rem;">⚙️ Metadados do Motor (Opcional)</summary>
+
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 0.5rem;">
+                <div>
+                  <label for="sessao-meta-diametro" style="font-size: 0.85rem; margin-bottom: 0.2rem;">Diâmetro (mm)</label>
+                  <input type="number" id="sessao-meta-diametro" placeholder="50" style="padding: 0.2rem;">
+                </div>
+                <div>
+                  <label for="sessao-meta-comprimento" style="font-size: 0.85rem; margin-bottom: 0.2rem;">Comprimento (mm)</label>
+                  <input type="number" id="sessao-meta-comprimento" placeholder="200" style="padding: 0.2rem;">
+                </div>
+                <div>
+                  <label for="sessao-meta-propelente" style="font-size: 0.85rem; margin-bottom: 0.2rem;">Propelente (g)</label>
+                  <input type="number" id="sessao-meta-propelente" placeholder="150.5" style="padding: 0.2rem;">
+                </div>
+                <div>
+                  <label for="sessao-meta-peso-total" style="font-size: 0.85rem; margin-bottom: 0.2rem;">Peso Total (g)</label>
+                  <input type="number" id="sessao-meta-peso-total" placeholder="350.2" style="padding: 0.2rem;">
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.5rem;">
+                <div>
+                  <label for="sessao-meta-temperatura" style="font-size: 0.85rem; margin-bottom: 0.2rem;">🌡️ Temp. (°C)</label>
+                  <input type="number" id="sessao-meta-temperatura" placeholder="25.5" step="0.1" style="padding: 0.2rem;">
+                </div>
+                <div>
+                  <label for="sessao-meta-umidade" style="font-size: 0.85rem; margin-bottom: 0.2rem;">💧 Umidade (%)</label>
+                  <input type="number" id="sessao-meta-umidade" placeholder="65" min="0" max="100" step="0.1" style="padding: 0.2rem;">
+                </div>
+                <div>
+                  <label for="sessao-meta-pressao" style="font-size: 0.85rem; margin-bottom: 0.2rem;">🔵 Pressão (hPa)</label>
+                  <input type="number" id="sessao-meta-pressao" placeholder="1013.25" step="0.01" style="padding: 0.2rem;">
+                </div>
+              </div>
+
+              <div style="margin-bottom: 0.5rem;">
+                <label for="sessao-meta-fabricante" style="font-size: 0.85rem; margin-bottom: 0.2rem;">Fabricante</label>
+                <input type="text" id="sessao-meta-fabricante" placeholder="GFIG - Campus Gaspar IFSC" style="padding: 0.2rem; width: 100%;">
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                <div>
+                  <label for="sessao-meta-descricao" style="font-size: 0.85rem; margin-bottom: 0.2rem;">Descrição</label>
+                  <textarea id="sessao-meta-descricao" rows="2" placeholder="Breve descrição do motor..." style="padding: 0.2rem; resize: vertical;"></textarea>
+                </div>
+                <div>
+                  <label for="sessao-meta-observacoes" style="font-size: 0.85rem; margin-bottom: 0.2rem;">Observações</label>
+                  <textarea id="sessao-meta-observacoes" rows="2" placeholder="Detalhes do teste..." style="padding: 0.2rem; resize: vertical;"></textarea>
+                </div>
+              </div>
+            </details>
           </div>
         </div>
-        <div class="wizard-footer">
+        <div class="wizard-footer" style="padding: 0.75rem 1rem;">
           <button onclick="fecharModalNovaSessao()" class="btn btn-secundario">Cancelar</button>
           <button onclick="iniciarSessaoAvancado()" class="btn btn-sucesso">▶ Iniciar Gravação</button>
         </div>
@@ -778,7 +799,7 @@ sudo chmod 666 /dev/ttyUSB0</pre>
 
     <!-- Modal de Visualização de Queima -->
     <div id="modal-burn-analysis" class="wizard-modal" style="display: none;">
-      <div class="wizard-content" style="max-width: 90%; max-height: 90vh;">
+      <div class="wizard-content" style="max-width: 90%; max-height: 95vh;">
         <div class="wizard-header" style="padding: 0.3rem 0.5rem;">
           <h2 style="margin: 0; font-size: 0.95rem;">🔥 <span id="burn-modal-session-name"></span>    <button onclick="resetBurnPoints()" class="btn btn-secundario">🔄 Resetar para Detecção Automática
             </button>  <button onclick="fecharModalBurnAnalysis()" class="btn btn-secundario" style="flex: 1; padding: 0.3rem; font-size: 0.75rem;">Cancelar</button>
@@ -786,13 +807,13 @@ sudo chmod 666 /dev/ttyUSB0</pre>
               <p style="color: var(--cor-texto-secundario); font-size: 0.75rem; margin: 0;"></p></h2>
           <button class="wizard-close" onclick="fecharModalBurnAnalysis()" style="font-size: 1.2rem; padding: 0.2rem 0.4rem;">&times;</button>
         </div>
-        <div class="wizard-body" style="overflow-y: auto;">
+        <div class="wizard-body" style="">
           
 
           <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--cor-fundo-secundario); border-radius: 8px; border: 2px solid var(--cor-primaria);">
             
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.2rem;">
               
               <div>
                 <div style="background: var(--cor-primaria); color: white; padding: 0.4rem 0.5rem; border-radius: 4px 4px 0 0; font-weight: bold; font-size: 0.8rem;">
@@ -868,42 +889,35 @@ sudo chmod 666 /dev/ttyUSB0</pre>
                 </div>
                 <div style="background: white; border: 1px solid var(--cor-borda); border-radius: 0 0 4px 4px; padding: 0.4rem; font-size: 0.75rem;">
                   <div style="padding: 0.3rem 0; border-bottom: 1px solid rgba(52, 152, 219, 0.2);">
-                    <div style="font-size: 0.65rem; color: var(--cor-texto-secundario); margin-bottom: 0.2rem;">Duração</div>
-                    <div style="font-weight: bold; color: var(--cor-primaria); font-size: 0.85rem;" id="burn-duration-display">---</div>
+                    <span style="font-size: 0.65rem; color: var(--cor-texto-secundario); margin-bottom: 0.2rem;">Duração</span>
+                    <span style="font-weight: bold; color: var(--cor-primaria); font-size: 0.85rem;" id="burn-duration-display">---</span>
                   </div>
                   <div style="padding: 0.3rem 0; border-bottom: 1px solid rgba(52, 152, 219, 0.2);">
-                    <div style="font-size: 0.65rem; color: var(--cor-texto-secundario); margin-bottom: 0.2rem;">Impulso Total</div>
-                    <div style="font-weight: bold; color: var(--cor-primaria); font-size: 0.85rem;" id="burn-impulse-display">---</div>
+                    <span style="font-size: 0.65rem; color: var(--cor-texto-secundario); margin-bottom: 0.2rem;">Impulso Total</span>
+                    <span style="font-weight: bold; color: var(--cor-primaria); font-size: 0.85rem;" id="burn-impulse-display">---</span>
                   </div>
                   <div style="padding: 0.3rem 0; border-bottom: 1px solid rgba(52, 152, 219, 0.2);">
-                    <div style="font-size: 0.65rem; color: var(--cor-texto-secundario); margin-bottom: 0.2rem;">Classificação</div>
-                    <div style="font-weight: bold; color: var(--cor-primaria); font-size: 0.85rem;" id="burn-class-display">---</div>
+                    <span style="font-size: 0.65rem; color: var(--cor-texto-secundario); margin-bottom: 0.2rem;">Classificação</span>
+                    <span style="font-weight: bold; color: var(--cor-primaria); font-size: 0.85rem;" id="burn-class-display">---</span>
                   </div>
                   <div style="padding: 0.3rem 0; border-bottom: 1px solid rgba(52, 152, 219, 0.2);">
-                    <div style="font-size: 0.65rem; color: var(--cor-texto-secundario); margin-bottom: 0.2rem;">Força Média</div>
-                    <div style="font-weight: bold; color: var(--cor-primaria); font-size: 0.85rem;" id="burn-avg-force-display">---</div>
+                    <span style="font-size: 0.65rem; color: var(--cor-texto-secundario); margin-bottom: 0.2rem;">Força Média</span>
+                    <span style="font-weight: bold; color: var(--cor-primaria); font-size: 0.85rem;" id="burn-avg-force-display">---</span>
                   </div>
                   <div style="padding: 0.3rem 0;">
-                    <div style="font-size: 0.65rem; color: var(--cor-texto-secundario); margin-bottom: 0.2rem;">Força Máxima</div>
-                    <div style="font-weight: bold; color: var(--cor-primaria); font-size: 0.85rem;" id="burn-max-force-display">---</div>
+                    <span style="font-size: 0.65rem; color: var(--cor-texto-secundario); margin-bottom: 0.2rem;">Força Máxima</span>
+                    <span style="font-weight: bold; color: var(--cor-primaria); font-size: 0.85rem;" id="burn-max-force-display">---</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div id="burn-analysis-chart" style="width: 100%; height: 400px;"></div>
+          <div id="burn-analysis-chart" style="width: 98%; height: 400px;"></div>
 
-          <div style="margin-top: 1rem;">
-            <button onclick="resetBurnPoints()" class="btn btn-secundario">
-              🔄 Resetar para Detecção Automática
-            </button>
-          </div>
+         
         </div>
-        <div class="wizard-footer" style="padding: 0.3rem; gap: 0.3rem;">
-          <button onclick="fecharModalBurnAnalysis()" class="btn btn-secundario" style="flex: 1; padding: 0.3rem; font-size: 0.75rem;">Cancelar</button>
-          <button onclick="salvarPontosQueima()" class="btn btn-sucesso" style="flex: 1; padding: 0.3rem; font-size: 0.75rem;">💾 Salvar</button>
-        </div>
+      
       </div>
     </div>
 

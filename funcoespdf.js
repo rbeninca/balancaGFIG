@@ -21,21 +21,24 @@ function exportarPDFViaPrint(sessionId) {
     }
     
     showNotification('info', 'Gerando relatório PDF com gráfico...', 2000);
-    
-    // Processa dados
+
+    // Processa dados COMPLETOS da sessão
+    const dadosCompletos = processarDadosSimples(sessao.dadosTabela);
+
+    // Processa dados (pode ser filtrado se houver intervalo personalizado)
     const dados = processarDadosSimples(sessao.dadosTabela);
     // Assumimos que calcularAreaSobCurva retorna o Impulso Total (área sob a curva)
     const impulsoData = calcularAreaSobCurva(dados.tempos, dados.newtons, false);
     // Assumimos que calcularMetricasPropulsao lida com a classificação NAR/TRA
     const metricasPropulsao = calcularMetricasPropulsao(impulsoData);
-    
+
     // Gera o gráfico em canvas e converte para imagem
     gerarGraficoParaPDF(sessao, dados, impulsoData, metricasPropulsao, (imagemBase64) => {
       // Cria janela de impressão com o gráfico
       const printWindow = window.open('', '_blank');
-      
+
       // Gera HTML do relatório COM a imagem do gráfico
-      const html = gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsao, imagemBase64);
+      const html = gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsao, imagemBase64, null, dadosCompletos);
       
       printWindow.document.write(html);
       printWindow.document.close();
@@ -574,32 +577,32 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
     
     body {
       font-family: Arial, sans-serif;
-      line-height: 1.4;
+      line-height: 1.3;
       color: #2c3e50;
       max-width: 210mm;
       margin: 0 auto;
-      padding: 10px;
+      padding: 6px;
       background: white;
-      font-size: 11px;
+      font-size: 10px;
     }
 
     .header {
       text-align: center;
       border-bottom: 2px solid #3498db;
-      padding-bottom: 8px;
-      margin-bottom: 10px;
+      padding-bottom: 5px;
+      margin-bottom: 5px;
     }
 
     .header h1 {
       color: #2c3e50;
-      margin: 5px 0;
-      font-size: 20px;
+      margin: 3px 0;
+      font-size: 18px;
     }
 
     .header .subtitle {
       color: #7f8c8d;
-      font-size: 10px;
-      margin: 3px 0;
+      font-size: 9px;
+      margin: 2px 0;
     }
 
     .impulso-destaque {
@@ -660,23 +663,23 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
     }
 
     .secao {
-      margin: 10px 0;
+      margin: 5px 0;
     }
 
     .secao h2 {
       color: #2c3e50;
       border-bottom: 2px solid #3498db;
-      padding-bottom: 5px;
-      margin-bottom: 8px;
-      font-size: 14px;
+      padding-bottom: 3px;
+      margin-bottom: 5px;
+      font-size: 12px;
     }
 
     .grafico-container {
       text-align: center;
-      margin: 8px 0;
+      margin: 5px 0;
       background: #f8f9fa;
-      padding: 10px;
-      border-radius: 6px;
+      padding: 5px;
+      border-radius: 4px;
     }
 
     .grafico-container img {
@@ -689,12 +692,12 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
     table {
       width: 100%;
       border-collapse: collapse;
-      margin: 8px 0;
-      font-size: 9px;
+      margin: 4px 0;
+      font-size: 8px;
     }
 
     th, td {
-      padding: 4px;
+      padding: 3px;
       text-align: left;
       border-bottom: 1px solid #dee2e6;
     }
@@ -703,7 +706,7 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
       background: #3498db;
       color: white;
       font-weight: bold;
-      font-size: 10px;
+      font-size: 9px;
     }
     
     /* Regras de cor de fundo alternadas */
@@ -717,12 +720,12 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
     }
     
     .footer {
-      margin-top: 30px;
-      padding-top: 15px;
-      border-top: 2px solid #dee2e6;
+      margin-top: 10px;
+      padding-top: 5px;
+      border-top: 1px solid #dee2e6;
       text-align: center;
       color: #7f8c8d;
-      font-size: 11px;
+      font-size: 7px;
     }
     
     .classificacao-info {
@@ -781,19 +784,19 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
 
   <!-- CABEÇALHO SIMPLIFICADO -->
   <div class="header avoid-break">
-    <h1 style="font-size: 18px; margin: 5px 0;">🚀 balançaGFIG - RELATÓRIO DE TESTE ESTÁTICO</h1>
-    <div class="subtitle" style="font-size: 11px;">${sessao.nome} • ${dataSessao}</div>
-    <div class="subtitle" style="font-size: 9px;">IFSC Campus Gaspar • GFIG • CompSteam • BoxSteam</div>
+    <h1 style="font-size: 16px; margin: 3px 0;">🚀 balançaGFIG - RELATÓRIO DE TESTE ESTÁTICO</h1>
+    <div class="subtitle" style="font-size: 9px;">${sessao.nome} • ${dataSessao}</div>
+    <div class="subtitle" style="font-size: 8px;">IFSC Campus Gaspar • GFIG • CompSteam • BoxSteam</div>
   </div>
 
   <!-- CLASSIFICAÇÃO E IMPULSO - Seção Sintética -->
-  <div class="secao avoid-break" style="background: ${classificacao.cor}20; border-left: 4px solid ${classificacao.cor}; padding: 8px; border-radius: 4px; margin: 8px 0;">
-    <div style="display: grid; grid-template-columns: auto 1fr; gap: 15px; align-items: center;">
-      <div style="text-align: center; padding: 10px; background: ${classificacao.cor}; color: white; border-radius: 4px; min-width: 80px;">
-        <div style="font-size: 20px; font-weight: bold;">${impulsoData.impulsoTotal.toFixed(2)}</div>
-        <div style="font-size: 9px;">N⋅s</div>
+  <div class="secao avoid-break" style="background: ${classificacao.cor}20; border-left: 4px solid ${classificacao.cor}; padding: 5px; border-radius: 3px; margin: 4px 0;">
+    <div style="display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center;">
+      <div style="text-align: center; padding: 6px; background: ${classificacao.cor}; color: white; border-radius: 3px; min-width: 70px;">
+        <div style="font-size: 16px; font-weight: bold;">${impulsoData.impulsoTotal.toFixed(2)}</div>
+        <div style="font-size: 8px;">N⋅s</div>
       </div>
-      <div style="font-size: 10px; line-height: 1.6;">
+      <div style="font-size: 9px; line-height: 1.4;">
         <strong>Classe:</strong> ${classificacao.classe} • <strong>Tipo:</strong> ${classificacao.tipo} • <strong>Nível:</strong> ${classificacao.nivel}<br>
         <strong>Faixa:</strong> ${classificacao.faixa} • <strong>Impulso Total:</strong> ${impulsoData.impulsoTotal.toFixed(2)} N⋅s
       </div>
@@ -801,98 +804,118 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
   </div>
 
   <!-- METADADOS DO MOTOR - Versão Compacta -->
-  ${sessao.metadadosMotor && (
-    sessao.metadadosMotor.manufacturer ||
-    sessao.metadadosMotor.diameter ||
-    sessao.metadadosMotor.length ||
-    sessao.metadadosMotor.propweight ||
-    sessao.metadadosMotor.totalweight ||
-    sessao.metadadosMotor.description ||
-    sessao.metadadosMotor.observations
-  ) ? `
-  <div class="secao avoid-break" style="background: #fff9e6; padding: 8px; border-radius: 4px; margin: 8px 0; border-left: 4px solid #ffc107;">
-    <h2 style="margin-bottom: 6px; color: #f39c12; font-size: 13px;">⚙️ Metadados do Motor</h2>
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 9px;">
-      ${sessao.metadadosMotor.manufacturer ? `<div><strong>Fabricante:</strong> ${sessao.metadadosMotor.manufacturer}</div>` : ''}
-      ${sessao.metadadosMotor.diameter ? `<div><strong>Diâmetro:</strong> ${sessao.metadadosMotor.diameter} mm</div>` : ''}
-      ${sessao.metadadosMotor.length ? `<div><strong>Comprimento:</strong> ${sessao.metadadosMotor.length} mm</div>` : ''}
-      ${sessao.metadadosMotor.propweight ? `<div><strong>Massa Propelente:</strong> ${sessao.metadadosMotor.propweight} g</div>` : ''}
-      ${sessao.metadadosMotor.totalweight ? `<div><strong>Massa Total:</strong> ${sessao.metadadosMotor.totalweight} g</div>` : ''}
-      ${sessao.metadadosMotor.propweight && sessao.metadadosMotor.totalweight ? `<div><strong>Fração:</strong> ${((sessao.metadadosMotor.propweight / sessao.metadadosMotor.totalweight) * 100).toFixed(1)}%</div>` : ''}
+  ${sessao.metadadosMotor ? `
+  <div class="secao avoid-break" style="background: #fff9e6; padding: 5px; border-radius: 3px; margin: 4px 0; border-left: 3px solid #ffc107;">
+    <h2 style="margin-bottom: 4px; color: #f39c12; font-size: 11px;">⚙️ Metadados do Motor</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; font-size: 8px;">
+      ${sessao.metadadosMotor.manufacturer ? `<div><strong>Fabricante:</strong> ${sessao.metadadosMotor.manufacturer}</div>` : '<div><strong>Fabricante:</strong> ---</div>'}
+      ${sessao.metadadosMotor.diameter ? `<div><strong>Diâmetro:</strong> ${sessao.metadadosMotor.diameter} mm</div>` : '<div><strong>Diâmetro:</strong> ---</div>'}
+      ${sessao.metadadosMotor.length ? `<div><strong>Comprimento:</strong> ${sessao.metadadosMotor.length} mm</div>` : '<div><strong>Comprimento:</strong> ---</div>'}
+      ${sessao.metadadosMotor.propweight ? `<div><strong>Massa Propelente:</strong> ${sessao.metadadosMotor.propweight} g</div>` : '<div><strong>Massa Propelente:</strong> ---</div>'}
+      ${sessao.metadadosMotor.totalweight ? `<div><strong>Massa Total:</strong> ${sessao.metadadosMotor.totalweight} g</div>` : '<div><strong>Massa Total:</strong> ---</div>'}
+      ${sessao.metadadosMotor.propweight && sessao.metadadosMotor.totalweight ? `<div><strong>Fração Propelente:</strong> ${((sessao.metadadosMotor.propweight / sessao.metadadosMotor.totalweight) * 100).toFixed(1)}%</div>` : '<div><strong>Fração Propelente:</strong> ---</div>'}
     </div>
-    ${sessao.metadadosMotor.description ? `<div style="margin-top: 6px; font-size: 9px;"><strong>Descrição:</strong> ${sessao.metadadosMotor.description}</div>` : ''}
-    ${sessao.metadadosMotor.observations ? `<div style="margin-top: 4px; font-size: 9px;"><strong>Observações:</strong> ${sessao.metadadosMotor.observations}</div>` : ''}
+    
+    <h3 style="margin-top: 4px; margin-bottom: 3px; color: #2980b9; font-size: 9px;">🌡️ Condições Ambientais</h3>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; font-size: 8px;">
+      ${sessao.metadadosMotor.temperatura !== undefined && sessao.metadadosMotor.temperatura !== null ? `<div><strong>Temperatura:</strong> ${sessao.metadadosMotor.temperatura.toFixed(1)}°C</div>` : '<div><strong>Temperatura:</strong> ---</div>'}
+      ${sessao.metadadosMotor.umidade !== undefined && sessao.metadadosMotor.umidade !== null ? `<div><strong>Umidade:</strong> ${sessao.metadadosMotor.umidade.toFixed(1)}%</div>` : '<div><strong>Umidade:</strong> ---</div>'}
+      ${sessao.metadadosMotor.pressao !== undefined && sessao.metadadosMotor.pressao !== null ? `<div><strong>Pressão:</strong> ${sessao.metadadosMotor.pressao.toFixed(2)} hPa</div>` : '<div><strong>Pressão:</strong> ---</div>'}
+    </div>
+    
+    ${sessao.metadadosMotor.description ? `<div style="margin-top: 4px; font-size: 8px;"><strong>Descrição:</strong> ${sessao.metadadosMotor.description}</div>` : ''}
+    ${sessao.metadadosMotor.observations ? `<div style="margin-top: 3px; font-size: 8px;"><strong>Observações:</strong> ${sessao.metadadosMotor.observations}</div>` : ''}
   </div>
   ` : ''}
 
   <!-- MÉTRICAS DE DESEMPENHO - Formato Tabela Compacta -->
   <div class="secao avoid-break">
-    <h2 style="font-size: 13px; margin-bottom: 6px;">📈 Métricas de Desempenho</h2>
-    <table style="font-size: 9px; width: 100%;">
+    <h2 style="font-size: 11px; margin-bottom: 4px;">📈 Métricas de Desempenho</h2>
+    <table style="font-size: 8px; width: 100%;">
       <tr style="background: #f8f9fa;">
-        <td style="padding: 4px; font-weight: bold;">Impulso Total</td>
-        <td style="padding: 4px;">${impulsoData.impulsoTotal.toFixed(2)} N⋅s</td>
-        <td style="padding: 4px; font-weight: bold;">Força Máxima</td>
-        <td style="padding: 4px;">${impulsoData.forcaMaxima.toFixed(2)} N</td>
+        <td style="padding: 2px; font-weight: bold;">Impulso Total</td>
+        <td style="padding: 2px;">${impulsoData.impulsoTotal.toFixed(2)} N⋅s</td>
+        <td style="padding: 2px; font-weight: bold;">Força Máxima</td>
+        <td style="padding: 2px;">${impulsoData.forcaMaxima.toFixed(2)} N</td>
       </tr>
       <tr>
-        <td style="padding: 4px; font-weight: bold;">Duração Queima</td>
-        <td style="padding: 4px;">${impulsoData.duracaoQueima.toFixed(3)} s</td>
-        <td style="padding: 4px; font-weight: bold;">Força Média (Queima)</td>
-        <td style="padding: 4px;">${(impulsoData.duracaoQueima > 0 ? impulsoData.impulsoTotal / impulsoData.duracaoQueima : 0).toFixed(2)} N</td>
+        <td style="padding: 2px; font-weight: bold;">Duração Queima</td>
+        <td style="padding: 2px;">${impulsoData.duracaoQueima.toFixed(3)} s</td>
+        <td style="padding: 2px; font-weight: bold;">Força Média (Queima)</td>
+        <td style="padding: 2px;">${(impulsoData.duracaoQueima > 0 ? impulsoData.impulsoTotal / impulsoData.duracaoQueima : 0).toFixed(2)} N</td>
       </tr>
       <tr style="background: #f8f9fa;">
-        <td style="padding: 4px; font-weight: bold;">Tempo Ignição</td>
-        <td style="padding: 4px;">${impulsoData.tempoIgnicao.toFixed(3)} s</td>
-        <td style="padding: 4px; font-weight: bold;">Tempo Burnout</td>
-        <td style="padding: 4px;">${impulsoData.tempoBurnout.toFixed(3)} s</td>
+        <td style="padding: 2px; font-weight: bold;">Tempo Ignição</td>
+        <td style="padding: 2px;">${impulsoData.tempoIgnicao.toFixed(3)} s</td>
+        <td style="padding: 2px; font-weight: bold;">Tempo Burnout</td>
+        <td style="padding: 2px;">${impulsoData.tempoBurnout.toFixed(3)} s</td>
       </tr>
       <tr>
-        <td style="padding: 4px; font-weight: bold;">Impulso Líquido</td>
-        <td style="padding: 4px;">${impulsoData.impulsoLiquido.toFixed(2)} N⋅s</td>
-        <td style="padding: 4px; font-weight: bold;">Impulso Específico (Isp)</td>
-        <td style="padding: 4px;">${impulsoEspecifico !== null ? impulsoEspecifico.toFixed(2) + ' s' : 'N/A'}</td>
+        <td style="padding: 2px; font-weight: bold;">Impulso Líquido</td>
+        <td style="padding: 2px;">${impulsoData.impulsoLiquido.toFixed(2)} N⋅s</td>
+        <td style="padding: 2px; font-weight: bold;">Impulso Específico (Isp)</td>
+        <td style="padding: 2px;">${impulsoEspecifico !== null ? impulsoEspecifico.toFixed(2) + ' s' : 'N/A'}</td>
       </tr>
     </table>
   </div>
 
   <!-- GRÁFICO -->
-  <div class="page-break"></div>
   <div class="secao">
-    <h2 style="font-size: 14px;">📉 Curva de Propulsão</h2>
+    <h2 style="font-size: 11px; margin-bottom: 4px;">📉 Curva de Propulsão</h2>
     <div class="grafico-container">
       <img src="${imagemGrafico}" alt="Gráfico de Propulsão" />
     </div>
   </div>
 
   <!-- ANÁLISE DE TEMPO (Horários do Teste e Queima) -->
-  <div class="secao avoid-break" style="background: #f8f9fa; padding: 8px; border-radius: 4px; margin: 8px 0;">
-    <h2 style="margin-bottom: 6px; font-size: 13px;">⏱️ Análise de Tempo</h2>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+  <div class="secao avoid-break" style="background: #f8f9fa; padding: 4px; border-radius: 3px; margin: 4px 0;">
+    <h2 style="margin-bottom: 3px; font-size: 10px;">⏱️ Análise de Tempo</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
       <!-- Teste Completo -->
       <div>
-        <div style="background: #3498db; color: white; padding: 5px 8px; border-radius: 3px 3px 0 0; font-weight: bold; font-size: 10px;">
-          📅 Teste Completo
+        <div style="background: #3498db; color: white; padding: 3px 6px; border-radius: 2px 2px 0 0; font-weight: bold; font-size: 8px;">
+          📅 HORÁRIO TESTE ESTÁTICO
         </div>
-        <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #dee2e6; font-size: 9px;">
-          <tr><td style="padding: 3px; font-weight: bold;">Início:</td><td style="padding: 3px;">00:00.000s</td></tr>
-          <tr><td style="padding: 3px; font-weight: bold;">Fim:</td><td style="padding: 3px;">${dados.tempos && dados.tempos.length > 0 ? (Math.max(...dados.tempos) - Math.min(...dados.tempos)).toFixed(3) + 's' : '---'}</td></tr>
-          <tr><td style="padding: 3px; font-weight: bold;">Duração:</td><td style="padding: 3px; font-weight: bold;">${dados.duracao.toFixed(3)} s</td></tr>
-          <tr><td style="padding: 3px; font-weight: bold;">Leituras:</td><td style="padding: 3px;">${dados.tempos ? dados.tempos.length : 0}</td></tr>
-          <tr><td style="padding: 3px; font-weight: bold;">Taxa:</td><td style="padding: 3px;">${dados.duracao > 0 ? (dados.tempos.length / dados.duracao).toFixed(1) : '0.0'} Hz</td></tr>
+        <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #dee2e6; font-size: 8px;">
+          <tr><td style="padding: 2px; font-weight: bold; width: 40%;">Horário Início:</td><td style="padding: 2px;">${sessao.data_inicio ? (() => {
+            const d = new Date(sessao.data_inicio);
+            return d.toLocaleTimeString('pt-BR') + '.' + String(d.getMilliseconds()).padStart(3, '0');
+          })() : '---'}</td></tr>
+          <tr><td style="padding: 2px; font-weight: bold;">Horário Fim:</td><td style="padding: 2px;">${sessao.data_fim ? (() => {
+            const d = new Date(sessao.data_fim);
+            return d.toLocaleTimeString('pt-BR') + '.' + String(d.getMilliseconds()).padStart(3, '0');
+          })() : '---'}</td></tr>
+          <tr><td style="padding: 2px; font-weight: bold;">Tempo Relativo:</td><td style="padding: 2px;">00:00.000s → ${dadosTotais ? dadosTotais.duracao.toFixed(3) : dados.duracao.toFixed(3)}s</td></tr>
+          <tr><td style="padding: 2px; font-weight: bold;">Duração Total:</td><td style="padding: 2px; font-weight: bold;">${dadosTotais ? dadosTotais.duracao.toFixed(3) : dados.duracao.toFixed(3)} s</td></tr>
+          <tr><td style="padding: 2px; font-weight: bold;">Leituras/Taxa:</td><td style="padding: 2px;">${dadosTotais ? dadosTotais.tempos.length : sessao.dadosTabela.length} leituras • ${dadosTotais && dadosTotais.duracao > 0 ? (dadosTotais.tempos.length / dadosTotais.duracao).toFixed(1) : dados.duracao > 0 ? (sessao.dadosTabela.length / dados.duracao).toFixed(1) : '0.0'} Hz</td></tr>
         </table>
       </div>
       <!-- Queima Detectada -->
       <div>
-        <div style="background: #27ae60; color: white; padding: 5px 8px; border-radius: 3px 3px 0 0; font-weight: bold; font-size: 10px;">
-          🔥 Queima
+        <div style="background: #27ae60; color: white; padding: 3px 6px; border-radius: 2px 2px 0 0; font-weight: bold; font-size: 8px;">
+          🔥 QUEIMA DETECTADA${burnInfo && burnInfo.usandoPontosPersonalizados ? ' (PERSONALIZADO)' : ' (AUTO)'}
         </div>
-        <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #dee2e6; font-size: 9px;">
-          <tr><td style="padding: 3px; font-weight: bold;">Ignição:</td><td style="padding: 3px;">${impulsoData.tempoIgnicao.toFixed(3)}s</td></tr>
-          <tr><td style="padding: 3px; font-weight: bold;">Burnout:</td><td style="padding: 3px;">${impulsoData.tempoBurnout.toFixed(3)}s</td></tr>
-          <tr><td style="padding: 3px; font-weight: bold;">Duração:</td><td style="padding: 3px; font-weight: bold;">${impulsoData.duracaoQueima.toFixed(3)} s</td></tr>
-          <tr><td style="padding: 3px; font-weight: bold;">Leituras:</td><td style="padding: 3px;">${dados.tempos ? dados.tempos.length : '---'}</td></tr>
-          <tr><td style="padding: 3px; font-weight: bold;">Taxa:</td><td style="padding: 3px;">${impulsoData.duracaoQueima > 0 ? (dados.tempos.length / impulsoData.duracaoQueima).toFixed(1) : '0.0'} Hz</td></tr>
+        <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #dee2e6; font-size: 8px;">
+          <tr><td style="padding: 2px; font-weight: bold; width: 40%;">Ignição (abs):</td><td style="padding: 2px;">${sessao.data_inicio && dados.tempos ? (() => {
+            const testStart = new Date(sessao.data_inicio);
+            const firstReading = Math.min(...dados.tempos);
+            const burnStartRelative = impulsoData.tempoIgnicao - firstReading;
+            const burnStart = new Date(testStart.getTime() + burnStartRelative * 1000);
+            return burnStart.toLocaleTimeString('pt-BR') + '.' + String(burnStart.getMilliseconds()).padStart(3, '0');
+          })() : '---'}</td></tr>
+          <tr><td style="padding: 2px; font-weight: bold;">Burnout (abs):</td><td style="padding: 2px;">${sessao.data_inicio && dados.tempos ? (() => {
+            const testStart = new Date(sessao.data_inicio);
+            const firstReading = Math.min(...dados.tempos);
+            const burnEndRelative = impulsoData.tempoBurnout - firstReading;
+            const burnEnd = new Date(testStart.getTime() + burnEndRelative * 1000);
+            return burnEnd.toLocaleTimeString('pt-BR') + '.' + String(burnEnd.getMilliseconds()).padStart(3, '0');
+          })() : '---'}</td></tr>
+          <tr><td style="padding: 2px; font-weight: bold;">Tempo Relativo:</td><td style="padding: 2px;">${impulsoData.tempoIgnicao.toFixed(3)}s → ${impulsoData.tempoBurnout.toFixed(3)}s</td></tr>
+          <tr><td style="padding: 2px; font-weight: bold;">Duração Queima:</td><td style="padding: 2px; font-weight: bold;">${impulsoData.duracaoQueima.toFixed(3)} s</td></tr>
+          <tr><td style="padding: 2px; font-weight: bold;">Leituras/Taxa:</td><td style="padding: 2px;">${dados.tempos ? (() => {
+            const leiturasQueima = dados.tempos.filter(t => t >= impulsoData.tempoIgnicao && t <= impulsoData.tempoBurnout).length;
+            return leiturasQueima + ' leituras • ' + (impulsoData.duracaoQueima > 0 ? (leiturasQueima / impulsoData.duracaoQueima).toFixed(1) : '0.0') + ' Hz';
+          })() : '---'}</td></tr>
         </table>
       </div>
     </div>
@@ -900,53 +923,52 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
 
   <!-- ANÁLISE DETALHADA -->
   <div class="secao avoid-break">
-    <h2>🔍 Análise Detalhada</h2>
-    <table style="font-size: 11px;">
+    <h2 style="font-size: 10px; margin-bottom: 3px;">🔍 Análise Detalhada</h2>
+    <table style="font-size: 8px;">
       <tr>
-        <td><strong>Parâmetro</strong></td>
-        <td><strong>Valor</strong></td>
-        <td><strong>Parâmetro</strong></td>
-        <td><strong>Valor</strong></td>
+        <td style="padding: 2px;"><strong>Parâmetro</strong></td>
+        <td style="padding: 2px;"><strong>Valor</strong></td>
+        <td style="padding: 2px;"><strong>Parâmetro</strong></td>
+        <td style="padding: 2px;"><strong>Valor</strong></td>
       </tr>
       <tr>
-        <td>Impulso Positivo</td>
-        <td>${impulsoData.impulsoPositivo.toFixed(3)} N⋅s</td>
-        <td>Área Negativa</td>
-        <td>${impulsoData.areaNegativa.toFixed(3)} N⋅s</td>
+        <td style="padding: 2px;">Impulso Positivo</td>
+        <td style="padding: 2px;">${impulsoData.impulsoPositivo.toFixed(3)} N⋅s</td>
+        <td style="padding: 2px;">Área Negativa</td>
+        <td style="padding: 2px;">${impulsoData.areaNegativa.toFixed(3)} N⋅s</td>
       </tr>
       <tr>
-        <td>Força Média (Amostral)</td>
-        <td>${impulsoData.forcaMedia.toFixed(2)} N</td>
-        <td>Força Média (Positiva)</td>
-        <td>${impulsoData.forcaMediaPositiva.toFixed(2)} N</td>
+        <td style="padding: 2px;">Força Média (Amostral)</td>
+        <td style="padding: 2px;">${impulsoData.forcaMedia.toFixed(2)} N</td>
+        <td style="padding: 2px;">Força Média (Positiva)</td>
+        <td style="padding: 2px;">${impulsoData.forcaMediaPositiva.toFixed(2)} N</td>
       </tr>
       <tr>
-        <td>Duração Total</td>
-        <td>${dados.duracao.toFixed(3)} s</td>
-        <td>Número de Leituras</td>
-        <td>${sessao.dadosTabela.length}</td>
+        <td style="padding: 2px;">Duração Total</td>
+        <td style="padding: 2px;">${dados.duracao.toFixed(3)} s</td>
+        <td style="padding: 2px;">Número de Leituras</td>
+        <td style="padding: 2px;">${sessao.dadosTabela.length}</td>
       </tr>
       <tr>
-        <td>Classificação NAR/TRA</td>
-        <td>${classificacao.classe}</td>
-        <td>Cor de Identificação</td>
-        <td><span style="background: ${classificacao.cor}; color: white; padding: 2px 8px; border-radius: 3px;">${classificacao.cor}</span></td>
+        <td style="padding: 2px;">Classificação NAR/TRA</td>
+        <td style="padding: 2px;">${classificacao.classe}</td>
+        <td style="padding: 2px;">Cor de Identificação</td>
+        <td style="padding: 2px;"><span style="background: ${classificacao.cor}; color: white; padding: 1px 5px; border-radius: 2px; font-size: 7px;">${classificacao.cor}</span></td>
       </tr>
     </table>
   </div>
 
   <!-- TABELA COMPLETA DE DADOS -->
-  <div class="page-break"></div>
   <div class="secao">
-    <h2>📋 Tabela Completa de Dados (${sessao.dadosTabela.length} leituras)</h2>
-    <table>
+    <h2 style="font-size: 10px; margin-bottom: 3px;">📋 Tabela Completa de Dados (${sessao.dadosTabela.length} leituras)</h2>
+    <table style="font-size: 7px;">
       <thead>
         <tr>
-          <th>#</th>
-          <th>Tempo (s)</th>
-          <th>Força (N)</th>
-          <th>Força (gf)</th>
-          <th>Força (kgf)</th>
+          <th style="padding: 2px;">#</th>
+          <th style="padding: 2px;">Tempo (s)</th>
+          <th style="padding: 2px;">Força (N)</th>
+          <th style="padding: 2px;">Força (gf)</th>
+          <th style="padding: 2px;">Força (kgf)</th>
         </tr>
       </thead>
       <tbody>
@@ -956,108 +978,107 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
   </div>
   
   <!-- EXPLICAÇÃO TÉCNICA (NOVA SEÇÃO) -->
-  <div class="page-break"></div>
   <div class="secao">
-    <h2>📚 Fundamentação Teórica e Metodologia de Cálculo</h2>
-    
-    <h3 style="margin-top: 1.5rem; color: #2c3e50;">1. Integração Numérica - Método dos Trapézios</h3>
-    <div class="info-box" style="background: #f8f9fa; border-left: 4px solid #3498db;">
-      <p><strong>Referência:</strong> MARCHI, C. H. et al. "Verificação de Soluções Numéricas". UFPR, 2015.</p>
-      <p>O <strong>Impulso Total</strong> é calculado pela integração numérica da curva força-tempo usando o <strong>Método dos Trapézios Composto</strong>:</p>
-      <p style="text-align: center; font-family: 'Courier New', monospace; background: white; padding: 0.5rem; border-radius: 4px;">
+    <h2 style="font-size: 10px; margin-bottom: 3px;">📚 Fundamentação Teórica e Metodologia de Cálculo</h2>
+
+    <h3 style="margin-top: 0.5rem; color: #2c3e50; font-size: 9px;">1. Integração Numérica - Método dos Trapézios</h3>
+    <div class="info-box" style="background: #f8f9fa; border-left: 3px solid #3498db; padding: 5px; margin: 3px 0; font-size: 7px;">
+      <p style="margin: 2px 0;"><strong>Referência:</strong> MARCHI, C. H. et al. "Verificação de Soluções Numéricas". UFPR, 2015.</p>
+      <p style="margin: 2px 0;">O <strong>Impulso Total</strong> é calculado pela integração numérica da curva força-tempo usando o <strong>Método dos Trapézios Composto</strong>:</p>
+      <p style="text-align: center; font-family: 'Courier New', monospace; background: white; padding: 3px; border-radius: 2px; margin: 3px 0; font-size: 7px;">
         I = ∫<sub>t₀</sub><sup>tₙ</sup> F(t) dt ≈ Σ<sub>i=1</sub><sup>n-1</sup> [(F<sub>i</sub> + F<sub>i+1</sub>)/2] × Δt<sub>i</sub>
       </p>
-      <p><strong>Erro de Truncamento:</strong> O(h²), onde h = Δt é o espaçamento entre pontos.</p>
-      <p><strong>Justificativa:</strong> Com taxa de amostragem típica de 80-100 Hz, o erro de discretização é desprezível comparado à incerteza de medição da célula de carga (±0.05% F.S.).</p>
+      <p style="margin: 2px 0;"><strong>Erro de Truncamento:</strong> O(h²), onde h = Δt é o espaçamento entre pontos.</p>
+      <p style="margin: 2px 0;"><strong>Justificativa:</strong> Com taxa de amostragem típica de 80-100 Hz, o erro de discretização é desprezível comparado à incerteza de medição da célula de carga (±0.05% F.S.).</p>
     </div>
 
-    <h3 style="margin-top: 1.5rem; color: #2c3e50;">2. Detecção de Eventos Críticos</h3>
-    <div class="info-box" style="background: #f8f9fa; border-left: 4px solid #e67e22;">
-      <p><strong>2.1 Threshold Adaptativo (Anti-Noising)</strong></p>
-      <p>A detecção de ignição e burnout utiliza um limiar dinâmico baseado em análise estatística do ruído de fundo:</p>
-      <p style="text-align: center; font-family: 'Courier New', monospace; background: white; padding: 0.5rem; border-radius: 4px;">
+    <h3 style="margin-top: 0.5rem; color: #2c3e50; font-size: 9px;">2. Detecção de Eventos Críticos</h3>
+    <div class="info-box" style="background: #f8f9fa; border-left: 3px solid #e67e22; padding: 5px; margin: 3px 0; font-size: 7px;">
+      <p style="margin: 2px 0;"><strong>2.1 Threshold Adaptativo (Anti-Noising)</strong></p>
+      <p style="margin: 2px 0;">A detecção de ignição e burnout utiliza um limiar dinâmico baseado em análise estatística do ruído de fundo:</p>
+      <p style="text-align: center; font-family: 'Courier New', monospace; background: white; padding: 3px; border-radius: 2px; margin: 3px 0; font-size: 7px;">
         F<sub>threshold</sub> = F<sub>média_ruído</sub> + k × σ<sub>ruído</sub>
       </p>
-      <p>onde <strong>k</strong> é o multiplicador configurável (padrão: 2.0σ) e <strong>σ</strong> é o desvio padrão amostral.</p>
-      
-      <p><strong>2.2 Desvio Padrão Amostral</strong></p>
-      <p><strong>Referência:</strong> MARCHI, C. H. "Análise de Incertezas em Medições". Cap. 3, UFPR.</p>
-      <p style="text-align: center; font-family: 'Courier New', monospace; background: white; padding: 0.5rem; border-radius: 4px;">
+      <p style="margin: 2px 0;">onde <strong>k</strong> é o multiplicador configurável (padrão: 2.0σ) e <strong>σ</strong> é o desvio padrão amostral.</p>
+
+      <p style="margin: 2px 0;"><strong>2.2 Desvio Padrão Amostral</strong></p>
+      <p style="margin: 2px 0;"><strong>Referência:</strong> MARCHI, C. H. "Análise de Incertezas em Medições". Cap. 3, UFPR.</p>
+      <p style="text-align: center; font-family: 'Courier New', monospace; background: white; padding: 3px; border-radius: 2px; margin: 3px 0; font-size: 7px;">
         σ = √[Σ(x<sub>i</sub> - x̄)² / (n-1)]
       </p>
-      <p><strong>Ignição:</strong> Detectada quando F(t) > F<sub>threshold</sub> por tempo mínimo configurável.</p>
-      <p><strong>Burnout:</strong> Detectado quando F(t) < F<sub>threshold</sub> após a ignição ter ocorrido.</p>
+      <p style="margin: 2px 0;"><strong>Ignição:</strong> Detectada quando F(t) > F<sub>threshold</sub> por tempo mínimo configurável.</p>
+      <p style="margin: 2px 0;"><strong>Burnout:</strong> Detectado quando F(t) < F<sub>threshold</sub> após a ignição ter ocorrido.</p>
     </div>
 
-    <h3 style="margin-top: 1.5rem; color: #2c3e50;">3. Métricas Estatísticas</h3>
-    <table style="font-size: 10px; width: 100%;">
+    <h3 style="margin-top: 0.5rem; color: #2c3e50; font-size: 9px;">3. Métricas Estatísticas</h3>
+    <table style="font-size: 7px; width: 100%; margin: 3px 0;">
       <tr>
-        <th style="width: 25%;">Métrica</th>
-        <th style="width: 35%;">Fórmula Matemática</th>
-        <th style="width: 40%;">Interpretação Física</th>
+        <th style="width: 25%; padding: 2px;">Métrica</th>
+        <th style="width: 35%; padding: 2px;">Fórmula Matemática</th>
+        <th style="width: 40%; padding: 2px;">Interpretação Física</th>
       </tr>
       <tr>
-        <td><strong>Impulso Total</strong></td>
-        <td>I = ∫ F(t) dt [N⋅s]</td>
-        <td>Quantidade total de movimento transferida pelo motor. Área sob a curva força-tempo.</td>
+        <td style="padding: 2px;"><strong>Impulso Total</strong></td>
+        <td style="padding: 2px;">I = ∫ F(t) dt [N⋅s]</td>
+        <td style="padding: 2px;">Quantidade total de movimento transferida pelo motor. Área sob a curva força-tempo.</td>
       </tr>
       <tr>
-        <td><strong>Força Máxima</strong></td>
-        <td>F<sub>max</sub> = max{F(t)} [N]</td>
-        <td>Pico de empuxo. Crítico para dimensionamento estrutural do foguete.</td>
+        <td style="padding: 2px;"><strong>Força Máxima</strong></td>
+        <td style="padding: 2px;">F<sub>max</sub> = max{F(t)} [N]</td>
+        <td style="padding: 2px;">Pico de empuxo. Crítico para dimensionamento estrutural do foguete.</td>
       </tr>
       <tr>
-        <td><strong>Força Média (Queima)</strong></td>
-        <td>F̄<sub>queima</sub> = I / Δt<sub>queima</sub> [N]</td>
-        <td>Empuxo constante equivalente durante a fase de propulsão efetiva.</td>
+        <td style="padding: 2px;"><strong>Força Média (Queima)</strong></td>
+        <td style="padding: 2px;">F̄<sub>queima</sub> = I / Δt<sub>queima</sub> [N]</td>
+        <td style="padding: 2px;">Empuxo constante equivalente durante a fase de propulsão efetiva.</td>
       </tr>
       <tr>
-        <td><strong>Força Média (Amostral)</strong></td>
-        <td>F̄ = (1/n) Σ F<sub>i</sub> [N]</td>
-        <td>Média aritmética de todas as leituras, incluindo valores negativos (arrasto).</td>
+        <td style="padding: 2px;"><strong>Força Média (Amostral)</strong></td>
+        <td style="padding: 2px;">F̄ = (1/n) Σ F<sub>i</sub> [N]</td>
+        <td style="padding: 2px;">Média aritmética de todas as leituras, incluindo valores negativos (arrasto).</td>
       </tr>
       <tr>
-        <td><strong>Impulso Líquido</strong></td>
-        <td>I<sub>líq</sub> = I<sub>pos</sub> - |I<sub>neg</sub>| [N⋅s]</td>
-        <td>Impulso útil para propulsão, descontando arrasto e forças resistivas.</td>
+        <td style="padding: 2px;"><strong>Impulso Líquido</strong></td>
+        <td style="padding: 2px;">I<sub>líq</sub> = I<sub>pos</sub> - |I<sub>neg</sub>| [N⋅s]</td>
+        <td style="padding: 2px;">Impulso útil para propulsão, descontando arrasto e forças resistivas.</td>
       </tr>
       <tr>
-        <td><strong>Impulso Específico</strong></td>
-        <td>I<sub>sp</sub> = I / (m<sub>prop</sub> × g₀) [s]</td>
-        <td>Eficiência do propelente. Tempo que 1kg de propelente fornece 1kgf de empuxo.</td>
+        <td style="padding: 2px;"><strong>Impulso Específico</strong></td>
+        <td style="padding: 2px;">I<sub>sp</sub> = I / (m<sub>prop</sub> × g₀) [s]</td>
+        <td style="padding: 2px;">Eficiência do propelente. Tempo que 1kg de propelente fornece 1kgf de empuxo.</td>
       </tr>
     </table>
 
-    <h3 style="margin-top: 1.5rem; color: #2c3e50;">4. Incertezas de Medição</h3>
-    <div class="info-box" style="background: #fff3cd; border-left: 4px solid #f39c12;">
-      <p><strong>Referência:</strong> MARCHI, C. H. "Propagação de Incertezas". UFPR, 2015.</p>
-      <p><strong>Incerteza Tipo A (Estatística):</strong> Obtida pelo desvio padrão das medições repetidas.</p>
-      <p><strong>Incerteza Tipo B (Sistemática):</strong> Especificação do fabricante da célula de carga (típico: ±0.05% F.S.).</p>
-      <p><strong>Incerteza Combinada do Impulso:</strong></p>
-      <p style="text-align: center; font-family: 'Courier New', monospace; background: white; padding: 0.5rem; border-radius: 4px;">
+    <h3 style="margin-top: 0.5rem; color: #2c3e50; font-size: 9px;">4. Incertezas de Medição</h3>
+    <div class="info-box" style="background: #fff3cd; border-left: 3px solid #f39c12; padding: 5px; margin: 3px 0; font-size: 7px;">
+      <p style="margin: 2px 0;"><strong>Referência:</strong> MARCHI, C. H. "Propagação de Incertezas". UFPR, 2015.</p>
+      <p style="margin: 2px 0;"><strong>Incerteza Tipo A (Estatística):</strong> Obtida pelo desvio padrão das medições repetidas.</p>
+      <p style="margin: 2px 0;"><strong>Incerteza Tipo B (Sistemática):</strong> Especificação do fabricante da célula de carga (típico: ±0.05% F.S.).</p>
+      <p style="margin: 2px 0;"><strong>Incerteza Combinada do Impulso:</strong></p>
+      <p style="text-align: center; font-family: 'Courier New', monospace; background: white; padding: 3px; border-radius: 2px; margin: 3px 0; font-size: 7px;">
         u<sub>c</sub>(I) = √[(∂I/∂F)² u²(F) + (∂I/∂t)² u²(t)]
       </p>
-      <p>Para taxa de amostragem constante e alta (>80 Hz), a incerteza temporal é desprezível, dominando a incerteza na medição de força.</p>
+      <p style="margin: 2px 0;">Para taxa de amostragem constante e alta (>80 Hz), a incerteza temporal é desprezível, dominando a incerteza na medição de força.</p>
     </div>
 
-    <h3 style="margin-top: 1.5rem; color: #2c3e50;">5. Classificação NAR/TRA</h3>
-    <div class="info-box" style="background: #f8f9fa; border-left: 4px solid #27ae60;">
-      <p><strong>Referências Normativas:</strong></p>
-      <ul style="margin: 0.5rem 0;">
+    <h3 style="margin-top: 0.5rem; color: #2c3e50; font-size: 9px;">5. Classificação NAR/TRA</h3>
+    <div class="info-box" style="background: #f8f9fa; border-left: 3px solid #27ae60; padding: 5px; margin: 3px 0; font-size: 7px;">
+      <p style="margin: 2px 0;"><strong>Referências Normativas:</strong></p>
+      <ul style="margin: 3px 0; padding-left: 15px;">
         <li><strong>NFPA 1122</strong> - Code for Model Rocketry</li>
         <li><strong>NFPA 1127</strong> - Code for High Power Rocketry</li>
         <li><strong>NAR/TRA Standards</strong> - Motor Classification System</li>
       </ul>
-      <p>A classificação por letras (A, B, C, ..., O) segue progressão logarítmica base 2:</p>
-      <p style="text-align: center; font-family: 'Courier New', monospace; background: white; padding: 0.5rem; border-radius: 4px;">
+      <p style="margin: 2px 0;">A classificação por letras (A, B, C, ..., O) segue progressão logarítmica base 2:</p>
+      <p style="text-align: center; font-family: 'Courier New', monospace; background: white; padding: 3px; border-radius: 2px; margin: 3px 0; font-size: 7px;">
         Classe N: 2<sup>N-1</sup> < I<sub>total</sub> ≤ 2<sup>N</sup> [N⋅s]
       </p>
-      <p>Exemplo: Classe D → 5 < I ≤ 10 N⋅s</p>
+      <p style="margin: 2px 0;">Exemplo: Classe D → 5 < I ≤ 10 N⋅s</p>
     </div>
 
-    <h3 style="margin-top: 1.5rem; color: #2c3e50;">6. Limitações e Observações</h3>
-    <div class="info-box" style="background: #f8d7da; border-left: 4px solid #e74c3c;">
-      <ul style="margin: 0.5rem 0;">
+    <h3 style="margin-top: 0.5rem; color: #2c3e50; font-size: 9px;">6. Limitações e Observações</h3>
+    <div class="info-box" style="background: #f8d7da; border-left: 3px solid #e74c3c; padding: 5px; margin: 3px 0; font-size: 7px;">
+      <ul style="margin: 3px 0; padding-left: 15px;">
         <li>O método dos trapézios assume variação linear entre pontos. Curvas com alta não-linearidade requerem maior taxa de amostragem.</li>
         <li>A detecção de ignição/burnout depende da correta calibração do threshold de ruído.</li>
         <li>O cálculo de I<sub>sp</sub> requer pesagem precisa do propelente antes e depois do teste.</li>
@@ -1066,71 +1087,70 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
       </ul>
     </div>
 
-    <h3 style="margin-top: 1.5rem; color: #2c3e50;">7. Referências Bibliográficas</h3>
-    <div style="font-size: 10px; line-height: 1.6; background: #f8f9fa; padding: 1rem; border-radius: 4px;">
-      <p><strong>[1]</strong> MARCHI, Carlos Henrique. <em>"Verificação de Soluções Numéricas"</em>. Departamento de Engenharia Mecânica, UFPR, 2015.</p>
-      <p><strong>[2]</strong> MARCHI, Carlos Henrique. <em>"Análise de Incertezas em Medições"</em>. Notas de aula, UFPR.</p>
-      <p><strong>[3]</strong> NFPA 1122: <em>Code for Model Rocketry</em>. National Fire Protection Association, 2018.</p>
-      <p><strong>[4]</strong> NFPA 1127: <em>Code for High Power Rocketry</em>. National Fire Protection Association, 2018.</p>
-      <p><strong>[5]</strong> NAR Standards and Testing Committee. <em>"Model Rocket Motor Classification"</em>.</p>
-      <p><strong>[6]</strong> SUTTON, George P.; BIBLARZ, Oscar. <em>"Rocket Propulsion Elements"</em>. 9th Edition, Wiley, 2017.</p>
-      <p><strong>[7]</strong> JCGM 100:2008. <em>"Evaluation of measurement data - Guide to the expression of uncertainty in measurement"</em> (GUM).</p>
+    <h3 style="margin-top: 0.5rem; color: #2c3e50; font-size: 9px;">7. Referências Bibliográficas</h3>
+    <div style="font-size: 7px; line-height: 1.4; background: #f8f9fa; padding: 5px; border-radius: 3px; margin: 3px 0;">
+      <p style="margin: 2px 0;"><strong>[1]</strong> MARCHI, Carlos Henrique. <em>"Verificação de Soluções Numéricas"</em>. Departamento de Engenharia Mecânica, UFPR, 2015.</p>
+      <p style="margin: 2px 0;"><strong>[2]</strong> MARCHI, Carlos Henrique. <em>"Análise de Incertezas em Medições"</em>. Notas de aula, UFPR.</p>
+      <p style="margin: 2px 0;"><strong>[3]</strong> NFPA 1122: <em>Code for Model Rocketry</em>. National Fire Protection Association, 2018.</p>
+      <p style="margin: 2px 0;"><strong>[4]</strong> NFPA 1127: <em>Code for High Power Rocketry</em>. National Fire Protection Association, 2018.</p>
+      <p style="margin: 2px 0;"><strong>[5]</strong> NAR Standards and Testing Committee. <em>"Model Rocket Motor Classification"</em>.</p>
+      <p style="margin: 2px 0;"><strong>[6]</strong> SUTTON, George P.; BIBLARZ, Oscar. <em>"Rocket Propulsion Elements"</em>. 9th Edition, Wiley, 2017.</p>
+      <p style="margin: 2px 0;"><strong>[7]</strong> JCGM 100:2008. <em>"Evaluation of measurement data - Guide to the expression of uncertainty in measurement"</em> (GUM).</p>
     </div>
   </div>
   <!-- FIM EXPLICAÇÃO TÉCNICA -->
 
   <!-- INFORMAÇÕES TÉCNICAS -->
   <div class="secao avoid-break">
-    <h2>⚙️ Informações do Sistema</h2>
-    <table style="font-size: 11px;">
+    <h2 style="font-size: 10px; margin-bottom: 3px;">⚙️ Informações do Sistema</h2>
+    <table style="font-size: 8px;">
       <tr>
-        <td><strong>Sistema de Aquisição:</strong></td>
-        <td>balançaGFIG v2.0 - Campus Gaspar IFSC</td>
+        <td style="padding: 2px;"><strong>Sistema de Aquisição:</strong></td>
+        <td style="padding: 2px;">balançaGFIG v2.0 - Campus Gaspar IFSC</td>
       </tr>
       <tr>
-        <td><strong>Resolução:</strong></td>
-        <td>0.001 N</td>
+        <td style="padding: 2px;"><strong>Resolução:</strong></td>
+        <td style="padding: 2px;">0.001 N</td>
       </tr>
       <tr>
-        <td><strong>Gravidade Local:</strong></td>
-        <td>9.80665 m/s²</td>
+        <td style="padding: 2px;"><strong>Gravidade Local:</strong></td>
+        <td style="padding: 2px;">9.80665 m/s²</td>
       </tr>
       <tr>
-        <td><strong>Taxa de Amostragem:</strong></td>
-        <td>${(sessao.dadosTabela.length / dados.duracao).toFixed(1)} Hz</td>
+        <td style="padding: 2px;"><strong>Taxa de Amostragem:</strong></td>
+        <td style="padding: 2px;">${(sessao.dadosTabela.length / dados.duracao).toFixed(1)} Hz</td>
       </tr>
       <tr>
-        <td><strong>Classificação:</strong></td>
-        <td>NAR/TRA Standards</td>
+        <td style="padding: 2px;"><strong>Classificação:</strong></td>
+        <td style="padding: 2px;">NAR/TRA Standards</td>
       </tr>
       <tr>
-        <td><strong>Normas de Referência:</strong></td>
-        <td>NFPA 1122, NFPA 1127</td>
+        <td style="padding: 2px;"><strong>Normas de Referência:</strong></td>
+        <td style="padding: 2px;">NFPA 1122, NFPA 1127</td>
       </tr>
     </table>
   </div>
 
   <!-- CLASSIFICAÇÃO DO MOTOR - Versão Compacta -->
-  <div class="page-break"></div>
-  <div class="secao avoid-break" style="padding: 10px 0;">
-    <h2 style="font-size: 16px; margin-bottom: 8px;">📊 Classificação NAR/TRA</h2>
-    <div style="background: ${classificacao.cor}20; border-left: 4px solid ${classificacao.cor}; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
-      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; font-size: 11px;">
+  <div class="secao avoid-break" style="padding: 4px 0;">
+    <h2 style="font-size: 10px; margin-bottom: 3px;">📊 Classificação NAR/TRA</h2>
+    <div style="background: ${classificacao.cor}20; border-left: 3px solid ${classificacao.cor}; padding: 5px; border-radius: 3px; margin-bottom: 3px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; font-size: 8px;">
         <div><strong>Classe:</strong> ${classificacao.classe}</div>
         <div><strong>Tipo:</strong> ${classificacao.tipo}</div>
         <div><strong>Nível:</strong> ${classificacao.nivel}</div>
       </div>
-      <div style="margin-top: 8px; font-size: 10px; color: #555;">
+      <div style="margin-top: 3px; font-size: 7px; color: #555;">
         <strong>Faixa:</strong> ${classificacao.faixa} • <strong>Impulso:</strong> ${impulsoData.impulsoTotal.toFixed(2)} N⋅s
       </div>
     </div>
-    <table style="font-size: 9px; width: 100%;">
+    <table style="font-size: 7px; width: 100%; margin: 3px 0;">
       <thead>
         <tr>
-          <th style="padding: 4px; text-align: center;">Classe</th>
-          <th style="padding: 4px; text-align: center;">Faixa (N⋅s)</th>
-          <th style="padding: 4px; text-align: center;">Tipo</th>
-          <th style="padding: 4px; text-align: center;">Nível</th>
+          <th style="padding: 2px; text-align: center;">Classe</th>
+          <th style="padding: 2px; text-align: center;">Faixa (N⋅s)</th>
+          <th style="padding: 2px; text-align: center;">Tipo</th>
+          <th style="padding: 2px; text-align: center;">Nível</th>
         </tr>
       </thead>
       <tbody>
@@ -1140,13 +1160,13 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
   </div>
 
   <!-- RODAPÉ -->
-  <div class="footer">
-    <p><strong>Relatório gerado automaticamente pela balançaGFIG</strong></p>
-    <p><strong>Grupo de Foguetes do Campus Gaspar (GFIG)</strong></p>
-    <p>CompSteam • Projeto BoxSteam • Controle e Automação de Eletrodomésticos do Cotidiano</p>
-    <p>Instituto Federal de Santa Catarina (IFSC) - Campus Gaspar</p>
-    <p>© 2025 - Todos os direitos reservados</p>
-    <p>Data de geração: ${new Date().toLocaleString('pt-BR')}</p>
+  <div class="footer" style="margin-top: 10px; padding-top: 5px; border-top: 1px solid #dee2e6; text-align: center; font-size: 7px; color: #7f8c8d;">
+    <p style="margin: 2px 0;"><strong>Relatório gerado automaticamente pela balançaGFIG</strong></p>
+    <p style="margin: 2px 0;"><strong>Grupo de Foguetes do Campus Gaspar (GFIG)</strong></p>
+    <p style="margin: 2px 0;">CompSteam • Projeto BoxSteam • Controle e Automação de Eletrodomésticos do Cotidiano</p>
+    <p style="margin: 2px 0;">Instituto Federal de Santa Catarina (IFSC) - Campus Gaspar</p>
+    <p style="margin: 2px 0;">© 2025 - Todos os direitos reservados</p>
+    <p style="margin: 2px 0;">Data de geração: ${new Date().toLocaleString('pt-BR')}</p>
   </div>
 
 </body>

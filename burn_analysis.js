@@ -259,7 +259,8 @@ function renderBurnAnalysisChart(dados) {
           zoomout: true,
           pan: true,
           reset: true
-        }
+        },
+        autoSelected: 'pan'
       },
       events: {
         click: function(event, chartContext, config) {
