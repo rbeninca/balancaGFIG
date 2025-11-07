@@ -3,6 +3,18 @@ let burnAnalysisChart = null;
 let currentBurnSession = null;
 let burnStartTime = null;
 let burnEndTime = null;
+let burnChartColorMode = 'class'; // 'class' ou 'simple'
+
+function setBurnChartColorMode(mode) {
+  burnChartColorMode = mode;
+  
+  // Atualiza a aparência dos botões
+  document.getElementById('burn-color-class-btn').classList.toggle('active', mode === 'class');
+  document.getElementById('burn-color-simple-btn').classList.toggle('active', mode === 'simple');
+
+  // Redesenha o gráfico
+  updateBurnChart();
+}
 
 /**
  * Filtra dados de uma sessão baseado nos pontos de queima salvos pelo usuário
@@ -95,6 +107,10 @@ async function abrirModalBurnAnalysis(sessionId, source) {
 
     // Renderizar gráfico
     renderBurnAnalysisChart(dadosProcessados);
+
+    // Configurar o modo de cor inicial do botão
+    document.getElementById('burn-color-class-btn').classList.toggle('active', burnChartColorMode === 'class');
+    document.getElementById('burn-color-simple-btn').classList.toggle('active', burnChartColorMode === 'simple');
 
     // Atualizar métricas
     updateBurnMetrics(dadosProcessados);
@@ -238,31 +254,112 @@ function renderBurnAnalysisChart(dados) {
     y: dados.newtons[i]
   }));
 
-  // Criar série de área apenas para o intervalo de queima
-  const burnAreaData = dados.tempos.map((t, i) => ({
-    x: t,
-    y: (t >= burnStartTime && t <= burnEndTime) ? dados.newtons[i] : null
-  }));
+  // =============================
+  // Cálculo de impulso cumulativo dentro da janela de queima
+  // =============================
+  const EPS = 1e-6; // Epsilon para comparações de ponto flutuante
+  const cumulativeImpulse = [];
+  let impulsoAcumulado = 0;
+  for (let i = 0; i < dados.tempos.length; i++) {
+    if (i > 0) {
+      const tPrev = dados.tempos[i - 1];
+      const tCur = dados.tempos[i];
+      if (tCur >= burnStartTime && tPrev >= burnStartTime && tCur <= burnEndTime) {
+        const dt = tCur - tPrev;
+        const f1 = dados.newtons[i - 1];
+        const f2 = dados.newtons[i];
+        const areaTrap = dt * (f1 + f2) / 2;
+        if (areaTrap > 0) impulsoAcumulado += areaTrap;
+      }
+    }
+    cumulativeImpulse.push(impulsoAcumulado);
+  }
+
+  // Tabela de classes (replicada para uso local de cores segmentadas)
+  const classificacoes = [
+    { min: 0.00,    max: 0.3125,   classe: 'Micro 1/8A', cor: '#8e44ad' },
+    { min: 0.3126,  max: 0.625,    classe: '¼A',         cor: '#9b59b6' },
+    { min: 0.626,   max: 1.25,     classe: '½A',         cor: '#e74c3c' },
+    { min: 1.26,    max: 2.50,     classe: 'A',          cor: '#e67e22' },
+    { min: 2.51,    max: 5.00,     classe: 'B',          cor: '#f39c12' },
+    { min: 5.01,    max: 10.00,    classe: 'C',          cor: '#f1c40f' },
+    { min: 10.01,   max: 20.00,    classe: 'D',          cor: '#2ecc71' },
+    { min: 20.01,   max: 40.00,    classe: 'E',          cor: '#1abc9c' },
+    { min: 40.01,   max: 80.00,    classe: 'F',          cor: '#3498db' },
+    { min: 80.01,   max: 160.00,   classe: 'G',          cor: '#9b59b6' },
+    { min: 160.01,  max: 320.00,   classe: 'H',          cor: '#e74c3c' },
+    { min: 320.01,  max: 640.00,   classe: 'I',          cor: '#e67e22' },
+    { min: 640.01,  max: 1280.00,  classe: 'J',          cor: '#f39c12' },
+    { min: 1280.01, max: 2560.00,  classe: 'K',          cor: '#2ecc71' },
+    { min: 2560.01, max: 5120.00,  classe: 'L',          cor: '#3498db' },
+    { min: 5120.01, max: 10240.00, classe: 'M',          cor: '#9b59b6' },
+    { min: 10240.01,max: 20480.00, classe: 'N',          cor: '#e74c3c' },
+    { min: 20480.01,max: 40960.00, classe: 'O',          cor: '#c0392b' },
+  ];
+
+  // Partição EXCLUSIVA por classe: cada amostra pertence a no máximo 1 faixa
+  // Isso elimina sobreposição entre cores. Em transições, a cor muda na amostra seguinte.
+  const classIndexByPoint = cumulativeImpulse.map((imp) => {
+    for (let idx = 0; idx < classificacoes.length; idx++) {
+      const c = classificacoes[idx];
+      if (imp >= (c.min - EPS) && imp <= (c.max + EPS)) return idx;
+    }
+    return -1; // fora de qualquer faixa conhecida
+  });
+
+  const segmentSeries = classificacoes.map((c, idx) => {
+    const segData = dados.tempos.map((t, i) => {
+      const dentroQueima = (t >= burnStartTime && t <= burnEndTime);
+      if (!dentroQueima) return { x: t, y: null };
+
+      const currentClass = classIndexByPoint[i];
+      const prevClass = (i > 0) ? classIndexByPoint[i - 1] : -1;
+
+      // O ponto `i` pertence a esta série se:
+      // 1. A classe do ponto atual é `idx`.
+      if (currentClass === idx) {
+        return { x: t, y: dados.newtons[i] };
+      }
+      // 2. A classe do ponto *anterior* era `idx` e a atual é diferente.
+      //    Isso "fecha" a área da série anterior, evitando lacunas.
+      if (prevClass === idx && currentClass !== idx) {
+        return { x: t, y: dados.newtons[i] };
+      }
+
+      return { x: t, y: null };
+    });
+    const legendName = `${c.classe} [${c.min.toFixed(2)} - ${c.max.toFixed(2)} N·s]`;
+    return { name: legendName, type: 'area', data: segData };
+  });
+
+  const allSeries = [
+    { name: 'Força (N)', type: 'line', data: chartData },
+  ];
+
+  if (burnChartColorMode === 'class') {
+    allSeries.push(...segmentSeries);
+  } else {
+    // Modo simples: uma única área azul
+    const simpleAreaData = dados.tempos.map(t => ({
+      x: t,
+      y: (t >= burnStartTime && t <= burnEndTime) ? dados.newtons[dados.tempos.indexOf(t)] : null
+    }));
+    allSeries.push({
+      name: 'Queima',
+      type: 'area',
+      data: simpleAreaData
+    });
+  }
 
   const options = {
-    series: [
-      {
-        name: 'Força (N)',
-        type: 'line',
-        data: chartData
-      },
-      {
-        name: 'Período de Queima',
-        type: 'area',
-        data: burnAreaData
-      }
-    ],
+    series: allSeries,
     chart: {
       type: 'line',
       height: 400,
       animations: {
         enabled: false
       },
+      stacked: false, // mantemos false para não somar áreas; sobreposição controlada por opacidade
       toolbar: {
         show: true,
         tools: {
@@ -300,19 +397,24 @@ function renderBurnAnalysisChart(dados) {
     },
     stroke: {
       curve: 'smooth',
-      width: [2, 0]  // Linha para primeira série, sem borda para área
+      width: burnChartColorMode === 'class' ? [2, ...segmentSeries.map(() => 0)] : [2, 1],
     },
     fill: {
-      type: ['solid', 'solid'],
+      type: burnChartColorMode === 'class' ? ['solid', ...segmentSeries.map(() => 'solid')] : ['solid', 'gradient'],
+      opacity: burnChartColorMode === 'class' ? [1, ...segmentSeries.map(() => 0.40)] : [1, 0.3],
       gradient: {
-        shadeIntensity: 1,
+        shade: 'light',
+        type: "vertical",
+        shadeIntensity: 0.25,
+        inverseColors: false,
         opacityFrom: 0.4,
-        opacityTo: 0.4,
-        stops: [1, 100]
+        opacityTo: 0.1,
+        stops: [0, 90, 100]
       }
-      , opacity: [1, 0.4]  // Opacidade para linha e área
     },
-    colors: ['#008FFB', '#a7baee'],  // Azul para linha, laranja para área de queima
+    colors: burnChartColorMode === 'class' 
+      ? ['#008FFB', ...classificacoes.map(c => c.cor)] 
+      : ['#008FFB', '#3b82f6'],
     xaxis: {
       type: 'numeric',
       title: {
@@ -338,10 +440,7 @@ function renderBurnAnalysisChart(dados) {
           borderColor: '#00E396',
           label: {
             borderColor: '#00E396',
-            style: {
-              color: '#fff',
-              background: '#00E396'
-            },
+            style: { color: '#fff', background: '#00E396' },
             text: '🔥 Início'
           }
         },
@@ -350,10 +449,7 @@ function renderBurnAnalysisChart(dados) {
           borderColor: '#FEB019',
           label: {
             borderColor: '#FEB019',
-            style: {
-              color: '#fff',
-              background: '#FEB019'
-            },
+            style: { color: '#fff', background: '#FEB019' },
             text: '🏁 Fim'
           }
         }
@@ -380,10 +476,8 @@ function updateBurnChart() {
 
   console.log('[updateBurnChart] Recriando gráfico com burnStart:', burnStartTime, 'burnEnd:', burnEndTime);
 
-  // Processar dados da sessão
+  // Processar dados da sessão e recriar o gráfico (necessário para recalcular segmentos de impulso)
   const dados = processarDadosSimples(currentBurnSession.dadosTabela);
-
-  // Recriar o gráfico completamente com os novos limites
   renderBurnAnalysisChart(dados);
 
   console.log('[updateBurnChart] Gráfico recriado com sucesso');
