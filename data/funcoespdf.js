@@ -21,21 +21,24 @@ function exportarPDFViaPrint(sessionId) {
     }
     
     showNotification('info', 'Gerando relatório PDF com gráfico...', 2000);
-    
-    // Processa dados
+
+    // Processa dados COMPLETOS da sessão
+    const dadosCompletos = processarDadosSimples(sessao.dadosTabela);
+
+    // Processa dados (pode ser filtrado se houver intervalo personalizado)
     const dados = processarDadosSimples(sessao.dadosTabela);
     // Assumimos que calcularAreaSobCurva retorna o Impulso Total (área sob a curva)
     const impulsoData = calcularAreaSobCurva(dados.tempos, dados.newtons, false);
     // Assumimos que calcularMetricasPropulsao lida com a classificação NAR/TRA
     const metricasPropulsao = calcularMetricasPropulsao(impulsoData);
-    
+
     // Gera o gráfico em canvas e converte para imagem
     gerarGraficoParaPDF(sessao, dados, impulsoData, metricasPropulsao, (imagemBase64) => {
       // Cria janela de impressão com o gráfico
       const printWindow = window.open('', '_blank');
-      
+
       // Gera HTML do relatório COM a imagem do gráfico
-      const html = gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsao, imagemBase64);
+      const html = gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsao, imagemBase64, null, dadosCompletos);
       
       printWindow.document.write(html);
       printWindow.document.close();
@@ -863,7 +866,7 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
       <!-- Teste Completo -->
       <div>
         <div style="background: #3498db; color: white; padding: 3px 6px; border-radius: 2px 2px 0 0; font-weight: bold; font-size: 8px;">
-          📅 TESTE ESTÁTICO (COMPLETO)
+          📅 HORÁRIO TESTE ESTÁTICO
         </div>
         <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #dee2e6; font-size: 8px;">
           <tr><td style="padding: 2px; font-weight: bold; width: 40%;">Horário Início:</td><td style="padding: 2px;">${sessao.data_inicio ? (() => {
@@ -874,9 +877,9 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
             const d = new Date(sessao.data_fim);
             return d.toLocaleTimeString('pt-BR') + '.' + String(d.getMilliseconds()).padStart(3, '0');
           })() : '---'}</td></tr>
-          <tr><td style="padding: 2px; font-weight: bold;">Tempo Relativo:</td><td style="padding: 2px;">00:00.000s → ${dados.duracao.toFixed(3)}s</td></tr>
-          <tr><td style="padding: 2px; font-weight: bold;">Duração Total:</td><td style="padding: 2px; font-weight: bold;">${dados.duracao.toFixed(3)} s</td></tr>
-          <tr><td style="padding: 2px; font-weight: bold;">Leituras/Taxa:</td><td style="padding: 2px;">${dados.tempos ? dados.tempos.length : 0} leituras • ${dados.duracao > 0 ? (dados.tempos.length / dados.duracao).toFixed(1) : '0.0'} Hz</td></tr>
+          <tr><td style="padding: 2px; font-weight: bold;">Tempo Relativo:</td><td style="padding: 2px;">00:00.000s → ${dadosTotais ? dadosTotais.duracao.toFixed(3) : dados.duracao.toFixed(3)}s</td></tr>
+          <tr><td style="padding: 2px; font-weight: bold;">Duração Total:</td><td style="padding: 2px; font-weight: bold;">${dadosTotais ? dadosTotais.duracao.toFixed(3) : dados.duracao.toFixed(3)} s</td></tr>
+          <tr><td style="padding: 2px; font-weight: bold;">Leituras/Taxa:</td><td style="padding: 2px;">${dadosTotais ? dadosTotais.tempos.length : sessao.dadosTabela.length} leituras • ${dadosTotais && dadosTotais.duracao > 0 ? (dadosTotais.tempos.length / dadosTotais.duracao).toFixed(1) : dados.duracao > 0 ? (sessao.dadosTabela.length / dados.duracao).toFixed(1) : '0.0'} Hz</td></tr>
         </table>
       </div>
       <!-- Queima Detectada -->
@@ -901,7 +904,10 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
           })() : '---'}</td></tr>
           <tr><td style="padding: 2px; font-weight: bold;">Tempo Relativo:</td><td style="padding: 2px;">${impulsoData.tempoIgnicao.toFixed(3)}s → ${impulsoData.tempoBurnout.toFixed(3)}s</td></tr>
           <tr><td style="padding: 2px; font-weight: bold;">Duração Queima:</td><td style="padding: 2px; font-weight: bold;">${impulsoData.duracaoQueima.toFixed(3)} s</td></tr>
-          <tr><td style="padding: 2px; font-weight: bold;">Leituras/Taxa:</td><td style="padding: 2px;">${dados.tempos ? dados.tempos.length : '---'} leituras • ${impulsoData.duracaoQueima > 0 ? (dados.tempos.length / impulsoData.duracaoQueima).toFixed(1) : '0.0'} Hz</td></tr>
+          <tr><td style="padding: 2px; font-weight: bold;">Leituras/Taxa:</td><td style="padding: 2px;">${dados.tempos ? (() => {
+            const leiturasQueima = dados.tempos.filter(t => t >= impulsoData.tempoIgnicao && t <= impulsoData.tempoBurnout).length;
+            return leiturasQueima + ' leituras • ' + (impulsoData.duracaoQueima > 0 ? (leiturasQueima / impulsoData.duracaoQueima).toFixed(1) : '0.0') + ' Hz';
+          })() : '---'}</td></tr>
         </table>
       </div>
     </div>
