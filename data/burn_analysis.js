@@ -312,7 +312,8 @@ function renderBurnAnalysisChart(dados) {
 
       return { x: t, y: null };
     });
-    return { name: c.classe, type: 'area', data: segData };
+    const legendName = `${c.classe} [${c.min.toFixed(2)} - ${c.max.toFixed(2)} N·s]`;
+    return { name: legendName, type: 'area', data: segData };
   });
 
   // Primeira série (linha completa) + séries de área segmentadas
