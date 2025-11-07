@@ -1,9 +1,19 @@
-// --- CONFIGURAÇÃO GUIADA (WIZARD) ---
+// --- CONFIGURAÇÃO GUIADA (WIZARD) SIMPLIFICADO ---
 
 let wizardCurrentStep = 0;
-const WIZARD_TOTAL_STEPS = 5;
-let wizardState = {};
+const WIZARD_TOTAL_STEPS = 4; // Reduzido de 5 para 4
+let wizardState = {
+  ruidoMedidoG: 0,
+  toleranciaCalculadaG: 0,
+  capacidadeKg: 0,
+  acuraciaPercent: 0.02,
+  leituraSemPeso: 0,
+  leituraComPeso: 0,
+  pesoConhecido: 0,
+  fatorConversao: 0
+};
 let configTimeout;
+let wizardRealtimeListeners = [];
 
 function openWizard() {
   const modal = document.getElementById('wizard-modal');
@@ -618,7 +628,13 @@ window.onload = () => {
   // Setup for Wizard button
   const wizardButton = document.getElementById('btn-open-wizard');
   if (wizardButton) {
-    wizardButton.addEventListener('click', openWizard);
+    wizardButton.addEventListener('click', () => {
+      if (typeof openWizardSimplificado === 'function') {
+        openWizardSimplificado();
+      } else {
+        openWizard(); // Fallback para wizard antigo
+      }
+    });
   }
 
   const leiturasContainer = document.getElementById('leituras-container');
