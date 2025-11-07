@@ -241,19 +241,7 @@ function renderBurnAnalysisChart(dados) {
   // =============================
   // Cálculo de impulso cumulativo dentro da janela de queima
   // =============================
-  // OVERLAP: pequeno valor para sobrepor intencionalmente os limites das faixas.
-  // Por quê? Em gráficos de área com suavização/curvas e dados amostrados, é comum
-  // surgirem fendas visuais entre faixas adjacentes devido a:
-  //  - arredondamentos numéricos (ponto flutuante) no cálculo do impulso acumulado;
-  //  - pontos amostrados não coincidirem exatamente com o instante do limite;
-  //  - interpolação/suavização do traçado da área.
-  // Estratégia: usamos um OVERLAP pequeno em torno dos limites (min/max) de cada faixa
-  // e expandimos a máscara de pertencimento para incluir amostras vizinhas. Assim,
-  // garantimos continuidade visual, mesmo que duas faixas se encontrem em um ponto
-  // entre amostras ou que a curva desenhada "arqueie" levemente no contorno.
-  // Observação: valores muito grandes podem causar sobreposição visível de cores.
-  // Ajuste se necessário; 1e-4 a 1e-3 N·s costuma funcionar bem para dados típicos.
-  const OVERLAP = 1e-4;
+  const EPS = 1e-6; // Epsilon para comparações de ponto flutuante
   const cumulativeImpulse = [];
   let impulsoAcumulado = 0;
   for (let i = 0; i < dados.tempos.length; i++) {
@@ -293,37 +281,26 @@ function renderBurnAnalysisChart(dados) {
     { min: 20480.01,max: 40960.00, classe: 'O',          cor: '#c0392b' },
   ];
 
-  // Gerar séries segmentadas: cada classe mostra apenas sua porção do intervalo de queima
-  const segmentSeries = classificacoes.map(c => {
-    // Primeiro calcula máscara de pertencimento à classe em cada amostra
-    const inside = dados.tempos.map((t, i) => {
-      const impulsoAqui = cumulativeImpulse[i];
-      // Inclui um pequeno OVERLAP para evitar fendas entre faixas vizinhas
-      return impulsoAqui >= (c.min - OVERLAP) && impulsoAqui <= (c.max + OVERLAP);
-    });
+  // Partição EXCLUSIVA por classe: cada amostra pertence a no máximo 1 faixa
+  // Isso elimina sobreposição entre cores. Em transições, a cor muda na amostra seguinte.
+  const classIndexByPoint = cumulativeImpulse.map((imp) => {
+    for (let idx = 0; idx < classificacoes.length; idx++) {
+      const c = classificacoes[idx];
+      if (imp >= (c.min - EPS) && imp <= (c.max + EPS)) return idx;
+    }
+    return -1; // fora de qualquer faixa conhecida
+  });
 
-    // Expande a máscara em +/-2 amostras para evitar gaps entre faixas
-    const EXPAND_SAMPLES = 2;
-    const expanded = inside.map((v, i) => {
-      if (v) return true;
-      for (let k = 1; k <= EXPAND_SAMPLES; k++) {
-        if (inside[i - k] || inside[i + k]) return true;
-      }
-      return false;
-    });
-
+  const segmentSeries = classificacoes.map((c, idx) => {
     const segData = dados.tempos.map((t, i) => {
-      const dentroQueima = t >= burnStartTime && t <= burnEndTime;
+      const dentroQueima = (t >= burnStartTime && t <= burnEndTime);
+      const exclusivoDestaClasse = (classIndexByPoint[i] === idx);
       return {
         x: t,
-        y: (dentroQueima && expanded[i]) ? dados.newtons[i] : null
+        y: (dentroQueima && exclusivoDestaClasse) ? dados.newtons[i] : null
       };
     });
-    return {
-      name: c.classe,
-      type: 'area',
-      data: segData
-    };
+    return { name: c.classe, type: 'area', data: segData };
   });
 
   // Primeira série (linha completa) + séries de área segmentadas
@@ -383,7 +360,7 @@ function renderBurnAnalysisChart(dados) {
     },
     fill: {
       type: ['solid', ...segmentSeries.map(() => 'solid')],
-      opacity: [1, ...segmentSeries.map(() => 0.50)]
+      opacity: [1, ...segmentSeries.map(() => 0.40)]
     },
     colors: ['#008FFB', ...classificacoes.map(c => c.cor)],
     xaxis: {
