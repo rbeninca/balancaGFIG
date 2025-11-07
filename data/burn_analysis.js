@@ -3,6 +3,18 @@ let burnAnalysisChart = null;
 let currentBurnSession = null;
 let burnStartTime = null;
 let burnEndTime = null;
+let burnChartColorMode = 'class'; // 'class' ou 'simple'
+
+function setBurnChartColorMode(mode) {
+  burnChartColorMode = mode;
+  
+  // Atualiza a aparência dos botões
+  document.getElementById('burn-color-class-btn').classList.toggle('active', mode === 'class');
+  document.getElementById('burn-color-simple-btn').classList.toggle('active', mode === 'simple');
+
+  // Redesenha o gráfico
+  updateBurnChart();
+}
 
 /**
  * Filtra dados de uma sessão baseado nos pontos de queima salvos pelo usuário
@@ -95,6 +107,10 @@ async function abrirModalBurnAnalysis(sessionId, source) {
 
     // Renderizar gráfico
     renderBurnAnalysisChart(dadosProcessados);
+
+    // Configurar o modo de cor inicial do botão
+    document.getElementById('burn-color-class-btn').classList.toggle('active', burnChartColorMode === 'class');
+    document.getElementById('burn-color-simple-btn').classList.toggle('active', burnChartColorMode === 'simple');
 
     // Atualizar métricas
     updateBurnMetrics(dadosProcessados);
@@ -316,11 +332,24 @@ function renderBurnAnalysisChart(dados) {
     return { name: legendName, type: 'area', data: segData };
   });
 
-  // Primeira série (linha completa) + séries de área segmentadas
   const allSeries = [
     { name: 'Força (N)', type: 'line', data: chartData },
-    ...segmentSeries
   ];
+
+  if (burnChartColorMode === 'class') {
+    allSeries.push(...segmentSeries);
+  } else {
+    // Modo simples: uma única área azul
+    const simpleAreaData = dados.tempos.map(t => ({
+      x: t,
+      y: (t >= burnStartTime && t <= burnEndTime) ? dados.newtons[dados.tempos.indexOf(t)] : null
+    }));
+    allSeries.push({
+      name: 'Queima',
+      type: 'area',
+      data: simpleAreaData
+    });
+  }
 
   const options = {
     series: allSeries,
@@ -367,15 +396,25 @@ function renderBurnAnalysisChart(dados) {
       }
     },
     stroke: {
-      // Linha principal suave; áreas com 'straight' para alinhar limites e minimizar gaps
       curve: 'smooth',
-      width: [2, ...segmentSeries.map(() => 0)]
+      width: burnChartColorMode === 'class' ? [2, ...segmentSeries.map(() => 0)] : [2, 1],
     },
     fill: {
-      type: ['solid', ...segmentSeries.map(() => 'solid')],
-      opacity: [1, ...segmentSeries.map(() => 0.40)]
+      type: burnChartColorMode === 'class' ? ['solid', ...segmentSeries.map(() => 'solid')] : ['solid', 'gradient'],
+      opacity: burnChartColorMode === 'class' ? [1, ...segmentSeries.map(() => 0.40)] : [1, 0.3],
+      gradient: {
+        shade: 'light',
+        type: "vertical",
+        shadeIntensity: 0.25,
+        inverseColors: false,
+        opacityFrom: 0.4,
+        opacityTo: 0.1,
+        stops: [0, 90, 100]
+      }
     },
-    colors: ['#008FFB', ...classificacoes.map(c => c.cor)],
+    colors: burnChartColorMode === 'class' 
+      ? ['#008FFB', ...classificacoes.map(c => c.cor)] 
+      : ['#008FFB', '#3b82f6'],
     xaxis: {
       type: 'numeric',
       title: {

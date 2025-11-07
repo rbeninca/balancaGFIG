@@ -807,7 +807,7 @@ sudo chmod 666 /dev/ttyUSB0</pre>
               <p style="color: var(--cor-texto-secundario); font-size: 0.75rem; margin: 0;"></p></h2>
           <button class="wizard-close" onclick="fecharModalBurnAnalysis()" style="font-size: 1.2rem; padding: 0.2rem 0.4rem;">&times;</button>
         </div>
-        <div class="wizard-body" style="">
+        <div class="wizard-body">
           
 
           <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--cor-fundo-secundario); border-radius: 8px; border: 2px solid var(--cor-primaria);">
@@ -913,6 +913,12 @@ sudo chmod 666 /dev/ttyUSB0</pre>
             </div>
           </div>
 
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 1rem 0.5rem 1rem;">
+            <div id="burn-color-toggle" class="toggle-switch">
+              <button id="burn-color-class-btn" class="btn btn-toggle active" onclick="setBurnChartColorMode('class')">🎨 Cores por Classe</button>
+              <button id="burn-color-simple-btn" class="btn btn-toggle" onclick="setBurnChartColorMode('simple')">💧 Cor Simples</button>
+            </div>
+          </div>
           <div id="burn-analysis-chart" style="width: 98%; height: 400px;"></div>
 
          
