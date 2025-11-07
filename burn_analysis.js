@@ -238,11 +238,25 @@ function renderBurnAnalysisChart(dados) {
     y: dados.newtons[i]
   }));
 
+  // Criar série de área apenas para o intervalo de queima
+  const burnAreaData = dados.tempos.map((t, i) => ({
+    x: t,
+    y: (t >= burnStartTime && t <= burnEndTime) ? dados.newtons[i] : null
+  }));
+
   const options = {
-    series: [{
-      name: 'Força (N)',
-      data: chartData
-    }],
+    series: [
+      {
+        name: 'Força (N)',
+        type: 'line',
+        data: chartData
+      },
+      {
+        name: 'Período de Queima',
+        type: 'area',
+        data: burnAreaData
+      }
+    ],
     chart: {
       type: 'line',
       height: 400,
@@ -286,8 +300,19 @@ function renderBurnAnalysisChart(dados) {
     },
     stroke: {
       curve: 'smooth',
-      width: 2
+      width: [2, 0]  // Linha para primeira série, sem borda para área
     },
+    fill: {
+      type: ['solid', 'solid'],
+      gradient: {
+        shadeIntensity: 1,
+        opacityFrom: 0.4,
+        opacityTo: 0.4,
+        stops: [1, 100]
+      }
+      , opacity: [1, 0.4]  // Opacidade para linha e área
+    },
+    colors: ['#008FFB', '#a7baee'],  // Azul para linha, laranja para área de queima
     xaxis: {
       type: 'numeric',
       title: {
@@ -348,38 +373,20 @@ function renderBurnAnalysisChart(dados) {
 }
 
 function updateBurnChart() {
-  if (!burnAnalysisChart) return;
+  if (!currentBurnSession) {
+    console.log('[updateBurnChart] Sessão não disponível');
+    return;
+  }
 
-  burnAnalysisChart.updateOptions({
-    annotations: {
-      xaxis: [
-        {
-          x: burnStartTime,
-          borderColor: '#00E396',
-          label: {
-            borderColor: '#00E396',
-            style: {
-              color: '#fff',
-              background: '#00E396'
-            },
-            text: '🔥 Início'
-          }
-        },
-        {
-          x: burnEndTime,
-          borderColor: '#FEB019',
-          label: {
-            borderColor: '#FEB019',
-            style: {
-              color: '#fff',
-              background: '#FEB019'
-            },
-            text: '🏁 Fim'
-          }
-        }
-      ]
-    }
-  });
+  console.log('[updateBurnChart] Recriando gráfico com burnStart:', burnStartTime, 'burnEnd:', burnEndTime);
+
+  // Processar dados da sessão
+  const dados = processarDadosSimples(currentBurnSession.dadosTabela);
+
+  // Recriar o gráfico completamente com os novos limites
+  renderBurnAnalysisChart(dados);
+
+  console.log('[updateBurnChart] Gráfico recriado com sucesso');
 }
 
 function updateBurnMetrics(dados) {
