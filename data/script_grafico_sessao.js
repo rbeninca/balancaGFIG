@@ -130,7 +130,7 @@ function obterConfiguracaoExportacao() {
     template: localStorage.getItem('png_template') || 'completo',
     tamanho: localStorage.getItem('png_tamanho') || 'medio',
     mostrarLogo: localStorage.getItem('png_logo') !== 'false',
-    logoTexto: localStorage.getItem('png_logo_texto') || 'GFIG',
+    logoTexto: localStorage.getItem('png_logo_texto') || 'Grupo de Foguetes - Campus Gaspar IFSC',
     logoPos: localStorage.getItem('png_logo_pos') || 'canto-superior-direito',
     formato: localStorage.getItem('png_formato') || 'png',
     qualidadeJPEG: parseFloat(localStorage.getItem('png_qualidade')) || 0.95,
@@ -584,7 +584,7 @@ function criarRelatorioComImpulsoAvancado(sessao, dados, config, burnInfo = null
     ctx.fillStyle = cor.subtitulo;
     ctx.font = '12px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText('Sistema de Análise de Propulsão - GFIG', 50, h-20);
+    ctx.fillText('Sistema de Teste de Motores Foguete - Grupo de Foguetes Campus Gaspar IFSC', 50, h-20);
     ctx.textAlign = 'right';
     ctx.fillText(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, w-50, h-20);
 
@@ -633,7 +633,7 @@ function desenharLogoSimples(ctx, config, cor, w, h) {
     ctx.fillStyle = cor.cinza;
     ctx.font = '20px Arial';
     ctx.textAlign = 'right';
-    ctx.fillText(config.logoTexto || 'GFIG', x, y);
+    ctx.fillText(config.logoTexto || 'Grupo de Foguetes - Campus Gaspar IFSC', x, y);
     ctx.restore();
   } catch (e) {
     if (config.debug) console.warn('[PNG] Erro ao desenhar logo:', e);
@@ -766,7 +766,7 @@ function criarRelatorioComImpulso(sessao, dados) {
   ctx.fillStyle = cor.subtitulo;
   ctx.font = '12px Arial';
   ctx.textAlign = 'left';
-  ctx.fillText('Sistema de Análise de Propulsão - GFIG', 50, h-20);
+  ctx.fillText('Sistema de Teste de Motores Foguete - Grupo de Foguetes Campus Gaspar IFSC', 50, h-20);
   ctx.textAlign = 'right';
   ctx.fillText(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, w-50, h-20);
   
@@ -1800,7 +1800,7 @@ function exportarMotorENG(sessionId) {
         const delay = meta.delay || parseFloat(document.getElementById('eng-delay').value) || 0; // s
         const propWeight = meta.propweight || parseFloat(document.getElementById('eng-propweight').value) || 0.1; // kg
         const totalWeight = meta.totalweight || parseFloat(document.getElementById('eng-totalweight').value) || 0.25; // kg
-        const fabricante = meta.manufacturer || document.getElementById('eng-manufacturer').value.trim() || 'GFIG-IFC';
+        const fabricante = meta.manufacturer || document.getElementById('eng-manufacturer').value.trim() || 'Grupo de Foguetes - Campus Gaspar IFSC';
 
 
         if (!nome || isNaN(diametro) || isNaN(comprimento) || isNaN(propWeight) || isNaN(totalWeight)) {
@@ -1809,9 +1809,11 @@ function exportarMotorENG(sessionId) {
         }
 
         // 2. Constrói o cabeçalho no formato openRocket/RASAero
-        const cabecalho = 
+        const cabecalho =
 `
-; Arquivo de Curva de Empuxo (.eng) gerado pelo GFIG (Balança Wi-Fi)
+; Arquivo de Curva de Empuxo (.eng) gerado pelo Sistema de Teste de Motores Foguete
+; Grupo de Foguetes do Campus Gaspar - IFSC
+; Projeto de Controle e Automação - Campus Gaspar IFSC 2025
 ; Sessão de Teste: ${sessao.nome}
 ; Data de Gravação: ${new Date(sessao.timestamp).toLocaleString('pt-BR')}
 ;

@@ -1,41 +1,108 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Créditos</title>
+    <title>Créditos - balançaGFIG</title>
     <style>
         body {
-            font-family: sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            background-color: #f0f0f0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-width: 900px;
+            width: 100%;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+        }
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 1.1em;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        .description {
+            text-align: center;
+            color: #555;
+            margin-bottom: 30px;
+            line-height: 1.6;
+            padding: 0 20px;
         }
         .logos-container {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 20px;
-            margin-top: 20px;
+            gap: 30px;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
         }
         .logo {
-        
-            max-height: 150px;
+            max-height: 120px;
+            max-width: 200px;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+        }
+        .logo:hover {
+            transform: scale(1.1);
+        }
+        .footer-text {
+            text-align: center;
+            margin-top: 30px;
+            color: #7f8c8d;
+            font-size: 0.9em;
         }
     </style>
 </head>
 <body>
-    <h1>Créditos</h1>
-    <div class="logos-container">
-        <img src="imgs/logo_campusGaspar.png" alt="Logo Campus Gaspar" class="logo">
-        <img src="imgs/logo_compSteam.png" alt="Logo CompSteam" class="logo">
-        <img src="imgs/logo_gfig_pb.png" alt="Logo GFIG PB" class="logo">
-        <img src="imgs/logo_gfig.png" alt="Logo GFIG" class="logo">
-        <img src="imgs/logo_receita.png" alt="Logo Receita" class="logo">
-        <img src="imgs/logo-bar.png" alt="Logo Bar" class="logo">
+    <div class="container">
+        <h1>🚀 balançaGFIG</h1>
+        <div class="subtitle">Sistema de Teste de Motores Foguete</div>
+        <div class="subtitle" style="font-size: 0.95em; margin-top: -20px;">Instituto Federal de Santa Catarina (IFSC) - Campus Gaspar</div>
+
+        <div class="description">
+            <p><strong>Desenvolvido nos seguintes projetos:</strong></p>
+            <p style="line-height: 2;">
+                <strong>• Grupo de Foguetes do Campus Gaspar (GFIG)</strong><br>
+                <strong>• Projeto de Ensino:</strong> Controle e Automação de Eletrodomésticos do Cotidiano<br>
+                <strong>• Grupo de Pesquisa CompSteam</strong><br>
+                <strong>• Projeto BoxSteam - Campus Gaspar</strong>
+            </p>
+            <p style="margin-top: 15px;">Sistema desenvolvido para testes estáticos de motores foguete de propelente sólido,<br>
+            com análise em tempo real de curvas de empuxo e geração de relatórios técnicos.</p>
+        </div>
+
+        <div class="logos-container">
+            <img src="imgs/logo_campusGaspar.png" alt="Logo Campus Gaspar IFSC" class="logo">
+            <img src="imgs/logo_compSteam.png" alt="Logo CompSteam" class="logo">
+            <img src="imgs/logo_gfig_pb.png" alt="Logo GFIG PB" class="logo">
+            <img src="imgs/logo_gfig.png" alt="Logo GFIG" class="logo">
+            <img src="imgs/logo_receita.png" alt="Logo Receita" class="logo">
+            <img src="imgs/logo-bar.png" alt="Logo Bar" class="logo">
+        </div>
+
+        <div class="footer-text">
+            <p>© 2025 - Instituto Federal de Santa Catarina</p>
+            <p>Todos os direitos reservados</p>
+        </div>
     </div>
 </body>
 </html>
