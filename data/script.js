@@ -1412,1184 +1412,62 @@ function updateConfigForm(config) {
   document.getElementById('abaControles').classList.remove('config-loading');
 }
 
-// --- Funções de Ação do Usuário ---
+// ===================================================================================
 
-function tare() {
-  sendCommandToWorker("t");
-  showNotification('info', 'Comando de Tara enviado. (Atalho: Shift + T)');
-  // Request config update after tare
-  setTimeout(() => sendCommandToWorker('get_config'), 1000);
-}
-
-function calibrar() {
-  const massa = parseFloat(document.getElementById("massaCalibracao").value);
-  if (!isNaN(massa) && massa > 0) {
-    sendCommandToWorker("c", massa);
-    showNotification('info', 'Comando de calibração com ' + massa + 'g enviado. (Atalho: Shift + C)');
-    // Request config update after calibration
-    setTimeout(() => sendCommandToWorker('get_config'), 1000);
-  } else {
-    showNotification("error", "Informe uma massa de calibração válida.");
-  }
-}
-
-async function salvarParametros() {
-  const params = {
-    conversionFactor: "param-conversao", gravity: "param-gravidade",
-    tareOffset: "param-offset", leiturasEstaveis: "param-leituras-estaveis",
-    toleranciaEstabilidade: "param-tolerancia", numAmostrasMedia: "param-num-amostras",
-    timeoutCalibracao: "param-timeout", capacidadeMaximaGramas: "param-capacidade-maxima",
-    percentualAcuracia: "param-acuracia",
-  };
-
-  showNotification('info', 'Enviando parâmetros para o dispositivo...');
-
-  for (const [key, id] of Object.entries(params)) {
-    const valueStr = document.getElementById(id).value.trim();
-    if (valueStr !== '') {
-      const valueNum = parseFloat(valueStr.replace(',', '.'));
-      if (!isNaN(valueNum)) {
-        // Envia um comando de cada vez com um pequeno atraso
-        await new Promise(resolve => setTimeout(resolve, 100));
-        // Usa o protocolo padronizado do worker: cmd 'set' com objeto {param, value}
-        sendCommandToWorker('set', { param: key, value: valueNum });
-      }
-    }
-  }
-
-  // Após enviar todos os comandos, espera um pouco e solicita a configuração atualizada
-  setTimeout(() => {
-    showNotification('success', 'Parâmetros salvos! Atualizando valores...');
-    sendCommandToWorker('get_config');
-  }, 1000); // Espera 1 segundo
-}
-
-function salvarWsUrl() {
-  const wsUrl = document.getElementById('ws-url').value;
-  localStorage.setItem('wsUrl', wsUrl);
-  if (dataWorker) {
-    dataWorker.postMessage({ type: 'set_ws_url', payload: { url: wsUrl } });
-  }
-  showNotification('success', 'URL do WebSocket salva. A conexão será reiniciada.');
-}
-
-function resetarWsUrl() {
-  // Remove a URL salva do localStorage
-  localStorage.removeItem('wsUrl');
-  
-  // Obtém o host padrão (hostname atual da página)
-  const defaultHost = window.location.hostname || 'localhost';
-  const defaultWsUrl = 'ws://' + defaultHost + ':81';
-  
-  // Atualiza o campo de input
-  const wsUrlInput = document.getElementById('ws-url');
-  wsUrlInput.value = defaultWsUrl;
-  
-  // Reinicia a conexão com o padrão
-  if (dataWorker) {
-    dataWorker.postMessage({ type: 'set_ws_url', payload: { url: defaultWsUrl } });
-  }
-  
-  showNotification('success', 'URL do WebSocket restaurada para o padrão: ' + defaultWsUrl);
-}
-
-// --- Funções do Modal de Importação ---
-function abrirModalImportacao() {
-  const modal = document.getElementById('modal-importacao');
-  modal.style.display = 'block';
-}
-
-function fecharModalImportacao() {
-  const modal = document.getElementById('modal-importacao');
-  modal.style.display = 'none';
-}
-
-// --- Funções do Modal de Nova Sessão ---
-function abrirModalNovaSessao() {
-  const modal = document.getElementById('modal-nova-sessao');
-  modal.style.display = 'block';
-}
-
-function fecharModalNovaSessao() {
-  const modal = document.getElementById('modal-nova-sessao');
-  modal.style.display = 'none';
-}
-
-let temporizadorSessaoId = null;
-let temporizadorGravacaoId = null;
-let contagemIntervalId = null; // ID para o intervalo do countdown
-
-function cancelarContagem() {
-  if (contagemIntervalId) {
-    clearInterval(contagemIntervalId);
-    contagemIntervalId = null;
-  }
-  const overlay = document.getElementById('countdown-overlay');
-  if(overlay) overlay.style.display = 'none';
-
-  // Re-habilita o botão de iniciar e garante que o de encerrar está desabilitado
-  document.getElementById('btn-abrir-modal-sessao').disabled = false;
-  document.getElementById('btn-encerrar-sessao').disabled = true;
-
-  // Reset timestamps
-  sessionRecordingStartTimestamp = null;
-  sessionRecordingEndTimestamp = null;
-
-  showNotification('warning', 'Gravação cancelada pelo usuário.');
-}
-
-function iniciarContagemRegressiva(segundos, callback) {
-  const overlay = document.getElementById('countdown-overlay');
-  const numberEl = document.getElementById('countdown-number');
-  const handEl = document.getElementById('countdown-hand');
-  const cancelButton = document.getElementById('btn-cancelar-countdown');
-  const statusEl = document.getElementById('countdown-status');
-  const labelEl = document.getElementById('countdown-label');
-
-  if (!overlay || !numberEl || !handEl) {
-    console.error('Elementos do countdown não encontrados!');
-    callback(); // Executa o callback diretamente se o overlay não existir
+/**
+ * Carrega sessões de exemplo de arquivos JSON se não existirem no localStorage.
+ * Isso é útil para demonstrações, especialmente em ambientes web como GitHub Pages.
+ */
+async function carregarSessoesExemplo() {
+  // Executa apenas em ambiente web (http/https) e não em arquivos locais
+  if (!window.location.protocol.startsWith('http')) {
     return;
   }
 
-  // Adiciona o listener para o botão de cancelar
-  cancelButton.onclick = cancelarContagem;
-
-  overlay.style.display = 'flex';
-  let contador = Math.floor(segundos);
-
-  if (contagemIntervalId) clearInterval(contagemIntervalId);
-  contagemIntervalId = setInterval(() => {
-    // Formata o tempo restante em MM:SS
-    const minutos = Math.floor(contador / 60);
-    const segs = contador % 60;
-    const tempoFormatado = `${String(minutos).padStart(2, '0')}:${String(segs).padStart(2, '0')}`;
-    
-    if (contador > 0) {
-      numberEl.textContent = tempoFormatado;
-      statusEl.textContent = 'Começando a gravar em:';
-      labelEl.textContent = '';
-      
-      if (contador > 1) {
-        tocarBeep(800, 100, 0.1); // Beep suave a cada segundo
-      } else {
-        tocarBeep(1200, 200, 0.3); // Beep mais forte no final
-      }
-    }
-
-    contador--;
-
-    if (contador < 0) {
-      if (contagemIntervalId) clearInterval(contagemIntervalId);
-      contagemIntervalId = null;
-      overlay.style.display = 'none';
-      callback();
-    }
-  }, 1000);
-}
-
-function iniciarSessaoAvancado() {
-  const nomeSessao = document.getElementById('sessao-nome').value.trim();
-  const delaySegundos = parseFloat(document.getElementById('sessao-delay').value) || 0;
-  const duracaoSegundos = parseFloat(document.getElementById('sessao-timer').value) || 0;
-
-  if (!nomeSessao) {
-    showNotification('error', 'Por favor, insira um nome para a sessão.');
-    document.getElementById('sessao-nome').focus();
-    return;
-  }
-
-  fecharModalNovaSessao();
-
-  // Desabilita o botão de iniciar para prevenir múltiplas contagens
-  document.getElementById('btn-abrir-modal-sessao').disabled = true;
-
-  const startRecordingLogic = () => {
-    clearChart();
-    document.getElementById("tabela").querySelector("tbody").innerHTML = '';
-    isSessionActive = true;
-    sessionStartTime = null; // Resetar o tempo inicial (será definido na primeira leitura)
-
-    // O botão de nova sessão já está desabilitado, mas o de encerrar é habilitado aqui
-    document.getElementById('btn-encerrar-sessao').disabled = false;
-
-    const msgGravacaoEl = document.getElementById('mensagem-gravacao');
-    const tempoGravacaoEl = document.getElementById('tempo-gravacao');
-    const tempoRestanteEl = document.getElementById('tempo-restante');
-    msgGravacaoEl.style.display = 'flex';
-    
-    // Mostra tempo restante apenas se há duração configurada
-    if (tempoRestanteEl && duracaoSegundos > 0) {
-      tempoRestanteEl.style.display = 'block';
-      tempoRestanteEl.textContent = duracaoSegundos;
-    } else if (tempoRestanteEl) {
-      tempoRestanteEl.style.display = 'none';
-    }
-    
-    let tempoDecorrido = 0;
-    tempoGravacaoEl.textContent = `Gravando ${tempoDecorrido}s...`;
-
-    if (temporizadorGravacaoId) clearInterval(temporizadorGravacaoId);
-    temporizadorGravacaoId = setInterval(() => {
-      tempoDecorrido++;
-      tempoGravacaoEl.textContent = `Gravando ${tempoDecorrido}s...`;
-      
-      // Se há duração configurada, mostra o tempo restante
-      if (duracaoSegundos > 0 && tempoRestanteEl) {
-        const tempoRest = Math.max(0, duracaoSegundos - tempoDecorrido);
-        tempoRestanteEl.textContent = tempoRest;
-      }
-    }, 1000);
-
-    showNotification('success', `Sessão "${nomeSessao}" iniciada!`);
-
-    if (duracaoSegundos > 0) {
-      showNotification('info', `A gravação será encerrada automaticamente em ${duracaoSegundos} segundos.`);
-      if (temporizadorSessaoId) clearTimeout(temporizadorSessaoId);
-      temporizadorSessaoId = setTimeout(() => {
-        showNotification('info', 'Tempo de gravação finalizado. Encerrando sessão...');
-        encerrarSessao();
-      }, duracaoSegundos * 1000);
-    }
-  };
-
-  if (delaySegundos > 1) {
-    iniciarContagemRegressiva(delaySegundos, startRecordingLogic);
-  } else {
-    showNotification('info', `Gravação iniciando...`);
-    startRecordingLogic();
-  }
-}
-
-
-// --- Funções de Sessão ---
-
-async function encerrarSessao() {
-  if (!isSessionActive) return;
-  
-  // Limpa timers
-  if (temporizadorSessaoId) {
-    clearTimeout(temporizadorSessaoId);
-    temporizadorSessaoId = null;
-  }
-  if (temporizadorGravacaoId) {
-    clearInterval(temporizadorGravacaoId);
-    temporizadorGravacaoId = null;
-  }
-
-  // Esconde mensagem de gravação
-  const msgGravacaoEl = document.getElementById('mensagem-gravacao');
-  const tempoRestanteEl = document.getElementById('tempo-restante');
-  if(msgGravacaoEl) msgGravacaoEl.style.display = 'none';
-  if(tempoRestanteEl) tempoRestanteEl.style.display = 'none';
-
-  const nomeSessao = document.getElementById('sessao-nome').value.trim();
-  const tabela = document.getElementById("tabela").querySelector("tbody");
-  if (tabela.rows.length > 0) {
-    sessionRecordingEndTimestamp = new Date(); // Capture wall-clock end time
-    const gravacao = await salvarDadosDaSessao(nomeSessao, tabela); // Modified to await
-    
-    // Se a sessão foi salva com sucesso
-    if (gravacao) {
-      // Sempre tenta enviar para MySQL se conectado
-      if (isMysqlConnected) {
-        showNotification('info', 'Enviando sessão "' + gravacao.nome + '" para o MySQL...');
-        sendCommandToWorker('save_session_to_mysql', gravacao); // Save to DB via worker
-      } else {
-        // Se MySQL não estiver conectado, mas o usuário sabe que deveria estar, oferece opção de salvar manualmente
-        showNotification('warning', 'Sessão "' + gravacao.nome + '" salva localmente. MySQL desconectado. Você poderá sincronizar quando a conexão retornar.');
-      }
-      
-      // Recarrega a lista de gravações para refletir a nova sessão
-      setTimeout(() => {
-        loadAndDisplayAllSessions();
-      }, 500);
-    } else {
-      showNotification('error', 'Erro ao salvar a sessão. Verifique se o LocalStorage não está cheio.');
-    }
-  } else {
-    showNotification('info', 'Nenhum dado foi gravado. Nada foi salvo.');
-  }
-  isSessionActive = false;
-  sessionStartTime = null; // Resetar o tempo inicial
-  sessionRecordingStartTimestamp = null; // Reset wall-clock timestamps
-  sessionRecordingEndTimestamp = null;
-
-  document.getElementById('btn-abrir-modal-sessao').disabled = false;
-  document.getElementById('btn-encerrar-sessao').disabled = true;
-  document.getElementById('sessao-nome').value = ''; // Limpa o nome no modal
-}
-
-async function salvarDadosDaSessao(nome, tabela) {
-  console.log(`[salvarDadosDaSessao] Iniciando salvamento da sessão: "${nome}"`);
-  console.log(`[salvarDadosDaSessao] Número de linhas na tabela:`, tabela.rows.length);
-  
-  const dadosTabela = Array.from(tabela.rows).map(linha => ({
-    timestamp: linha.cells[0].innerText,
-    tempo_esp: linha.cells[1].innerText,
-    newtons: linha.cells[2].innerText,
-    grama_forca: linha.cells[3].innerText,
-    quilo_forca: linha.cells[4].innerText
-  })).reverse();
-
-  const metadadosMotor = {
-    diameter: parseFloat(document.getElementById('sessao-meta-diametro')?.value) || null,
-    length: parseFloat(document.getElementById('sessao-meta-comprimento')?.value) || null,
-    manufacturer: document.getElementById('sessao-meta-fabricante')?.value?.trim() || null,
-    propweight: parseFloat(document.getElementById('sessao-meta-propelente')?.value) || null,
-    totalweight: parseFloat(document.getElementById('sessao-meta-peso-total')?.value) || null,
-    description: document.getElementById('sessao-meta-descricao')?.value?.trim() || null,
-    observations: document.getElementById('sessao-meta-observacoes')?.value?.trim() || null,
-    temperatura: document.getElementById('sessao-meta-temperatura')?.value ? parseFloat(document.getElementById('sessao-meta-temperatura').value) : null,
-    umidade: document.getElementById('sessao-meta-umidade')?.value ? parseFloat(document.getElementById('sessao-meta-umidade').value) : null,
-    pressao: document.getElementById('sessao-meta-pressao')?.value ? parseFloat(document.getElementById('sessao-meta-pressao').value) : null,
-  };
-
-  // Use the captured timestamps or fallback to current time
-  const startTimestamp = sessionRecordingStartTimestamp ? sessionRecordingStartTimestamp.toISOString() : new Date().toISOString();
-  const endTimestamp = sessionRecordingEndTimestamp ? sessionRecordingEndTimestamp.toISOString() : new Date().toISOString();
-
-  const gravacao = {
-    id: Date.now(),
-    nome,
-    timestamp: startTimestamp,
-    data_inicio: startTimestamp,
-    data_fim: endTimestamp,
-    data_modificacao: new Date().toISOString(),
-    dadosTabela,
-    metadadosMotor,
-    savedToMysql: isMysqlConnected // Mark as saved to MySQL if connected
-  };
-
-  console.log(`[salvarDadosDaSessao] Gravação preparada - ID: ${gravacao.id}, Nome: ${nome}, Dados: ${dadosTabela.length} linhas`);
+  const nomesArquivosExemplo = ['G60.json', 'BFB_14.json', 'NFB_14.json', 'PF_5.json'];
+  const caminhoBase = 'data/json/';
 
   try {
-    let gravacoes = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
-    console.log(`[salvarDadosDaSessao] Sessões existentes no localStorage:`, gravacoes.length);
-    
-    gravacoes.push(gravacao);
-    localStorage.setItem('balancaGravacoes', JSON.stringify(gravacoes));
-    
-    console.log(`[salvarDadosDaSessao] ✓ Sessão salva no localStorage com sucesso. Total de sessões: ${gravacoes.length}`);
-    showNotification('success', 'Sessão "' + nome + '" salva localmente!');
-    return gravacao; // Return the saved session
-  } catch (e) {
-    console.error(`[salvarDadosDaSessao] ✗ Erro ao salvar no localStorage:`, e.message);
-    showNotification('error', 'Erro ao salvar. O Local Storage pode estar cheio.');
-    return null;
-  }
-}
-
-// --- Funções Auxiliares e de UI ---
-
-function abrirAba(element, abaID) {
-  document.querySelectorAll('.tabcontent').forEach(tab => { tab.style.display = "none"; tab.classList.remove('active'); });
-  document.querySelectorAll('.tablink').forEach(link => link.classList.remove('active'));
-  const el = document.getElementById(abaID);
-  if (abaID === 'abaControles') {
-    el.classList.add('config-loading'); // Add loading class
-    sendCommandToWorker('get_config');
-  } else if (abaID === 'abaGravacoes') {
-    // As sessões agora são carregadas no início e atualizadas dinamicamente.
-    // Nenhuma ação é necessária aqui para evitar recargas desnecessárias.
-  }
-  el.style.display = "block";
-  el.classList.add('active');
-  element.classList.add('active');
-}
-
-// ==========================================
-// JOGOS - Abrir Index com Todos os Jogos
-// ==========================================
-function abrirMarteloFullscreen() {
-  // Abre o index de jogos com todos os templates disponíveis
-  // Martelo do Thor agora é um dos jogos nesta coleção
-  window.open('jogos/index.html', 'jogos', 'width=1400,height=900,scrollbars=yes,resizable=yes');
-}
-
-function showNotification(type, message, duration = 5000) {
-  const area = document.getElementById('notification-area');
-  const notification = document.createElement('div');
-  notification.className = 'notification ' + type;
-  notification.innerHTML = message;
-  area.prepend(notification);
-  setTimeout(() => {
-    notification.style.transition = 'opacity 0.5s';
-    notification.style.opacity = '0';
-    setTimeout(() => notification.remove(), 500);
-  }, duration);
-}
-
-/**
- * Mostra overlay de carregamento
- */
-function showLoading() {
-  const loader = document.getElementById('loading-overlay');
-  if (loader) {
-    loader.style.display = 'flex';
-    // Força o reflow para garantir que a mudança seja aplicada
-    loader.offsetHeight;
-  }
-}
-
-/**
- * Esconde overlay de carregamento
- */
-function hideLoading() {
-  const loader = document.getElementById('loading-overlay');
-  if (loader) {
-    loader.style.display = 'none';
-  }
-}
-
-/**
- * Configura event listener para botão de fechamento manual do loader
- */
-document.addEventListener('DOMContentLoaded', () => {
-  const btnFecharLoader = document.getElementById('btn-fechar-loader');
-  if (btnFecharLoader) {
-    btnFecharLoader.addEventListener('click', () => {
-      hideLoading();
-      showNotification('warning', 'Carregamento interrompido manualmente.');
-    });
-  }
-});
-
-function convertForce(valueN, unit) {
-  const g_force_conversion = 101.9716;
-  if (unit === 'gf') return valueN * g_force_conversion;
-  if (unit === 'kgf') return valueN * (g_force_conversion / 1000);
-  return valueN;
-}
-
-/**
- * Aplica classes de alerta gradual nos cards do display baseado na proximidade do limite
- * @param {number} forcaAtualN - Força atual em Newtons
- */
-function aplicarAlertasLimite(forcaAtualN) {
-  // Obtém a capacidade máxima em gramas e converte para Newtons
-  const capacidadeGramas = parseFloat(document.getElementById("param-capacidade-maxima")?.value) || 5000;
-  const capacidadeN = (capacidadeGramas / 1000) * 9.80665; // Converte kg para N
-  
-  // Calcula o percentual em relação à capacidade máxima (usa valor absoluto)
-  const percentual = Math.abs((forcaAtualN / capacidadeN) * 100);
-  
-  // Seleciona todos os cards de leitura
-  const cards = document.querySelectorAll('.leituras-valores > div');
-  
-  // Remove todas as classes de alerta existentes
-  cards.forEach(card => {
-    card.classList.remove('alerta-70', 'alerta-80', 'alerta-90', 'alerta-limite');
-  });
-  
-  // Aplica a classe apropriada baseada no percentual
-  if (percentual >= 100) {
-    // Limite excedido - vermelho intenso com pulsação rápida
-    cards.forEach(card => card.classList.add('alerta-limite'));
-  } else if (percentual >= 90) {
-    // 90-99% - vermelho com pulsação suave
-    cards.forEach(card => card.classList.add('alerta-90'));
-  } else if (percentual >= 80) {
-    // 80-89% - laranja
-    cards.forEach(card => card.classList.add('alerta-80'));
-  } else if (percentual >= 70) {
-    // 70-79% - amarelo
-    cards.forEach(card => card.classList.add('alerta-70'));
-  }
-  // Abaixo de 70% não aplica nenhuma classe (mantém estilo normal)
-}
-
-/**
- * Controla a exibição do modal de alerta de sobrecarga
- * @param {number} forcaAtualN - Força atual em Newtons
- * @param {number} percentual - Percentual da capacidade
- */
-let modalSobrecargaAberto = false;
-let ultimoNivelAlerta = 0;
-let modalFechadoPeloUsuario = false; // Flag para controlar se usuário fechou manualmente
-let timestampFechamentoManual = 0; // Timestamp do fechamento manual
-
-function verificarModalSobrecarga(forcaAtualN, percentual) {
-  const modal = document.getElementById('modal-alerta-sobrecarga');
-  const modalContent = modal.querySelector('.modal-sobrecarga-content');
-  const titulo = document.getElementById('modal-sobrecarga-titulo');
-  const mensagem = document.getElementById('modal-sobrecarga-mensagem');
-  
-  // Obtém a capacidade máxima em gramas e converte para Newtons
-  const capacidadeGramas = parseFloat(document.getElementById("param-capacidade-maxima")?.value) || 5000;
-  const capacidadeN = (capacidadeGramas / 1000) * 9.80665;
-  
-  // Converte valores para a unidade atual do display
-  const valorAtual = convertForce(Math.abs(forcaAtualN), displayUnit);
-  const valorLimite = convertForce(capacidadeN, displayUnit);
-  
-  // Atualiza os valores no modal
-  document.getElementById('modal-sobrecarga-valor-atual').textContent = 
-    valorAtual.toFixed(3) + ' ' + displayUnit;
-  document.getElementById('modal-sobrecarga-valor-limite').textContent = 
-    valorLimite.toFixed(3) + ' ' + displayUnit;
-  document.getElementById('modal-sobrecarga-percentual').textContent = 
-    percentual.toFixed(1) + '%';
-  
-  // Atualiza a barra de progresso
-  const barra = document.getElementById('modal-sobrecarga-barra-progresso');
-  barra.style.width = Math.min(percentual, 100) + '%';
-  
-  // Define o nível de alerta atual
-  let nivelAtual = 0;
-  if (percentual >= 100) nivelAtual = 100;
-  else if (percentual >= 90) nivelAtual = 90;
-  else if (percentual >= 80) nivelAtual = 80;
-
-  // Atualiza o estado compartilhado para o jogo
-  window.sharedState.overloadAlert = {
-    active: percentual >= 80,
-    level: nivelAtual,
-    percent: percentual,
-    forca: forcaAtualN,
-    capacidade: capacidadeN,
-    displayUnit: displayUnit
-  };
-
-  // Se o modal foi fechado manualmente, só reabre após 10 segundos OU se a carga cair abaixo de 70%
-  const tempoDesdeFechar = Date.now() - timestampFechamentoManual;
-  if (modalFechadoPeloUsuario && percentual < 70) {
-    // Reset da flag se a carga caiu significativamente
-    modalFechadoPeloUsuario = false;
-    timestampFechamentoManual = 0;
-  } else if (modalFechadoPeloUsuario && tempoDesdeFechar < 10000) {
-    // Não reabre se ainda não passou 10 segundos
-    return;
-  }
-  
-  // Abre o modal se passar de 80% e não estiver aberto
-  if (percentual >= 80 && !modalSobrecargaAberto) {
-    modal.classList.add('ativo');
-    modalSobrecargaAberto = true;
-    modalFechadoPeloUsuario = false; // Reset ao abrir automaticamente
-    ultimoNivelAlerta = nivelAtual;
-    
-    // Toca som de alerta se disponível
-    try {
-      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjeR1/LMeSwFJHfH8N2RQAoUXrTp66hVFApGn+DyvmwhBjeR1/LMeSwFJHfH8N2RQAoUXrTp66hVFApGn+DyvmwhBjeR1/LMeSwFJHfH8N2RQAoUXrTp66hVFApGn+DyvmwhBjeR1/LMeSwFJHfH8N2RQAoUXrTp66hVFApGn+DyvmwhBjeR1/LMeSwFJHfH8N2RQAoUXrTp66hVFApGn+DyvmwhBjeR1/LMeSwFJHfH8N2RQAoUXrTp66hVFApGn+DyvmwhBjeR1/LMeSwFJHfH8N2RQAoUXrTp66hVFApGn+DyvmwhBjeR1/LMeSwFJHfH8N2RQAoUXrTp66hVFApGn+DyvmwhBjeR1/LMeSwFJHfH8N2RQAoUXrTp66hVFApGn+DyvmwhBjeR1/LMeSwFJHfH8N2RQAoUXrTp66hVFApGn+DyvmwhBjeR1/LMeSwFJHfH8N2RQAoUXrTp66hVFApGn+DyvmwhBjeR1/LMeSwFJHfH8N2RQAoUXrTp66hVFApGn+DyvmwhBjeR1/LMeSwFJHfH8N2RQAoUXrTp66hVFApGn+DyvmwhBjeR1/LMeSwFJHfH8N2RQAoUXrTp66hVFApGn+DyvmwhBjeR1/LMeSwFJHfH8N2RQAoUXrTp66hVFA==');
-      audio.play().catch(() => {});
-    } catch (e) {}
-  }
-  
-  // Atualiza as classes visuais do modal conforme o nível
-  if (modalSobrecargaAberto) {
-    modalContent.classList.remove('alerta-80', 'alerta-90', 'alerta-100');
-    
-    if (percentual >= 100) {
-      modalContent.classList.add('alerta-100');
-      titulo.textContent = '🚨 LIMITE EXCEDIDO! PARE IMEDIATAMENTE! 🚨';
-      mensagem.innerHTML = `
-        ⛔ <strong>LIMITE DA CÉLULA ULTRAPASSADO!</strong><br>
-        <strong style="font-size: 1.15rem; color: #7f1d1d;">RISCO CRÍTICO DE DESTRUIÇÃO DO EQUIPAMENTO!</strong>
-      `;
-    } else if (percentual >= 90) {
-      modalContent.classList.add('alerta-90');
-      titulo.textContent = '🚨 PERIGO: MUITO PRÓXIMO DO LIMITE! 🚨';
-      mensagem.innerHTML = `
-        ⚠️ Você está em zona crítica!<br>
-        <strong>RISCO IMINENTE DE DANOS PERMANENTES!</strong>
-      `;
-    } else if (percentual >= 80) {
-      modalContent.classList.add('alerta-80');
-      titulo.textContent = '⚠️ ATENÇÃO: APROXIMANDO DO LIMITE! ⚠️';
-      mensagem.innerHTML = `
-        ⚠️ Você está próximo do limite da célula de carga!<br>
-        <strong>RISCO DE DANOS PERMANENTES AO EQUIPAMENTO!</strong>
-      `;
-    }
-    
-    // Fecha automaticamente se cair abaixo de 75% (mas não marca como fechado pelo usuário)
-    if (percentual < 75) {
-      fecharModalSobrecarga(false); // false = fechamento automático
-    }
-  }
-}
-
-function fecharModalSobrecarga(fechadoPeloUsuario = true) {
-  const modal = document.getElementById('modal-alerta-sobrecarga');
-  modal.classList.remove('ativo');
-  modalSobrecargaAberto = false;
-  ultimoNivelAlerta = 0;
-  
-  // Se foi fechado pelo usuário (clique no botão), marca a flag
-  if (fechadoPeloUsuario) {
-    modalFechadoPeloUsuario = true;
-    timestampFechamentoManual = Date.now();
-    console.log('[MODAL] Fechado pelo usuário - não reabrirá por 10 segundos ou até carga cair abaixo de 70%');
-  }
-}
-
-/**
- * Atualiza a barra de progresso do esforço da célula no display
- * @param {number} percentual - Percentual da capacidade
- * @param {number} forcaAtualN - Força atual em Newtons
- */
-function atualizarBarraEsforcoDisplay(percentual, forcaAtualN) {
-  const barraFill = document.getElementById('barra-esforco-fill');
-  const barraTexto = document.getElementById('barra-esforco-texto');
-  
-  if (!barraFill || !barraTexto) return;
-  
-  // Converte para a unidade atual do display
-  const valorDisplay = convertForce(Math.abs(forcaAtualN), displayUnit);
-  
-  // Atualiza largura da barra
-  barraFill.style.width = Math.min(percentual, 100) + '%';
-  
-  // Atualiza texto dentro da barra (valor | percentual)
-  barraTexto.textContent = `${valorDisplay.toFixed(2)} ${displayUnit} | ${percentual.toFixed(1)}%`;
-  
-  // Remove todas as classes anteriores
-  barraFill.classList.remove('nivel-50', 'nivel-60', 'nivel-70', 'nivel-80', 'nivel-90', 'nivel-100');
-  
-  // Aplica classe conforme o nível (iniciando em 50%)
-  if (percentual >= 100) {
-    barraFill.classList.add('nivel-100');
-  } else if (percentual >= 90) {
-    barraFill.classList.add('nivel-90');
-  } else if (percentual >= 80) {
-    barraFill.classList.add('nivel-80');
-  } else if (percentual >= 70) {
-    barraFill.classList.add('nivel-70');
-  } else if (percentual >= 60) {
-    barraFill.classList.add('nivel-60');
-  } else if (percentual >= 50) {
-    barraFill.classList.add('nivel-50');
-  }
-  // Abaixo de 50% mantém o verde padrão
-}
-
-function atualizarToleranciaEmGramas() {
-  const toleranciaBruta = parseFloat(document.getElementById("param-tolerancia").value);
-  const fatorConversao = parseFloat(document.getElementById("param-conversao").value);
-  const el = document.getElementById("tolerancia-em-gramas");
-  if (el && !isNaN(toleranciaBruta) && !isNaN(fatorConversao) && fatorConversao !== 0) {
-    el.textContent = '≈ ' + (toleranciaBruta / fatorConversao).toFixed(3) + ' gf';
-  }
-}
-
-function atualizarCapacidadeEmKg() {
-  const capacidadeGramas = parseFloat(document.getElementById("param-capacidade-maxima").value);
-  const el = document.getElementById("capacidade-em-kg");
-  if (el && !isNaN(capacidadeGramas)) {
-    el.textContent = '≈ ' + (capacidadeGramas / 1000).toFixed(2) + ' kg';
-    // Atualiza a variável global imediatamente para refletir na Zona Morta
-    if (Number.isFinite(capacidadeGramas) && capacidadeGramas > 0) {
-      capacidadeMaximaGramas = capacidadeGramas;
-      atualizarStatusFiltros();
-      console.log('[UI] capacidadeMaximaGramas atualizada via input →', capacidadeMaximaGramas);
-    }
-  }
-}
-
-function atualizarErroAbsoluto() {
-  const capacidadeGramas = parseFloat(document.getElementById("param-capacidade-maxima").value);
-  const percentAcuracia = parseFloat(document.getElementById("param-acuracia").value);
-  const el = document.getElementById("erro-absoluto");
-  if (el && !isNaN(capacidadeGramas) && !isNaN(percentAcuracia)) {
-    el.textContent = 'Erro: ±' + (capacidadeGramas * percentAcuracia).toFixed(2) + ' g';
-    // Atualiza a variável global imediatamente para refletir na Zona Morta
-    if (Number.isFinite(percentAcuracia) && percentAcuracia > 0) {
-      percentualAcuracia = percentAcuracia;
-      atualizarStatusFiltros();
-      console.log('[UI] percentualAcuracia atualizado via input →', percentualAcuracia);
-    }
-  }
-}
-
-// --- Funções de Filtros e Análise de Ruído ---
-
-/**
- * PIPELINE DE FILTROS para normalizar leituras de força
- * Aplicados na seguinte ordem (critial para resultados corretos):
- * 1. Zona Morta - Neutraliza ruído dentro da margem de erro da célula
- * 2. Arredondamento Inteligente - Ajusta casas decimais baseado na precisão
- * 
- * NÃO é aplicado aqui: Anti-Noising (aplicado DEPOIS na UI)
- */
-function aplicarFiltrosGramas(valorGramas) {
-  let valor = valorGramas;
-  if (filtroZonaMortaAtivo) valor = aplicarZonaMorta(valor);
-  if (arredondamentoInteligenteAtivo) valor = aplicarArredondamentoInteligente(valor);
-  return valor;
-}
-
-function aplicarZonaMorta(valorGramas) {
-  // Calcula a margem de erro absoluta da célula de carga
-  // Fórmula: erro = capacidade máxima × percentual de acurácia
-  // Exemplo: 20000g × 0.017% = 3.4g
-  const erroAbsoluto = capacidadeMaximaGramas * percentualAcuracia;
-  
-  // Se o valor está dentro da margem de erro (+/-), neutraliza para zero
-  // Evita que oscilações de ruído apareçam como leituras reais
-  const resultado = Math.abs(valorGramas) <= erroAbsoluto ? 0 : valorGramas;
-  
-  // Log apenas quando houver mudança (evita spam no console)
-  if (resultado === 0 && valorGramas !== 0) {
-    console.log('[ZonaMorta] Valor', valorGramas.toFixed(3), 'g → 0 (limite:', erroAbsoluto.toFixed(2), 'g)');
-  }
-  
-  return resultado;
-}
-
-function aplicarArredondamentoInteligente(valorGramas) {
-  const erroAbsoluto = capacidadeMaximaGramas * percentualAcuracia;
-  let casasDecimais = (erroAbsoluto >= 1) ? 1 : (erroAbsoluto >= 0.1) ? 2 : 3;
-  return parseFloat(valorGramas.toFixed(casasDecimais));
-}
-
-function atualizarStatusFiltros() {
-  const erroAbsoluto = capacidadeMaximaGramas * percentualAcuracia;
-  casasDecimais = (erroAbsoluto >= 1) ? 1 : (erroAbsoluto >= 0.1) ? 2 : 3;
-
-  //console.log('[atualizarStatusFiltros] capacidadeMaximaGramas:', capacidadeMaximaGramas);
-  //console.log('[atualizarStatusFiltros] percentualAcuracia:', percentualAcuracia);
-  //console.log('[atualizarStatusFiltros] Erro Absoluto (Zona Morta):', erroAbsoluto.toFixed(2), 'g');
-
-  const infoZonaMorta = document.getElementById('info-zona-morta');
-  if (infoZonaMorta) {
-    infoZonaMorta.textContent = filtroZonaMortaAtivo ? '✓ Zona Morta (±' + erroAbsoluto.toFixed(2) + 'g)' : '✗ Zona Morta';
-    infoZonaMorta.style.color = filtroZonaMortaAtivo ? '#27ae60' : '#95a5a6';
-  }
-
-  const infoArredondamento = document.getElementById('info-arredondamento');
-  if (infoArredondamento) {
-    infoArredondamento.textContent = arredondamentoInteligenteAtivo ? '✓ Arredondamento (' + casasDecimais + ' casas)' : '✗ Arredondamento';
-    infoArredondamento.style.color = arredondamentoInteligenteAtivo ? '#27ae60' : '#95a5a6';
-  }
-}
-
-// Garante que os botões reflitam o estado atual dos filtros
-function syncFilterButtonsUI() {
-  const btnZona = document.getElementById('btn-zona-morta');
-  if (btnZona) {
-    btnZona.textContent = 'Zona Morta: ' + (filtroZonaMortaAtivo ? 'ON' : 'OFF');
-    btnZona.style.background = filtroZonaMortaAtivo ? '#27ae60' : '#95a5a6';
-  }
-  const btnArr = document.getElementById('btn-arredondamento');
-  if (btnArr) {
-    btnArr.textContent = 'Arredondar: ' + (arredondamentoInteligenteAtivo ? 'ON' : 'OFF');
-    btnArr.style.background = arredondamentoInteligenteAtivo ? '#27ae60' : '#95a5a6';
-  }
-}
-
-function toggleFiltroZonaMorta() {
-  filtroZonaMortaAtivo = !filtroZonaMortaAtivo;
-  const btn = document.getElementById('btn-zona-morta');
-  btn.textContent = 'Zona Morta: ' + (filtroZonaMortaAtivo ? 'ON' : 'OFF');
-  btn.style.background = filtroZonaMortaAtivo ? '#27ae60' : '#95a5a6';
-  atualizarStatusFiltros();
-}
-
-function toggleArredondamentoInteligente() {
-  arredondamentoInteligenteAtivo = !arredondamentoInteligenteAtivo;
-  const btn = document.getElementById('btn-arredondamento');
-  btn.textContent = 'Arredondar: ' + (arredondamentoInteligenteAtivo ? 'ON' : 'OFF');
-  btn.style.background = arredondamentoInteligenteAtivo ? '#27ae60' : '#95a5a6';
-  atualizarStatusFiltros();
-}
-
-// --- Função de Debug para Zona Morta ---
-function debugZonaMorta() {
-  const erroAbsoluto = capacidadeMaximaGramas * percentualAcuracia;
-  
-  console.log('═══════════════════════════════════════');
-  console.log('🔍 DEBUG ZONA MORTA');
-  console.log('═══════════════════════════════════════');
-  console.log('📊 Parâmetros Globais:');
-  console.log('  capacidadeMaximaGramas:', capacidadeMaximaGramas);
-  console.log('  percentualAcuracia:', percentualAcuracia);
-  console.log('  Erro Absoluto (Zona Morta):', erroAbsoluto.toFixed(2), 'g');
-  console.log('  Filtro Ativo:', filtroZonaMortaAtivo);
-  console.log('───────────────────────────────────────');
-  console.log('🧪 Testes de Valores:');
-  
-  const testValues = [0, 0.1, 0.5, 1, 2, 5, 10, 50, 100];
-  testValues.forEach(val => {
-    const resultado = aplicarZonaMorta(val);
-    const status = resultado === 0 ? '→ ZERADO' : '→ MANTIDO';
-    console.log(`  ${val.toFixed(1)}g ${status} (resultado: ${resultado.toFixed(3)}g)`);
-  });
-  
-  console.log('═══════════════════════════════════════');
-  
-  showNotification('info', `Debug Zona Morta concluído! Limite atual: ±${erroAbsoluto.toFixed(2)}g. Veja o console.`, 5000);
-}
-
-function toggleAntiNoising() {
-  antiNoisingAtivo = !antiNoisingAtivo;
-  const btn = document.getElementById('btn-anti-noising');
-  if (antiNoisingAtivo) {
-    btn.textContent = 'Anti-Noising: ON';
-    btn.classList.add('btn-sucesso');
-  } else {
-    btn.textContent = 'Anti-Noising: OFF';
-    btn.classList.remove('btn-sucesso');
-  }
-}
-
-function applyAntiNoising(forceValue) {
-  if (currentStdDev === 0) return forceValue;
-  const threshold = currentStdDev * antiNoisingMultiplier;
-  return Math.abs(forceValue - noiseMean) <= threshold ? 0 : forceValue - noiseMean;
-}
-
-function calculateNoiseStatistics(forceValue) {
-  noiseBuffer.push(forceValue);
-  if (noiseBuffer.length > NOISE_BUFFER_SIZE) noiseBuffer.shift();
-  if (noiseBuffer.length < 10) return;
-  noiseMean = noiseBuffer.reduce((s, v) => s + v, 0) / noiseBuffer.length;
-  const variance = noiseBuffer.reduce((s, v) => s + Math.pow(v - noiseMean, 2), 0) / noiseBuffer.length;
-  currentStdDev = Math.sqrt(variance);
-  updateNoiseDisplay();
-}
-
-function updateNoiseDisplay() {
-  // This function is intentionally left blank as the controls are not in the main UI anymore
-}
-
-function startNoiseAnalysis() {
-  isStabilityMode = true;
-  noiseBuffer = [];
-  showNotification('info', 'Analisando ruído... Mantenha a balança VAZIA e ESTÁVEL por 5 segundos!', 5000);
-  setTimeout(() => {
-    isStabilityMode = false;
-    showNotification('success', '✅ Ruído calibrado!');
-  }, 5000);
-}
-
-function resetNoiseAnalysis() {
-  noiseBuffer = []; currentStdDev = 0; noiseMean = 0; isStabilityMode = false;
-  showNotification('info', 'Análise de ruído resetada');
-}
-
-function setAntiNoisingMultiplier(multiplier) {
-  antiNoisingMultiplier = parseFloat(multiplier);
-}
-
-function atualizarInfoMultiplier() {
-  const multiplierInput = document.getElementById('anti-noising-multiplier');
-  const infoMultiplier = document.getElementById('info-multiplier');
-  if (multiplierInput && infoMultiplier) {
-    const valor = parseFloat(multiplierInput.value);
-    infoMultiplier.textContent = `Valor atual: ${valor.toFixed(1)}x desvio padrão`;
-  }
-}
-
-function addNoiseControlsToUI() {
-  // This function is intentionally left blank as the controls are not in the main UI anymore
-}
-
-// --- Funções de Áudio e Alertas ---
-
-function inicializarAudioContext() {
-  try {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  } catch (e) { console.warn('Áudio não disponível'); }
-}
-
-function toggleAvisosAudio() {
-  avisosAudioAtivados = document.getElementById('audio-avisos').checked;
-  if (avisosAudioAtivados && audioContext?.state === 'suspended') audioContext.resume();
-  showNotification('info', '🔊 Avisos sonoros ' + (avisosAudioAtivados ? 'ativados' : 'desativados'));
-}
-
-function tocarBeep(freq = 800, dur = 100, vol = 0.2) {
-  if (!avisosAudioAtivados || !audioContext) return;
-  const osc = audioContext.createOscillator();
-  const gain = audioContext.createGain();
-  osc.connect(gain);
-  gain.connect(audioContext.destination);
-  osc.frequency.value = freq;
-  gain.gain.setValueAtTime(vol, audioContext.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + dur / 1000);
-  osc.start();
-  osc.stop(audioContext.currentTime + dur / 1000);
-}
-
-function tocarAlertaDesconexao() { tocarBeep(400, 100); setTimeout(() => tocarBeep(300, 100), 150); }
-function tocarAlertaReconexao() { tocarBeep(600, 100); setTimeout(() => tocarBeep(800, 100), 120); }
-function tocarAlertaEstabilizacao() { tocarBeep(500, 150); }
-
-function verificarStatusEstabilizacao(status) {
-  const problema = status?.includes('não estabilizando');
-  if (problema && !ultimoStatusEstabilizacao) {
-    contadorFalhasEstabilizacao++;
-    if (contadorFalhasEstabilizacao >= 3) document.getElementById('alerta-estabilizacao').classList.add('ativo');
-  } else if (!problema) {
-    contadorFalhasEstabilizacao = 0;
-    document.getElementById('alerta-estabilizacao').classList.remove('ativo');
-  }
-  ultimoStatusEstabilizacao = !problema;
-}
-
-// --- Atalhos de Teclado ---
-
-function setupKeyboardShortcuts() {
-  document.addEventListener('keydown', (event) => {
-    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
-    const key = event.key.toLowerCase();
-    const fullscreenModalEl = document.getElementById('fullscreen-chart-modal');
-
-    // Handle Escape key for fullscreen exit
-    if (key === 'escape' && fullscreenModalEl.classList.contains('active')) {
-      event.preventDefault();
-      toggleFullscreen();
-      return; // Exit early to prevent other shortcuts from firing
-    }
-
-    if (event.shiftKey) {
-      if (key === 't') { event.preventDefault(); tare(); }
-      else if (key === 'c') { event.preventDefault(); calibrar(); }
-      else if (key === 'a') { event.preventDefault(); startNoiseAnalysis(); }
-      else if (key === 'd') { event.preventDefault(); debugZonaMorta(); } // NOVO: Debug Zona Morta
-    } else if (!event.ctrlKey && !event.metaKey) {
-      if (key === 'l') { event.preventDefault(); clearChart(); }
-      else if (key === 'p') { event.preventDefault(); toggleChartPause(); }
-    }
-  });
-}
-
-let isDataLabelsEnabled = false;
-let chartDisplayMode = 'points';
-let casasDecimais = 6; // Default value
-let isGridEnabled = true;
-
-function toggleDataLabels() {
-  isDataLabelsEnabled = !isDataLabelsEnabled;
-  chart.updateOptions({
-    dataLabels: {
-      enabled: isDataLabelsEnabled,
-      offsetY: -10, // Move labels slightly above the points
-      style: {
-        fontSize: '10px',
-      },
-      formatter: function (val) {
-        return val.toFixed(6) + ' ' + displayUnit;
-      }
-    }
-  });
-}
-
-function toggleChartDisplayMode() {
-  const modes = ['points', 'line', 'both'];
-  let currentIndex = modes.indexOf(chartDisplayMode);
-  let nextIndex = (currentIndex + 1) % modes.length;
-  chartDisplayMode = modes[nextIndex];
-
-  const btn = document.getElementById('btn-toggle-display-mode');
-  let btnText = '';
-  let strokeWidth = 0;
-  let markerSize = 0;
-
-  switch (chartDisplayMode) {
-    case 'points':
-      btnText = 'Modo: Somente Pontos';
-      markerSize = 4;
-      strokeWidth = 0;
-      break;
-    case 'line':
-      btnText = 'Modo: Somente Linha';
-      markerSize = 0;
-      strokeWidth = 2.5;
-      break;
-    case 'both':
-      btnText = 'Modo: Linha + Pontos';
-      markerSize = 4;
-      strokeWidth = 2.5;
-      break;
-  }
-
-  btn.textContent = btnText;
-  chart.updateOptions({
-    stroke: {
-      width: strokeWidth
-    },
-    markers: {
-      size: markerSize
-    }
-  });
-  showNotification('info', 'Modo de exibição do gráfico: ' + btnText.replace('Modo: ', '') + '.');
-}
-
-function setInterpolation(curve) {
-  chart.updateOptions({
-    stroke: {
-      curve: curve
-    }
-  });
-}
-
-
-
-function toggleFullscreen() {
-  const chartEl = document.querySelector("#grafico");
-  const fullscreenModalEl = document.getElementById('fullscreen-chart-modal');
-  const fullscreenButton = document.getElementById('btn-toggle-fullscreen');
-  const bodyEl = document.body;
-
-  // Get the target btn-grupo within originalChartContainer (the one next to the chart)
-  const chartSideControls = originalChartContainer.querySelector(".btn-grupo");
-
-  if (!fullscreenModalEl.classList.contains('active')) {
-    // Entering Fullscreen Modal Mode
-    if (!originalChartContainer || !originalChartSessionControlsContainer || !originalChartControlsParent) {
-      console.error("Original chart containers or controls parent not found!");
-      return;
-    }
-
-    // Move specific buttons from originalChartControlsParent to chartSideControls
-    chartSideControls.appendChild(btnToggleLabels);
-    chartSideControls.appendChild(btnToggleDisplayMode);
-    chartSideControls.appendChild(btnToggleGrid);
-    chartSideControls.appendChild(btnSetSmoothLine);
-    chartSideControls.appendChild(btnSetStraightLine);
-
-    // Move the entire originalChartContainer (now with all relevant buttons) to the modal
-    fullscreenModalEl.appendChild(originalChartContainer);
-
-    // Hide the original session controls container as its buttons have been moved
-    originalChartSessionControlsContainer.style.display = 'none';
-
-    fullscreenModalEl.classList.add('active');
-    bodyEl.classList.add('no-scroll');
-    if (fullscreenButton) fullscreenButton.textContent = 'Sair da Tela Cheia';
-
-    // Update chart options for fullscreen
-    requestAnimationFrame(() => {
-      chart.updateOptions({
-        chart: {
-          height: '100%', // Let ApexCharts manage height based on its new parent
-          width: '100%'
+    let sessoesLocais = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+    const idsSessoesLocais = new Set(sessoesLocais.map(s => s.id));
+    let novasSessoesAdicionadas = false;
+
+    for (const nomeArquivo of nomesArquivosExemplo) {
+      // O ID da sessão é derivado do nome do arquivo sem a extensão .json
+      const idSessaoExemplo = nomeArquivo.replace('.json', '');
+
+      if (!idsSessoesLocais.has(idSessaoExemplo)) {
+        console.log(`Sessão de exemplo '${idSessaoExemplo}' não encontrada. Importando...`);
+        const response = await fetch(caminhoBase + nomeArquivo);
+        if (response.ok) {
+          const sessaoExemplo = await response.json();
+          // Garante que o ID no arquivo corresponde ao nome do arquivo
+          if (sessaoExemplo.id === idSessaoExemplo) {
+            sessoesLocais.push(sessaoExemplo);
+            novasSessoesAdicionadas = true;
+          } else {
+            console.warn(`ID no arquivo '${nomeArquivo}' ('${sessaoExemplo.id}') não corresponde ao nome do arquivo ('${idSessaoExemplo}').`);
+          }
+        } else {
+          console.error(`Falha ao carregar sessão de exemplo: ${nomeArquivo}`);
         }
-      });
-      setTimeout(() => {
-        chart.windowResize();
-      }, 50);
-    });
-
-  } else {
-    // Exiting Fullscreen Modal Mode
-    const abaGrafico = document.getElementById('abaGrafico');
-
-    // Move specific buttons back from chartSideControls to originalChartControlsParent
-    originalChartControlsParent.appendChild(btnToggleLabels);
-    originalChartControlsParent.appendChild(btnToggleDisplayMode);
-    originalChartControlsParent.appendChild(btnToggleGrid);
-    originalChartControlsParent.appendChild(btnSetSmoothLine);
-    originalChartControlsParent.appendChild(btnSetStraightLine);
-
-    // Move the originalChartContainer back to its original location
-    abaGrafico.appendChild(originalChartContainer);
-
-    // Show the original session controls container again
-    originalChartSessionControlsContainer.style.display = 'flex'; // Assuming it was flex
-
-    fullscreenModalEl.classList.remove('active');
-    bodyEl.classList.remove('no-scroll');
-    if (fullscreenButton) fullscreenButton.textContent = 'Tela Cheia';
-
-    // Revert chart options to original
-    requestAnimationFrame(() => {
-      chart.updateOptions({
-        chart: {
-          height: 450, // Original height from initializeApexChart
-          width: '100%'
-        }
-      });
-      setTimeout(() => {
-        chart.windowResize();
-      }, 50);
-    });
-  }
-}
-
-function toggleGrid() {
-  isGridEnabled = !isGridEnabled;
-  chart.updateOptions({
-    grid: {
-      show: isGridEnabled
-    }
-  });
-  const btn = document.getElementById('btn-toggle-grid');
-  btn.textContent = 'Grade: ' + (isGridEnabled ? 'ON' : 'OFF');
-  showNotification('info', 'Grade do gráfico: ' + (isGridEnabled ? 'ON' : 'OFF') + '.');
-}
-
-function setYAxisRange(mode) {
-  if (mode === 'auto') {
-    chart.updateOptions({
-      yaxis: {
-        min: undefined,
-        max: undefined
       }
-    });
-  } else if (mode === 'fixed') {
-    // A capacidadeMaximaGramas é atualizada pela função updateConfigForm
-    if (!capacidadeMaximaGramas || capacidadeMaximaGramas <= 0) {
-      showNotification('error', 'Capacidade máxima da célula não definida. Verifique os parâmetros.');
-      return;
     }
 
-    let maxRange;
-    const gravity = 9.80665;
-    const maxForceInN = (capacidadeMaximaGramas / 1000) * gravity;
-    maxRange = convertForce(maxForceInN, displayUnit);
-
-    chart.updateOptions({
-      yaxis: {
-        min: 0,
-        max: maxRange
-      }
-    });
-  }
-}
-
-// --- Funções de Sessão (Local Storage e DB) ---
-
-// Util: interpreta timestamp vindo do DB como UTC e formata para dd/mm/yyyy HH:MM:SS.mmm (UTC)
-function parseDbTimestampToUTC(ts) {
-  if (!ts) return null;
-  let s = typeof ts === 'string' ? ts : String(ts);
-  // Normaliza: 'YYYY-MM-DD HH:MM:SS(.ffffff)' -> 'YYYY-MM-DDTHH:MM:SS(.mmm)Z'
-  s = s.replace(' ', 'T');
-  // Mantém no máximo 3 casas decimais (milissegundos)
-  s = s.replace(/\.(\d{3})\d+$/, '.$1');
-  if (!/Z$/i.test(s)) s += 'Z';
-  return new Date(s);
-}
-
-function formatUtcDdMm(date) {
-  if (!date) return '';
-  const dd = String(date.getUTCDate()).padStart(2, '0');
-  const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const yyyy = date.getUTCFullYear();
-  const HH = String(date.getUTCHours()).padStart(2, '0');
-  const MM = String(date.getUTCMinutes()).padStart(2, '0');
-  const SS = String(date.getUTCSeconds()).padStart(2, '0');
-  const mmm = String(date.getUTCMilliseconds()).padStart(3, '0');
-  return `${dd}/${mm}/${yyyy} ${HH}:${MM}:${SS}.${mmm}`;
-}
-
-async function fetchDbSessions() {
-  try {
-    const response = await apiFetch('/api/sessoes');
-    if (!response.ok) {
-      throw new Error('Erro na rede: ' + response.statusText);
+    if (novasSessoesAdicionadas) {
+      console.log('Novas sessões de exemplo foram adicionadas ao localStorage.');
+      localStorage.setItem('balancaGravacoes', JSON.stringify(sessoesLocais));
+      // Retorna true para que a chamada possa recarregar a lista na UI
+      return true;
     }
-    return await response.json();
   } catch (error) {
-    console.error('Erro ao buscar sessões do DB:', error);
-    showNotification('error', 'Não foi possível buscar as sessões do banco de dados.');
-    return [];
+    console.error('Erro ao carregar sessões de exemplo:', error);
   }
+
+  return false;
 }
 
+<<<<<<< HEAD
 /**
  * Carrega arquivos JSON de demonstração da pasta data/json/
  * Usado automaticamente quando em modo GitHub Pages e não há sessões no localStorage
@@ -2639,7 +1517,15 @@ async function loadDemoJsonSessions() {
   return loadedSessions;
 }
 
+=======
+
+// Função para carregar e exibir todas as sessões salvas
+>>>>>>> refs/remotes/origin/master
 async function loadAndDisplayAllSessions() {
+  // Carrega exemplos primeiro e verifica se algo novo foi adicionado
+  const exemplosAdicionados = await carregarSessoesExemplo();
+
+  const gravacoes = JSON.parse(localStorage.getItem('balancaGravacoes') || '[]');
   const listaGravacoesDiv = document.getElementById('lista-gravacoes');
   if (!listaGravacoesDiv) {
     console.error('[loadAndDisplayAllSessions] Elemento #lista-gravacoes não encontrado no DOM');
@@ -2953,6 +1839,1123 @@ async function editarMetadadosMotor(sessionId) {
             <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">Comprimento (mm)</label>
             <input type="number" id="meta-length" value="${meta.length || 200}" step="1" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
           </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">Delay (s)</label>
+            <input type="number" id="meta-delay" value="${meta.delay || 0}" step="0.1" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 0.5rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">Prop. (kg)</label>
+            <input type="number" id="meta-propweight" value="${meta.propweight || 0.1}" step="0.001" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">Total (kg)</label>
+            <input type="number" id="meta-totalweight" value="${meta.totalweight || 0.25}" step="0.001" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">🌡️ Temp. (°C)</label>
+            <input type="number" id="meta-temperatura" value="${meta.temperatura !== undefined && meta.temperatura !== null ? meta.temperatura : ''}" step="0.1" placeholder="25.5" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">💧 Umid. (%)</label>
+            <input type="number" id="meta-umidade" value="${meta.umidade !== undefined && meta.umidade !== null ? meta.umidade : ''}" min="0" max="100" step="0.1" placeholder="65" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">🔵 Pressão (hPa)</label>
+            <input type="number" id="meta-pressao" value="${meta.pressao !== undefined && meta.pressao !== null ? meta.pressao : ''}" step="0.01" placeholder="1013.25" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">Fabricante</label>
+            <input type="text" id="meta-manufacturer" value="${meta.manufacturer || 'GFIG - Campus Gaspar IFSC'}" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">📝 Descrição</label>
+            <textarea id="meta-description" placeholder="Descrição do motor..." style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px; min-height: 60px; resize: vertical; font-family: inherit;">${meta.description || ''}</textarea>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.75rem;">
+          <button onclick="fecharModalMetadados()" class="btn btn-secundario">Cancelar</button>
+          <button onclick="salvarMetadadosMotor(${sessionId})" class="btn btn-sucesso">💾 Salvar Metadados</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function fecharModalMetadados() {
+  const modal = document.getElementById('modal-metadados');
+  if (modal) modal.remove();
+}
+
+async function salvarMetadadosMotor(sessionId) {
+  const localSessions = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+  const sessionIndex = localSessions.findIndex(s => s.id === sessionId);
+
+  // Captura os valores do formulário
+  const metadadosMotor = {
+    name: document.getElementById('meta-name').value.trim(),
+    manufacturer: document.getElementById('meta-manufacturer').value.trim(),
+    diameter: parseFloat(document.getElementById('meta-diameter').value) || 45,
+    length: parseFloat(document.getElementById('meta-length').value) || 200,
+    delay: parseFloat(document.getElementById('meta-delay').value) || 0,
+    propweight: parseFloat(document.getElementById('meta-propweight').value) || 0.1,
+    totalweight: parseFloat(document.getElementById('meta-totalweight').value) || 0.25,
+    description: document.getElementById('meta-description').value.trim(),
+    observations: document.getElementById('meta-observations').value.trim(),
+    temperatura: document.getElementById('meta-temperatura').value ? parseFloat(document.getElementById('meta-temperatura').value) : null,
+    umidade: document.getElementById('meta-umidade').value ? parseFloat(document.getElementById('meta-umidade').value) : null,
+    pressao: document.getElementById('meta-pressao').value ? parseFloat(document.getElementById('meta-pressao').value) : null
+  };
+
+  let sessionToUpdate = null;
+  let isInLocal = sessionIndex !== -1;
+
+  // Se existe localmente, atualiza no local storage
+
+  if (isInLocal) {
+    localSessions[sessionIndex].metadadosMotor = metadadosMotor;
+    localSessions[sessionIndex].data_modificacao = new Date().toISOString();
+    sessionToUpdate = localSessions[sessionIndex];
+
+    try {
+      localStorage.setItem('balancaGravacoes', JSON.stringify(localSessions));
+      showNotification('success', 'Metadados do motor salvos localmente!');
+    } catch (e) {
+      showNotification('error', 'Erro ao salvar metadados localmente: ' + e.message);
+      fecharModalMetadados();
+      return;
+    }
+  }
+
+  // Se não está localmente, busca do DB para ter os dados completos
+  if (!sessionToUpdate) {
+    try {
+      const resp = await apiFetch(`/api/sessoes/${sessionId}`);
+      if (resp.ok) {
+        sessionToUpdate = await resp.json();
+        sessionToUpdate.metadadosMotor = metadadosMotor;
+
+        // Normaliza campos do DB para o formato esperado pelo worker
+        if (sessionToUpdate.data_inicio && !sessionToUpdate.timestamp) {
+          sessionToUpdate.timestamp = sessionToUpdate.data_inicio;
+        }
+        if (!sessionToUpdate.nome) {
+          sessionToUpdate.nome = 'Sessão ' + sessionId;
+        }
+      }
+    } catch (e) {
+      console.error('Erro ao buscar sessão do DB:', e);
+    }
+  } else {
+    // Atualiza os metadados na sessão local se já temos ela
+    sessionToUpdate.metadadosMotor = metadadosMotor;
+  }
+
+  // Tenta salvar no DB se MySQL está conectado e temos a sessão
+  if (isMysqlConnected && sessionToUpdate) {
+    // Busca as leituras se não estiverem presentes
+    if (!sessionToUpdate.dadosTabela || sessionToUpdate.dadosTabela.length === 0) {
+      try {
+        const readingsResp = await apiFetch(`/api/sessoes/${sessionId}/leituras`);
+        if (readingsResp.ok) {
+          const dbReadings = await readingsResp.json();
+          sessionToUpdate.dadosTabela = dbReadings.map(r => ({
+            timestamp: formatUtcDdMm(parseDbTimestampToUTC(r.timestamp)),
+            tempo_esp: r.tempo,
+            newtons: r.forca,
+            grama_forca: (r.forca / 9.80665 * 1000),
+            quilo_forca: (r.forca / 9.80665)
+          }));
+        }
+      } catch (e) {
+        console.warn('Não foi possível carregar leituras:', e);
+      }
+    }
+
+    console.log('Enviando para o banco:', sessionToUpdate); // Debug
+    sendCommandToWorker('save_session_to_mysql', sessionToUpdate);
+    showNotification('info', 'Atualizando metadados no banco de dados...');
+  } else if (!isMysqlConnected) {
+    showNotification('warning', 'MySQL desconectado. Metadados salvos apenas localmente.');
+  }
+
+  fecharModalMetadados();
+
+  // Recarrega a lista para mostrar os novos metadados
+  setTimeout(() => loadAndDisplayAllSessions(), 500);
+}
+
+
+async function exportarPNG(sessionId, source) {
+  // NOVA VERSÃO: Usa o sistema avançado de exportação PNG com configurações
+  showNotification('info', 'Gerando relatório PNG com análise de propulsão...');
+
+  const session = await getSessionDataForExport(sessionId, source);
+  if (!session) {
+    showNotification('error', 'Sessão não encontrada para exportar PNG.');
+    return;
+  }
+
+  // Chama a função avançada de exportação PNG (de script_grafico_sessao.js)
+  if (typeof exportarImagemSessao === 'function') {
+    exportarImagemSessao(session.id);
+  } else {
+    // Fallback para versão antiga caso a função nova não esteja carregada
+    console.warn('[PNG] Função exportarImagemSessao não encontrada, usando método legado');
+
+    const chartData = session.dadosTabela.map(d => [d.tempo_esp, d.newtons]);
+
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.width = '800px';
+    tempDiv.style.height = '600px';
+    document.body.appendChild(tempDiv);
+
+    const tempChartOptions = {
+      series: [{ name: 'Força', data: chartData }],
+      chart: { type: 'line', height: '100%', width: '100%', background: '#fff' },
+      title: { text: 'Gráfico da Sessão: ' + session.nome, align: 'center' },
+      xaxis: { title: { text: 'Tempo (s)' } },
+      yaxis: { title: { text: 'Força (N)' } }
+    };
+
+    const tempChart = new ApexCharts(tempDiv, tempChartOptions);
+
+    tempChart.render().then(() => {
+      tempChart.dataURI().then(({ imgURI }) => {
+        const a = document.createElement('a');
+        a.href = imgURI;
+        a.download = 'grafico_' + session.nome.replace(/[^a-zA-Z0-9_]/g, '_') + '.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        tempChart.destroy();
+        document.body.removeChild(tempDiv);
+        showNotification('success', 'Gráfico exportado como PNG!');
+      });
+    });
+  }
+}
+
+async function exportarJSON(sessionId, source) {
+  const session = await getSessionDataForExport(sessionId, source);
+  if (!session) {
+    showNotification('error', 'Sessão não encontrada para exportar JSON.');
+    return;
+  }
+
+  const jsonContent = JSON.stringify(session, null, 2);
+  const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = session.nome.replace(/[^a-zA-Z0-9_]/g, '_') + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showNotification('success', 'Arquivo JSON para "' + session.nome + '" gerado!');
+}
+
+
+async function getSessionDataForExport(sessionId, source) {
+  let sessionData = null;
+  if (source === 'local' || source === 'both') {
+    const localSessions = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+    sessionData = localSessions.find(s => s.id === sessionId);
+  }
+
+  if (!sessionData && (source === 'db' || source === 'both')) { // Try DB if local not found or explicitly DB
+    try {
+      showLoading(); // Mostra loader enquanto busca dados
+      
+      const dbSessionResponse = await apiFetch(`/api/sessoes/${sessionId}`);
+      if (!dbSessionResponse.ok) throw new Error('Falha ao carregar detalhes da sessão do DB para exportação.');
+      const dbSession = await dbSessionResponse.json();
+
+      if (dbSession) {
+        const readingsResponse = await apiFetch('/api/sessoes/' + sessionId + '/leituras');
+        if (readingsResponse.ok) {
+          const dbReadings = await readingsResponse.json();
+          dbSession.dadosTabela = dbReadings.map(r => ({
+            timestamp: formatUtcDdMm(parseDbTimestampToUTC(r.timestamp)),
+            tempo_esp: r.tempo,
+            newtons: r.forca,
+            grama_forca: (r.forca / 9.80665 * 1000),
+            quilo_forca: (r.forca / 9.80665)
+          }));
+        }
+      }
+      
+      hideLoading(); // Esconde loader após sucesso
+    } catch (error) {
+      hideLoading(); // Esconde loader em caso de erro
+      console.error('Erro ao buscar sessão do DB para exportação:', error);
+      showNotification('error', 'Erro ao carregar sessão ' + sessionId + ' do DB para exportação.');
+      return null;
+    }
+  }
+  
+  // Se carregou localmente, esconde o loader também
+  if (sessionData && !source.includes('db')) {
+    hideLoading();
+  }
+  
+  return sessionData;
+}
+// Visualiza uma sessão salva (gráfico + tabela) garantindo eixo X numérico e ordenado
+// Localizado em script.js
+
+// Visualiza uma sessão salva (gráfico + tabela) garantindo eixo X numérico e ordenado
+async function visualizarSessao(sessionId) {
+  try {
+    // 1) Obter sessão (LocalStorage → API)
+    const gravacoes = JSON.parse(localStorage.getItem('balancaGravacoes') || '[]');
+    let sessao = gravacoes.find(g => String(g.id) === String(sessionId));
+
+    // Se não for encontrada localmente, tenta buscar o registro no DB
+    if (!sessao) {
+      try {
+        const resp = await apiFetch(`/api/sessoes/${sessionId}`, { cache: 'no-store' });
+        if (resp.ok) sessao = await resp.json();
+      } catch (e) {
+        console.error("Erro ao buscar metadados da sessão no DB:", e);
+      }
+    }
+
+    // Se o registro da sessão foi encontrado (local ou DB), mas os dadosTabela estão ausentes ou vazios,
+    // E a sessão *pode* estar no DB (checar se tem os campos do DB, ex: data_inicio), buscamos as leituras no DB.
+    if (sessao && (!Array.isArray(sessao.dadosTabela) || sessao.dadosTabela.length === 0)) {
+      // Tentativa de buscar leituras do DB, caso o registro da sessão tenha vindo da API.
+      // Assumimos que a sessão é do DB se ela veio da API e não tem dadosTabela.
+      try {
+        const readingsResp = await apiFetch(`/api/sessoes/${sessionId}/leituras`, { cache: 'no-store' });
+        if (readingsResp.ok) {
+          const dbReadings = await readingsResp.json();
+          sessao.dadosTabela = dbReadings.map(r => ({
+            timestamp: new Date(r.timestamp).toLocaleString('pt-BR', { hour12: false }).replace(', ', ' '),
+            tempo_esp: r.tempo,
+            newtons: r.forca,
+            grama_forca: (r.forca / 9.80665 * 1000).toFixed(3),
+            quilo_forca: (r.forca / 9.80665).toFixed(6)
+          }));
+        }
+      } catch (e) {
+        console.error("Erro ao buscar leituras da sessão no DB:", e);
+        // Continua, mas com um alerta
+      }
+    }
+
+
+    if (!sessao || !Array.isArray(sessao.dadosTabela) || sessao.dadosTabela.length === 0) {
+      showNotification('error', 'Sessão não encontrada ou sem dados.');
+      return;
+    }
+
+    // 2) Normalizar → [tempo: number, newtons: number], filtrar NaN e ORDENAR por tempo
+    const parsed = sessao.dadosTabela
+      .map(l => [Number(l.tempo_esp), Number(l.newtons)])
+      .filter(([t, f]) => Number.isFinite(t) && Number.isFinite(f))
+      .sort((a, b) => a[0] - b[0]);
+
+    if (parsed.length < 2) {
+      showNotification('error', 'Dados insuficientes para plotagem.');
+      return;
+    }
+
+    // 3) Atualizar buffers internos e estatísticas
+    rawDataN = parsed.map(([t, f]) => [t, f]); // mantém base em Newtons
+    maxForceInN = Math.max(...parsed.map(p => p[1]));
+    minForceInN = Math.min(...parsed.map(p => p[1]));
+
+    // 4) Atualizar gráfico (convertendo para a unidade atual de exibição)
+    const displayData = parsed.map(([t, f]) => [t, convertForce(f, displayUnit)]);
+    chart.updateSeries([{ data: displayData }]);
+
+    // 5) Atualizar textos de métricas no header, se existirem
+    const forceNow = parsed[parsed.length - 1][1];
+    const displayForceNow = convertForce(forceNow, displayUnit);
+    const maxDisplayForce = convertForce(maxForceInN, displayUnit);
+    const minDisplayForce = convertForce(minForceInN, displayUnit);
+
+    const elAtual = document.getElementById('forca-atual');
+    const elEms = document.getElementById('forca-ems');
+    const elMax = document.getElementById('forca-maxima');
+    const elMin = document.getElementById('forca-minima');
+
+    if (elAtual) elAtual.textContent = displayForceNow.toFixed(3);
+    if (elEms) elEms.textContent = displayForceNow.toFixed(3); // não recomputa EMA aqui
+    if (elMax) elMax.textContent = maxDisplayForce.toFixed(3);
+    if (elMin) elMin.textContent = `mín: ${minDisplayForce.toFixed(3)}`;
+
+    // 6) Repopular a tabela
+    const tbody = document.querySelector('#tabela tbody');
+    if (tbody) {
+      tbody.innerHTML = '';
+      // Evita travar a UI em sessões muito grandes — renderiza em blocos
+      const renderChunk = (startIdx, chunkSize = 1000) => {
+        const end = Math.min(startIdx + chunkSize, parsed.length);
+        const frag = document.createDocumentFragment();
+
+        for (let i = startIdx; i < end; i++) {
+          const [t, N] = parsed[i];
+          const gf = (N / 9.80665) * 1000;
+          const kgf = (N / 9.80665);
+
+          const tr = document.createElement('tr');
+          const ts = (sessao.dadosTabela[i] && sessao.dadosTabela[i].timestamp) || '';
+
+          const tdTs = document.createElement('td'); tdTs.textContent = ts;
+          const tdT = document.createElement('td'); tdT.textContent = t.toFixed(3);
+          const tdN = document.createElement('td'); tdN.textContent = N.toFixed(6);
+          const tdGf = document.createElement('td'); tdGf.textContent = gf.toFixed(3);
+          const tdKgf = document.createElement('td'); tdKgf.textContent = kgf.toFixed(6);
+
+          tr.appendChild(tdTs);
+          tr.appendChild(tdT);
+          tr.appendChild(tdN);
+          tr.appendChild(tdGf);
+          tr.appendChild(tdKgf);
+          frag.appendChild(tr);
+        }
+
+        tbody.appendChild(frag);
+
+        if (end < parsed.length) {
+          // Próximo bloco na próxima iteração do event loop
+          setTimeout(() => renderChunk(end, chunkSize), 0);
+        }
+      };
+
+      renderChunk(0);
+    }
+
+    // 7) Ajustes visuais/UX
+    // Garantir que a aba do gráfico esteja ativa para o usuário ver o resultado
+    const btnAbaGrafico = document.getElementById('padrao');
+    if (btnAbaGrafico && typeof abrirAba === 'function') {
+      abrirAba(btnAbaGrafico, 'abaGrafico');
+    }
+
+    // Atualiza range do eixo Y para "auto" por padrão ao visualizar sessão
+    if (typeof setYAxisRange === 'function') {
+      setYAxisRange('auto');
+    }
+
+    showNotification('success', `Sessão "${sessao.nome || sessionId}" carregada.`);
+
+  } catch (err) {
+    console.error('Erro em visualizarSessao:', err);
+    showNotification('error', 'Falha ao carregar a sessão: ' + (err && err.message ? err.message : 'erro desconhecido'));
+  }
+  //pausa  
+  toggleChartPause(true);
+}
+
+async function exportarEng(sessionId, source) {
+  const session = await getSessionDataForExport(sessionId, source); // Try both sources
+  if (!session) {
+    showNotification('error', 'Sessão não encontrada para exportação .ENG.');
+    return;
+  }
+
+  // Aplica pontos de queima salvos pelo usuário (se existirem)
+  const burnData = aplicarPontosDeQueima(session);
+
+  if (!burnData) {
+    showNotification('error', 'Erro ao processar dados da sessão.');
+    return;
+  }
+
+  // Extrai metadados do motor
+  const metadados = session.metadadosMotor || {};
+  const nomeArquivo = (metadados.name || session.nome.replace(/[^a-zA-Z0-9_]/g, '_')) + '.eng';
+
+  // Constrói cabeçalho no formato RASP/OpenRocket
+  // Comentário com especificação dos campos
+  let engContent = ';name\tdiameter\tlength\tdelay\tpropweight\ttotalweight\tmanufacturer\n';
+
+  // Linha de metadados do motor (em mm, s, kg)
+  engContent += (metadados.name || 'Motor').trim() + '\t';
+  engContent += (metadados.diameter || 45).toFixed(1) + '\t';      // mm
+  engContent += (metadados.length || 200).toFixed(1) + '\t';       // mm
+  engContent += (metadados.delay || 0).toFixed(1) + '\t';          // s
+  engContent += (metadados.propweight || 0.1).toFixed(5) + '\t';   // kg
+  engContent += (metadados.totalweight || 0.25).toFixed(5) + '\t'; // kg
+  engContent += (metadados.manufacturer || 'Grupo de Foguetes - Campus Gaspar IFSC').trim() + '\n';
+
+  // Comentários informativos
+  engContent += ';\n';
+  engContent += '; Arquivo gerado pelo Sistema de Teste de Motores Foguete\n';
+  engContent += '; Grupo de Foguetes do Campus Gaspar - IFSC\n';
+  engContent += '; Projeto de Controle e Automação - Campus Gaspar IFSC 2025\n';
+  engContent += '; Data: ' + new Date().toLocaleString('pt-BR') + '\n';
+  engContent += '; Sessão: ' + session.nome + '\n';
+
+  // Se houver massa de propelente, adiciona informação
+  if (metadados.massaPropelente) {
+    engContent += '; Massa de propelente informada: ' + metadados.massaPropelente.toFixed(2) + ' g\n';
+  }
+
+  // Informação sobre pontos de queima
+  if (burnData.usandoPontosPersonalizados) {
+    engContent += '; USANDO PONTOS DE QUEIMA PERSONALIZADOS\n';
+    engContent += '; Início da queima: ' + burnData.startTime.toFixed(3) + ' s\n';
+    engContent += '; Fim da queima: ' + burnData.endTime.toFixed(3) + ' s\n';
+    engContent += '; Duração da queima: ' + burnData.duration.toFixed(3) + ' s\n';
+  } else {
+    engContent += '; Pontos de queima detectados automaticamente\n';
+    engContent += '; Início: ' + burnData.startTime.toFixed(3) + ' s, Fim: ' + burnData.endTime.toFixed(3) + ' s\n';
+  }
+
+  engContent += '; Número de leituras (filtradas): ' + burnData.dadosFiltrados.tempos.length + '\n';
+  engContent += ';\n';
+
+  // Dados de impulso (tempo em segundos, força em Newtons) - APENAS DO INTERVALO DE QUEIMA
+  // Formato: tempo(s)  força(N)
+  for (let i = 0; i < burnData.dadosFiltrados.tempos.length; i++) {
+    const tempo = burnData.dadosFiltrados.tempos[i];
+    const newtons = burnData.dadosFiltrados.newtons[i];
+    engContent += tempo.toFixed(5) + '\t' + newtons.toFixed(5) + '\n';
+  }
+  
+  // Download do arquivo
+  const blob = new Blob([engContent], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nomeArquivo;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showNotification('success', 'Arquivo .ENG compatível com OpenRocket gerado!');
+}
+
+
+
+async function gerarRelatorioPdf(sessionId, source) {
+  try {
+    const session = await getSessionDataForExport(sessionId, source);
+    if (!session) {
+      showNotification('error', 'Sessão não encontrada para relatório PDF.');
+      return;
+    }
+
+    showNotification('info', 'Gerando relatório PDF com gráfico...', 2000);
+
+    // Aplica pontos de queima salvos pelo usuário (se existirem)
+    const burnData = aplicarPontosDeQueima(session);
+
+    if (!burnData) {
+      showNotification('error', 'Erro ao processar dados da sessão.');
+      return;
+    }
+
+    // Dados totais do teste (não filtrados)
+    const dadosTotais = processarDadosSimples(session.dadosTabela);
+
+    // Usa dados filtrados pelos pontos de queima
+    const dados = burnData.dadosFiltrados;
+
+    console.log('[PDF DEBUG] dados:', {
+      tempos: dados.tempos?.length,
+      newtons: dados.newtons?.length,
+      hasTempos: !!dados.tempos,
+      hasNewtons: !!dados.newtons
+    });
+
+    if (!dados.tempos || !dados.newtons || dados.tempos.length === 0) {
+      showNotification('error', 'Dados filtrados estão vazios ou inválidos.');
+      return;
+    }
+
+    const impulsoData = calcularAreaSobCurva(dados.tempos, dados.newtons, false);
+
+  // Obtém massa do propelente em kg (converte de gramas se necessário)
+  let massaPropelente = null;
+  if (session.metadadosMotor && session.metadadosMotor.massaPropelente) {
+    massaPropelente = session.metadadosMotor.massaPropelente / 1000; // Converte de gramas para kg
+  }
+
+  const metricasPropulsao = calcularMetricasPropulsao(impulsoData, massaPropelente);
+
+  // Adiciona informação sobre pontos personalizados
+  const burnInfo = {
+    usandoPontosPersonalizados: burnData.usandoPontosPersonalizados,
+    startTime: burnData.startTime,
+    endTime: burnData.endTime,
+    duration: burnData.endTime - burnData.startTime
+  };
+
+  // Cria uma cópia temporária da sessão com dados filtrados
+  const sessionParaPDF = { ...session };
+
+  console.log('[PDF DEBUG] session.dadosTabela:', session.dadosTabela?.length, 'items');
+  console.log('[PDF DEBUG] burnData times:', burnData.startTime, 'to', burnData.endTime);
+
+  sessionParaPDF.dadosTabela = session.dadosTabela.filter(d => {
+    const tempo = parseFloat(d.tempo_esp) || 0;
+    return tempo >= burnData.startTime && tempo <= burnData.endTime;
+  });
+
+  console.log('[PDF DEBUG] sessionParaPDF.dadosTabela filtered:', sessionParaPDF.dadosTabela?.length, 'items');
+
+  if (!sessionParaPDF.dadosTabela || sessionParaPDF.dadosTabela.length === 0) {
+    showNotification('error', 'Nenhum dado encontrado no intervalo de queima.');
+    return;
+  }
+
+  // Gera o gráfico em canvas e converte para imagem
+  gerarGraficoParaPDF(sessionParaPDF, dados, impulsoData, metricasPropulsao, (imagemBase64) => {
+    // Cria janela de impressão com o gráfico
+    const printWindow = window.open('', '_blank');
+
+    // Gera HTML do relatório COM a imagem do gráfico
+    const html = gerarHTMLRelatorioCompleto(sessionParaPDF, dados, impulsoData, metricasPropulsao, imagemBase64, burnInfo, dadosTotais);
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+
+    showNotification('success', 'Relatório PDF gerado com sucesso!', 3000);
+  });
+  } catch (error) {
+    console.error('Erro ao gerar PDF:', error);
+    showNotification('error', 'Erro ao gerar PDF: ' + error.message);
+  }
+}
+
+async function exportarCSV(sessionId, source) {
+  const session = await getSessionDataForExport(sessionId, source);
+  if (!session) {
+    showNotification('error', 'Sessão não encontrada para exportação CSV.');
+    return;
+  }
+
+  let csvContent = "Timestamp,Tempo ESP (s),Newtons (N),Grama-força (gf),Quilo-força (kgf)\n";
+  session.dadosTabela.forEach(leitura => {
+    csvContent += leitura.timestamp + ',' + leitura.tempo_esp + ',' + leitura.newtons + ',' + leitura.grama_forca + ',' + leitura.quilo_forca + '\n';
+  });
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = session.nome.replace(/[^a-zA-Z0-9_]/g, '_') + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showNotification('success', 'Arquivo CSV para "' + session.nome + '" gerado!');
+}
+
+function deleteLocalSession(sessionId) {
+  if (!confirm('Tem certeza que deseja excluir a sessão ' + sessionId + ' do Local Storage?')) {
+    return;
+  }
+  let gravacoes = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+  gravacoes = gravacoes.filter(s => s.id !== sessionId);
+  localStorage.setItem('balancaGravacoes', JSON.stringify(gravacoes));
+  showNotification('success', 'Sessão ' + sessionId + ' excluída do Local Storage.');
+  loadAndDisplayAllSessions(); // Re-render the list
+}
+
+async function deleteDbSession(sessionId) {
+  if (!confirm('Tem certeza que deseja excluir a sessão ' + sessionId + ' do banco de dados? Esta ação não pode ser desfeita.')) {
+    return;
+  }
+  try {
+    const response = await apiFetch(`/api/sessoes/${sessionId}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error('Falha ao excluir a sessão do DB.');
+
+    showNotification('success', 'Sessão ' + sessionId + ' excluída do banco de dados.');
+    loadAndDisplayAllSessions(); // Re-render the list
+  } catch (error) {
+    console.error('Erro ao excluir sessão do DB:', error);
+    showNotification('error', 'Erro ao excluir a sessão ' + sessionId + ' do DB.');
+  }
+}
+
+async function saveDbSessionToLocal(sessionId) {
+  try {
+    // Fetch session details from DB
+    const dbSessionResponse = await apiFetch('/api/sessoes');
+    if (!dbSessionResponse.ok) throw new Error('Falha ao carregar detalhes da sessão do DB para salvar localmente.');
+    const allDbSessions = await dbSessionResponse.json();
+    const dbSession = allDbSessions.find(s => s.id === sessionId);
+
+    if (!dbSession) {
+      showNotification('error', 'Sessão do DB não encontrada para salvar localmente.');
+      return;
+    }
+
+    // Fetch readings from DB
+    const readingsResponse = await apiFetch('/api/sessoes/' + sessionId + '/leituras');
+    if (!readingsResponse.ok) throw new Error('Falha ao carregar leituras do DB para salvar localmente.');
+    const dbReadings = await readingsResponse.json();
+
+    const gravacao = {
+      id: dbSession.id,
+      nome: dbSession.nome,
+      timestamp: dbSession.data_inicio,
+      data_inicio: dbSession.data_inicio,
+      data_fim: dbSession.data_fim,
+      data_modificacao: dbSession.data_modificacao || new Date().toISOString(),
+      dadosTabela: dbReadings.map(r => ({
+        timestamp: formatUtcDdMm(parseDbTimestampToUTC(r.timestamp)),
+        tempo_esp: r.tempo,
+        newtons: r.forca,
+        grama_forca: (r.forca / 9.80665 * 1000),
+        quilo_forca: (r.forca / 9.80665)
+      })),
+      metadadosMotor: dbSession.metadadosMotor || {},
+      burnMetadata: dbSession.burnMetadata || {},
+      savedToMysql: true // Mark as saved to MySQL since it came from there
+    };
+
+    let gravacoes = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+    // Check if already exists in local storage to avoid duplicates
+    const existingIndex = gravacoes.findIndex(s => s.id === sessionId);
+    if (existingIndex === -1) {
+      gravacoes.push(gravacao);
+      showNotification('success', 'Sessão "' + dbSession.nome + '" salva localmente!');
+    } else {
+      // Atualiza a sessão existente
+      gravacoes[existingIndex] = gravacao;
+      showNotification('success', 'Sessão "' + dbSession.nome + '" atualizada localmente!');
+    }
+    localStorage.setItem('balancaGravacoes', JSON.stringify(gravacoes));
+    loadAndDisplayAllSessions(); // Re-render to update status
+
+  } catch (error) {
+    console.error('Erro ao salvar sessão do DB localmente:', error);
+    showNotification('error', 'Erro ao salvar sessão ' + sessionId + ' localmente.');
+  }
+}
+
+async function saveLocalSessionToDb(sessionId) {
+  const localSessions = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+  const sessionToSave = localSessions.find(s => s.id === sessionId);
+
+  if (!sessionToSave) {
+    showNotification('error', 'Sessão local não encontrada para salvar no DB.');
+    return;
+  }
+
+  if (isMysqlConnected) {
+    showNotification('info', 'Enviando sessão "' + sessionToSave.nome + '" para o MySQL...');
+    sendCommandToWorker('save_session_to_mysql', sessionToSave);
+    // The worker will send back mysql_save_success/error, which will trigger loadAndDisplayAllSessions
+  } else {
+    showNotification('error', 'Não foi possível salvar no MySQL: Banco de dados desconectado.');
+  }
+}
+
+async function resolverConflito(sessionId) {
+  const localSessions = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+  const localSession = localSessions.find(s => s.id === sessionId);
+
+  let dbSession = null;
+  try {
+    const resp = await apiFetch(`/api/sessoes/${sessionId}`);
+    if (resp.ok) {
+      dbSession = await resp.json();
+    }
+  } catch (e) {
+    console.error('Erro ao buscar sessão do DB:', e);
+    showNotification('error', 'Erro ao buscar dados do banco para comparação.');
+    return;
+  }
+
+  if (!localSession || !dbSession) {
+    showNotification('error', 'Não foi possível carregar ambas as versões para comparação.');
+    return;
+  }
+
+  const localDate = localSession.data_modificacao ? new Date(localSession.data_modificacao).toLocaleString('pt-BR') : 'Desconhecida';
+  const dbDate = dbSession.data_modificacao ? new Date(dbSession.data_modificacao).toLocaleString('pt-BR') : 'Desconhecida';
+
+  // Metadados do motor para comparação
+  const localMeta = localSession.metadadosMotor || {};
+  const dbMeta = dbSession.metadadosMotor || {};
+
+  const formatMetaValue = (val) => val !== undefined && val !== null && val !== '' ? val : 'N/D';
+
+  const metadadosLocalHtml = `
+    <div style="margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 0.85rem;">
+      <strong style="color: #3498db;">🚀 Metadados do Motor:</strong>
+      <div style="margin-top: 5px; line-height: 1.6;">
+        <div><strong>Nome:</strong> ${formatMetaValue(localMeta.name)}</div>
+        <div><strong>Diâmetro:</strong> ${formatMetaValue(localMeta.diameter)} mm</div>
+        <div><strong>Comprimento:</strong> ${formatMetaValue(localMeta.length)} mm</div>
+        <div><strong>Delay:</strong> ${formatMetaValue(localMeta.delay)} s</div>
+        <div><strong>Peso Propelente:</strong> ${formatMetaValue(localMeta.propweight)} kg</div>
+        <div><strong>Peso Total:</strong> ${formatMetaValue(localMeta.totalweight)} kg</div>
+        <div><strong>Fabricante:</strong> ${formatMetaValue(localMeta.manufacturer)}</div>
+        ${localMeta.description ? `<div style="margin-top: 5px;"><strong>Descrição:</strong> ${localMeta.description}</div>` : ''}
+        ${localMeta.observations ? `<div style="margin-top: 5px;"><strong>Observações:</strong> ${localMeta.observations}</div>` : ''}
+      </div>
+    </div>
+  `;
+
+  const metadadosDbHtml = `
+    <div style="margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 0.85rem;">
+      <strong style="color: #9b59b6;">🚀 Metadados do Motor:</strong>
+      <div style="margin-top: 5px; line-height: 1.6;">
+        <div><strong>Nome:</strong> ${formatMetaValue(dbMeta.name)}</div>
+        <div><strong>Diâmetro:</strong> ${formatMetaValue(dbMeta.diameter)} mm</div>
+        <div><strong>Comprimento:</strong> ${formatMetaValue(dbMeta.length)} mm</div>
+        <div><strong>Delay:</strong> ${formatMetaValue(dbMeta.delay)} s</div>
+        <div><strong>Peso Propelente:</strong> ${formatMetaValue(dbMeta.propweight)} kg</div>
+        <div><strong>Peso Total:</strong> ${formatMetaValue(dbMeta.totalweight)} kg</div>
+        <div><strong>Fabricante:</strong> ${formatMetaValue(dbMeta.manufacturer)}</div>
+        ${dbMeta.description ? `<div style="margin-top: 5px;"><strong>Descrição:</strong> ${dbMeta.description}</div>` : ''}
+        ${dbMeta.observations ? `<div style="margin-top: 5px;"><strong>Observações:</strong> ${dbMeta.observations}</div>` : ''}
+      </div>
+    </div>
+  `;
+
+  const modalHtml = `
+    <div id="modal-conflito" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 10000;">
+      <div style="background: var(--cor-fundo); padding: 30px; border-radius: 12px; max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+        <h2 style="margin-top: 0; color: #e74c3c;">⚠️ Conflito de Sincronização Detectado</h2>
+        <p style="color: var(--cor-texto); margin-bottom: 15px;">
+          A sessão "<strong>${localSession.nome}</strong>" possui versões diferentes no LocalStorage e no Banco de Dados.
+          Escolha qual versão deseja manter:
+        </p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
+          <div style="border: 2px solid #3498db; border-radius: 8px; padding: 15px; background: rgba(52, 152, 219, 0.1);">
+            <h3 style="margin-top: 0; color: #3498db; font-size: 1.1rem;">💾 Versão Local</h3>
+            <p style="margin: 5px 0;"><strong>Modificada em:</strong> ${localDate}</p>
+            <p style="margin: 5px 0; font-size: 0.9rem; color: var(--cor-texto-secundario);">
+              Dados salvos no navegador deste dispositivo.
+            </p>
+            ${metadadosLocalHtml}
+            <button onclick="resolverConflito_UsarLocal(${sessionId})" class="btn btn-primario" style="width: 100%; margin-top: 10px;">
+              ✓ Usar Versão Local
+            </button>
+          </div>
+
+          <div style="border: 2px solid #9b59b6; border-radius: 8px; padding: 15px; background: rgba(155, 89, 182, 0.1);">
+            <h3 style="margin-top: 0; color: #9b59b6; font-size: 1.1rem;">☁️ Versão do Banco</h3>
+            <p style="margin: 5px 0;"><strong>Modificada em:</strong> ${dbDate}</p>
+            <p style="margin: 5px 0; font-size: 0.9rem; color: var(--cor-texto-secundario);">
+              Dados salvos no banco de dados (sincronizados).
+            </p>
+            ${metadadosDbHtml}
+            <button onclick="resolverConflito_UsarDB(${sessionId})" class="btn btn-secundario" style="width: 100%; margin-top: 10px;">
+              ✓ Usar Versão do Banco
+            </button>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: center;">
+          <button onclick="fecharModalConflito()" class="btn btn-perigo">✗ Cancelar</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function fecharModalConflito() {
+  const modal = document.getElementById('modal-conflito');
+  if (modal) modal.remove();
+}
+
+async function resolverConflito_UsarLocal(sessionId) {
+  const localSessions = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+  const localSession = localSessions.find(s => s.id === sessionId);
+
+  if (!localSession) {
+    showNotification('error', 'Sessão local não encontrada.');
+    fecharModalConflito();
+    return;
+  }
+
+  // Atualiza data de modificação e envia para o banco
+  localSession.data_modificacao = new Date().toISOString();
+
+  // Atualiza no localStorage
+  const sessionIndex = localSessions.findIndex(s => s.id === sessionId);
+  localSessions[sessionIndex] = localSession;
+  localStorage.setItem('balancaGravacoes', JSON.stringify(localSessions));
+
+  if (isMysqlConnected) {
+    sendCommandToWorker('save_session_to_mysql', localSession);
+    showNotification('success', 'Versão local enviada para o banco de dados.');
+  } else {
+    showNotification('warning', 'MySQL desconectado. Versão local mantida, mas não sincronizada.');
+  }
+
+  fecharModalConflito();
+  setTimeout(() => loadAndDisplayAllSessions(), 500);
+}
+
+async function resolverConflito_UsarDB(sessionId) {
+  try {
+    const resp = await apiFetch(`/api/sessoes/${sessionId}`);
+    if (!resp.ok) {
+      throw new Error('Erro ao buscar sessão do banco');
+    }
+
+    const dbSession = await resp.json();
+
+    // Busca as leituras
+    const readingsResp = await apiFetch(`/api/sessoes/${sessionId}/leituras`);
+    if (readingsResp.ok) {
+      const dbReadings = await readingsResp.json();
+      dbSession.dadosTabela = dbReadings.map(r => ({
+        timestamp: formatUtcDdMm(parseDbTimestampToUTC(r.timestamp)),
+        tempo_esp: r.tempo,
+        newtons: r.forca,
+        grama_forca: (r.forca / 9.80665 * 1000),
+        quilo_forca: (r.forca / 9.80665)
+      }));
+    }
+
+    // Normaliza os campos
+    if (dbSession.data_inicio && !dbSession.timestamp) {
+      dbSession.timestamp = dbSession.data_inicio;
+    }
+    if (!dbSession.data_modificacao) {
+      dbSession.data_modificacao = new Date().toISOString();
+    }
+
+    // Atualiza no localStorage
+    const localSessions = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+    const sessionIndex = localSessions.findIndex(s => s.id === sessionId);
+
+    if (sessionIndex !== -1) {
+      localSessions[sessionIndex] = dbSession;
+    } else {
+      localSessions.push(dbSession);
+    }
+
+    localStorage.setItem('balancaGravacoes', JSON.stringify(localSessions));
+    showNotification('success', 'Versão do banco baixada para o LocalStorage.');
+
+    fecharModalConflito();
+    setTimeout(() => loadAndDisplayAllSessions(), 500);
+
+  } catch (error) {
+    console.error('Erro ao buscar sessão do DB:', error);
+    showNotification('error', 'Erro ao baixar versão do banco de dados.');
+    fecharModalConflito();
+  }
+}
+
+async function importarGravacaoExterna() {
+  const fileInput = document.getElementById('importar-arquivo-motor');
+  const nomeImportacaoInput = document.getElementById('nome-importacao');
+  const file = fileInput.files[0];
+  const nome = nomeImportacaoInput.value.trim();
+
+  if (!file || !nome) {
+    showNotification('error', 'Por favor, selecione um arquivo e insira um nome para a importação.');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const content = e.target.result;
+    const linhas = content.split('\n').filter(line => line.trim() !== '');
+    const dadosTabela = linhas.map((linha, index) => {
+      const partes = linha.trim().split(/\s+/);
+      if (partes.length >= 2) {
+        return {
+          timestamp: new Date(Date.now() + index).toLocaleString('pt-BR', { hour12: false }).replace(', ', ' '), // Unique timestamp
+          tempo_esp: parseFloat(partes[0]),
+          newtons: parseFloat(partes[1]),
+          grama_forca: parseFloat(partes[1]) / 9.80665 * 1000,
+          quilo_forca: parseFloat(partes[1]) / 9.80665
+        };
+      }
+      return null;
+    }).filter(Boolean);
+
+    if (dadosTabela.length === 0) {
+      showNotification('error', 'Nenhum dado válido encontrado no arquivo importado.');
+      return;
+    }
+
+    const gravacao = {
+      id: Date.now(),
+      nome: nome,
+      timestamp: new Date().toISOString(),
+      data_modificacao: new Date().toISOString(),
+      dadosTabela: dadosTabela,
+      metadadosMotor: {},
+      source: 'local', // Initially local
+      inLocal: true,
+      inDb: false
+    };
+
+    try {
+      let gravacoes = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+      gravacoes.push(gravacao);
+      localStorage.setItem('balancaGravacoes', JSON.stringify(gravacoes));
+      showNotification('success', 'Sessão "' + nome + '" importada e salva localmente!');
+
+      // Also save to DB if connected
+      if (isMysqlConnected) {
+        showNotification('info', 'Enviando sessão importada "' + nome + '" para o MySQL...');
+        sendCommandToWorker('save_session_to_mysql', gravacao);
+      }
+
+      loadAndDisplayAllSessions(); // Re-render the list
+      fileInput.value = '';
+      nomeImportacaoInput.value = '';
+    } catch (e) {
+      showNotification('error', 'Erro ao salvar importação. O Local Storage pode estar cheio.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// --- Função para Importar Gravação JSON Exportada ---
+async function importarGravacaoJSON() {
+  const fileInput = document.getElementById('importar-json');
+  const file = fileInput.files[0];
+
+  if (!file) {
+    showNotification('error', 'Por favor, selecione um arquivo JSON para importar.');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const content = e.target.result;
+      const gravacaoImportada = JSON.parse(content);
+
+      // Validar estrutura básica do JSON
+      if (!gravacaoImportada.nome || !gravacaoImportada.dadosTabela || !Array.isArray(gravacaoImportada.dadosTabela)) {
+        showNotification('error', 'Arquivo JSON inválido. Certifique-se de que é uma exportação válida.');
+        return;
+      }
+
+      // Gerar novo ID e atualizar timestamps
+      const novaGravacao = {
+        ...gravacaoImportada,
+        id: Date.now(), // Novo ID único
+        data_modificacao: new Date().toISOString(),
+        source: 'local', // Marcar como local
+        inLocal: true,
+        inDb: false
+      };
+
+      // Se não tiver timestamp, adicionar
+      if (!novaGravacao.timestamp) {
+        novaGravacao.timestamp = new Date().toISOString();
+      }
+
+      // Salvar no localStorage
+      let gravacoes = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+      
+      // Verificar se já existe uma gravação com o mesmo nome
+      const nomeExistente = gravacoes.some(g => g.nome === novaGravacao.nome);
+      if (nomeExistente) {
+        const confirmar = confirm(`Já existe uma gravação com o nome "${novaGravacao.nome}". Deseja importar mesmo assim com um nome diferente?`);
+        if (confirmar) {
+          novaGravacao.nome = `${novaGravacao.nome} (importada ${new Date().toLocaleTimeString('pt-BR')})`;
+        } else {
+          fileInput.value = '';
+          return;
+        }
+      }
+
+      gravacoes.push(novaGravacao);
+      localStorage.setItem('balancaGravacoes', JSON.stringify(gravacoes));
+      
+      showNotification('success', `Gravação "${novaGravacao.nome}" importada com sucesso! (${novaGravacao.dadosTabela.length} pontos)`);
+
+      // Também salvar no MySQL se conectado
+      if (isMysqlConnected) {
+        showNotification('info', `Enviando gravação "${novaGravacao.nome}" para o MySQL...`);
+        sendCommandToWorker('save_session_to_mysql', novaGravacao);
+      }
+
+      // Recarregar lista de gravações
+      loadAndDisplayAllSessions();
+      fileInput.value = '';
+
+    } catch (error) {
+      console.error('Erro ao importar JSON:', error);
+      showNotification('error', `Erro ao importar arquivo JSON: ${error.message}`);
+      fileInput.value = '';
+    }
+  };
+  
+  reader.readAsText(file);
+}
+
+// --- Funções do Relógio do Servidor ---
+
+async function updateServerClock() {
+  try {
+    const response = await apiFetch('/api/time');
+    if (response.ok) {
+      const data = await response.json();
+      const serverTime = new Date(data.time);
+      const clientTime = new Date();
+
+      // Calcula o offset entre servidor e cliente
+      serverTimeOffset = serverTime.getTime() - clientTime.getTime();
+
+      // Atualiza o display
+      updateClockDisplay();
+    }
+  } catch (error) {
+    console.error('Erro ao buscar hora do servidor:', error);
+    document.getElementById('server-clock').textContent = 'Erro';
+  }
+}
+
+function updateClockDisplay() {
+  // Cria um Date object com a hora do servidor ajustada
+  const now = new Date(Date.now() + serverTimeOffset);
+  
+  // getHours(), getMinutes(), getSeconds() já retornam no timezone LOCAL do navegador
+  // Isso está correto! Se o servidor está em UTC e retorna 10:00, e o navegador
+  // está em GMT-3, o Date object automaticamente mostra 07:00 localmente
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+
+  const clockElement = document.getElementById('server-clock');
+  if (clockElement) {
+    clockElement.textContent = `${hours}:${minutes}:${seconds}`;
+  }
+}
+
+async function syncServerTime() {
+  // Pega a hora LOCAL do navegador (a hora real que o usuário está vendo)
+  const clientTime = new Date();
+  
+  // Obtém o timezone offset do cliente em minutos (diferença em relação a UTC)
+  const timezoneOffset = clientTime.getTimezoneOffset(); // Retorna em minutos
+  const timezoneOffsetSeconds = timezoneOffset * 60; // Converter para segundos
+  
+  // Obtém o nome do timezone do cliente
+  const timezoneName = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  
+  // Formata a hora local para exibição (HH:MM:SS)
+  const hours = String(clientTime.getHours()).padStart(2, '0');
+  const minutes = String(clientTime.getMinutes()).padStart(2, '0');
+  const seconds = String(clientTime.getSeconds()).padStart(2, '0');
+  const displayedTime = `${hours}:${minutes}:${seconds}`;
           <div>
             <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">Delay (s)</label>
             <input type="number" id="meta-delay" value="${meta.delay || 0}" step="0.1" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
