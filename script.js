@@ -2591,14 +2591,21 @@ async function fetchDbSessions() {
 }
 
 /**
- * Carrega arquivos JSON de demonstração da pasta data/json/
+ * Carrega TODOS os arquivos JSON de demonstração da pasta data/json/
  * Usado automaticamente quando em modo GitHub Pages e não há sessões no localStorage
  */
 async function loadDemoJsonSessions() {
-  const demoFiles = ['F50.json', 'G60.json', 'Teste_Automatizado_091512.json'];
+  const demoFiles = [
+    'BFB_14.json',
+    'F50.json',
+    'G60.json',
+    'NFB_14.json',
+    'PF_5.json',
+    'Teste_Automatizado_091512.json'
+  ];
   const loadedSessions = [];
 
-  console.log('[loadDemoJsonSessions] Carregando arquivos JSON de demonstração...');
+  console.log(`[loadDemoJsonSessions] Carregando ${demoFiles.length} arquivos JSON de demonstração...`);
 
   for (const filename of demoFiles) {
     try {
@@ -2613,7 +2620,7 @@ async function loadDemoJsonSessions() {
       // Garante que o objeto tem a estrutura esperada
       if (sessionData && sessionData.dadosTabela) {
         loadedSessions.push(sessionData);
-        console.log(`[loadDemoJsonSessions] ✓ Carregado: ${filename} (${sessionData.nome || 'sem nome'})`);
+        console.log(`[loadDemoJsonSessions] ✓ Carregado: ${filename} (${sessionData.nome || 'sem nome'}) - ${sessionData.dadosTabela.length} leituras`);
       } else {
         console.warn(`[loadDemoJsonSessions] Arquivo ${filename} não tem estrutura válida`);
       }
