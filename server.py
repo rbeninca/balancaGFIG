@@ -378,18 +378,33 @@ async def save_session_to_mysql_db(session_data: Dict[str, Any]):
         with mysql_connection.cursor() as cursor:
             dados_tabela = session_data.get('dadosTabela', [])
 
-            # Parse data_inicio
-            try:
-                data_inicio = datetime.fromisoformat(session_data['timestamp'].replace('Z', '+00:00'))
-            except (ValueError, KeyError) as e:
-                logging.error(f"Erro ao converter timestamp '{session_data.get('timestamp')}': {e}")
+            # Parse data_inicio - prioritize data_inicio field from localStorage, fallback to timestamp
+            data_inicio = None
+            if 'data_inicio' in session_data and session_data['data_inicio']:
+                try:
+                    data_inicio = datetime.fromisoformat(session_data['data_inicio'].replace('Z', '+00:00'))
+                    logging.info(f"Usando data_inicio do localStorage: {data_inicio}")
+                except (ValueError, KeyError) as e:
+                    logging.warning(f"Erro ao converter data_inicio: {e}, tentando timestamp...")
+
+            if not data_inicio and 'timestamp' in session_data:
+                try:
+                    data_inicio = datetime.fromisoformat(session_data['timestamp'].replace('Z', '+00:00'))
+                    logging.info(f"Usando timestamp como data_inicio: {data_inicio}")
+                except (ValueError, KeyError) as e:
+                    logging.error(f"Erro ao converter timestamp '{session_data.get('timestamp')}': {e}")
+                    return False
+
+            if not data_inicio:
+                logging.error("session_data não contém data_inicio ou timestamp válidos")
                 return False
 
-            # Parse data_fim - prefer direct field, fallback to last reading's timestamp
+            # Parse data_fim - prefer direct field from localStorage, fallback to last reading's timestamp
             data_fim = None
             if 'data_fim' in session_data and session_data['data_fim']:
                 try:
                     data_fim = datetime.fromisoformat(session_data['data_fim'].replace('Z', '+00:00'))
+                    logging.info(f"Usando data_fim do localStorage: {data_fim}")
                 except (ValueError, KeyError) as e:
                     logging.warning(f"Erro ao converter data_fim direto: {e}")
 
@@ -440,15 +455,16 @@ async def save_session_to_mysql_db(session_data: Dict[str, Any]):
                     logging.warning(f"Erro ao calcular impulso: {e}")
 
             sql_sessoes = """
-            INSERT INTO sessoes (id, nome, data_inicio, data_fim, motor_name, motor_diameter,
+            INSERT INTO sessoes (id, nome, data_inicio, data_fim, data_modificacao, motor_name, motor_diameter,
                                 motor_length, motor_delay, motor_propweight, motor_totalweight, motor_manufacturer,
                                 motor_description, motor_observations, motor_temperatura, motor_umidade, motor_pressao,
                                 impulso_total, motor_class, class_color)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 nome = VALUES(nome),
                 data_inicio = VALUES(data_inicio),
                 data_fim = VALUES(data_fim),
+                data_modificacao = VALUES(data_modificacao),
                 motor_name = VALUES(motor_name),
                 motor_diameter = VALUES(motor_diameter),
                 motor_length = VALUES(motor_length),
@@ -469,8 +485,21 @@ async def save_session_to_mysql_db(session_data: Dict[str, Any]):
                 motor_temperatura = metadados.get('temperatura') if metadados else None
                 motor_umidade = metadados.get('umidade') if metadados else None
                 motor_pressao = metadados.get('pressao') if metadados else None
-                
-                cursor.execute(sql_sessoes, (session_data['id'], session_data['nome'], data_inicio, data_fim,
+
+                # Parse data_modificacao - preserve from localStorage if exists, otherwise use current time
+                data_modificacao = None
+                if 'data_modificacao' in session_data and session_data['data_modificacao']:
+                    try:
+                        data_modificacao = datetime.fromisoformat(session_data['data_modificacao'].replace('Z', '+00:00'))
+                        logging.info(f"Preservando data_modificacao do localStorage: {data_modificacao}")
+                    except (ValueError, KeyError) as e:
+                        logging.warning(f"Erro ao converter data_modificacao: {e}, usando data atual")
+                        data_modificacao = datetime.now()
+                else:
+                    data_modificacao = datetime.now()
+                    logging.info(f"data_modificacao não fornecido, usando data atual: {data_modificacao}")
+
+                cursor.execute(sql_sessoes, (session_data['id'], session_data['nome'], data_inicio, data_fim, data_modificacao,
                                             motor_name, motor_diameter, motor_length, motor_delay,
                                             motor_propweight, motor_totalweight, motor_manufacturer,
                                             motor_description, motor_observations, motor_temperatura, motor_umidade, motor_pressao,
