@@ -2825,7 +2825,7 @@ async function editarMetadadosMotor(sessionId) {
           </div>
           <div>
             <label style="display: block; margin-bottom: 5px; font-weight: 600;">Fabricante</label>
-            <input type="text" id="meta-manufacturer" value="${meta.manufacturer || 'GFIG-IFC'}" style="width: 100%; padding: 8px; border: 1px solid var(--cor-borda); border-radius: 4px;">
+            <input type="text" id="meta-manufacturer" value="${meta.manufacturer || 'Grupo de Foguetes - Campus Gaspar IFSC'}" style="width: 100%; padding: 8px; border: 1px solid var(--cor-borda); border-radius: 4px;">
           </div>
           <div>
             <label style="display: block; margin-bottom: 5px; font-weight: 600;">Diâmetro (mm)</label>
@@ -3280,11 +3280,13 @@ async function exportarEng(sessionId, source) {
   engContent += (metadados.delay || 0).toFixed(1) + '\t';          // s
   engContent += (metadados.propweight || 0.1).toFixed(5) + '\t';   // kg
   engContent += (metadados.totalweight || 0.25).toFixed(5) + '\t'; // kg
-  engContent += (metadados.manufacturer || 'GFIG').trim() + '\n';
+  engContent += (metadados.manufacturer || 'Grupo de Foguetes - Campus Gaspar IFSC').trim() + '\n';
 
   // Comentários informativos
   engContent += ';\n';
-  engContent += '; Arquivo gerado pelo sistema GFIG\n';
+  engContent += '; Arquivo gerado pelo Sistema de Teste de Motores Foguete\n';
+  engContent += '; Grupo de Foguetes do Campus Gaspar - IFSC\n';
+  engContent += '; Projeto de Controle e Automação - Campus Gaspar IFSC 2025\n';
   engContent += '; Data: ' + new Date().toLocaleString('pt-BR') + '\n';
   engContent += '; Sessão: ' + session.nome + '\n';
 

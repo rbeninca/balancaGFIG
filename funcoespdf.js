@@ -1,5 +1,9 @@
 // ============================================
-// GERAÇÃO DE RELATÓRIOS EM PDF COM GRÁFICO REAL - GFIG
+// balançaGFIG - GERAÇÃO DE RELATÓRIOS EM PDF
+// Grupo de Foguetes do Campus Gaspar (GFIG)
+// CompSteam • Projeto BoxSteam
+// Controle e Automação de Eletrodomésticos do Cotidiano
+// Instituto Federal de Santa Catarina (IFSC) - Campus Gaspar
 // ============================================
 
 /**
@@ -797,8 +801,12 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
 
   <!-- CABEÇALHO -->
   <div class="header avoid-break">
-    <h1>🚀 GFIG - RELATÓRIO DE TESTE ESTÁTICO</h1>
-    <div class="subtitle">Projeto de Foguetes de Modelismo Experimental - Campus Gaspar</div>
+    <h1>🚀 balançaGFIG - RELATÓRIO DE TESTE ESTÁTICO</h1>
+    <div class="subtitle">Grupo de Foguetes do Campus Gaspar (GFIG)</div>
+    <div class="subtitle" style="font-size: 12px; margin-top: 5px;">
+      CompSteam • Projeto BoxSteam • Controle e Automação de Eletrodomésticos do Cotidiano
+    </div>
+    <div class="subtitle" style="font-weight: bold; margin-top: 5px;">Instituto Federal de Santa Catarina (IFSC) - Campus Gaspar</div>
     <h2 style="color: #3498db; margin: 12px 0;">${sessao.nome}</h2>
     <div class="subtitle">Teste realizado em: ${dataSessao}</div>
     <div class="subtitle">${sessao.dadosTabela.length} leituras coletadas • Taxa: ${(sessao.dadosTabela.length / dados.duracao).toFixed(0)} Hz</div>
@@ -962,6 +970,79 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
     </div>
   </div>
   </div>
+
+  <!-- METADADOS DO MOTOR -->
+  ${sessao.metadadosMotor && (
+    sessao.metadadosMotor.manufacturer ||
+    sessao.metadadosMotor.diameter ||
+    sessao.metadadosMotor.length ||
+    sessao.metadadosMotor.propweight ||
+    sessao.metadadosMotor.totalweight ||
+    sessao.metadadosMotor.description ||
+    sessao.metadadosMotor.observations
+  ) ? `
+  <div class="secao avoid-break" style="background: #fff9e6; padding: 16px; border-radius: 8px; margin: 16px 0; border: 2px solid #ffc107;">
+    <h2 style="margin-bottom: 12px; color: #f39c12;">⚙️ Metadados do Motor Testado</h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+      ${sessao.metadadosMotor.manufacturer ? `
+      <div style="background: white; padding: 10px; border: 1px solid #ffe082; border-radius: 4px;">
+        <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">🏭 Fabricante</div>
+        <div style="font-size: 13px; color: #2c3e50;">${sessao.metadadosMotor.manufacturer}</div>
+      </div>
+      ` : ''}
+
+      ${sessao.metadadosMotor.diameter ? `
+      <div style="background: white; padding: 10px; border: 1px solid #ffe082; border-radius: 4px;">
+        <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">📏 Diâmetro</div>
+        <div style="font-size: 13px; color: #2c3e50;">${sessao.metadadosMotor.diameter} mm</div>
+      </div>
+      ` : ''}
+
+      ${sessao.metadadosMotor.length ? `
+      <div style="background: white; padding: 10px; border: 1px solid #ffe082; border-radius: 4px;">
+        <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">📐 Comprimento</div>
+        <div style="font-size: 13px; color: #2c3e50;">${sessao.metadadosMotor.length} mm</div>
+      </div>
+      ` : ''}
+
+      ${sessao.metadadosMotor.propweight ? `
+      <div style="background: white; padding: 10px; border: 1px solid #ffe082; border-radius: 4px;">
+        <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">🔥 Massa do Propelente</div>
+        <div style="font-size: 13px; color: #2c3e50;">${sessao.metadadosMotor.propweight} g</div>
+      </div>
+      ` : ''}
+
+      ${sessao.metadadosMotor.totalweight ? `
+      <div style="background: white; padding: 10px; border: 1px solid #ffe082; border-radius: 4px;">
+        <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">⚖️ Massa Total</div>
+        <div style="font-size: 13px; color: #2c3e50;">${sessao.metadadosMotor.totalweight} g</div>
+      </div>
+      ` : ''}
+
+      ${sessao.metadadosMotor.propweight && sessao.metadadosMotor.totalweight ? `
+      <div style="background: white; padding: 10px; border: 1px solid #ffe082; border-radius: 4px;">
+        <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">📊 Fração de Propelente</div>
+        <div style="font-size: 13px; color: #2c3e50;">${((sessao.metadadosMotor.propweight / sessao.metadadosMotor.totalweight) * 100).toFixed(1)}%</div>
+      </div>
+      ` : ''}
+    </div>
+
+    ${sessao.metadadosMotor.description ? `
+    <div style="background: white; padding: 10px; border: 1px solid #ffe082; border-radius: 4px; margin-bottom: 12px;">
+      <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 6px; font-weight: bold;">📝 Descrição</div>
+      <div style="font-size: 12px; color: #2c3e50; line-height: 1.5;">${sessao.metadadosMotor.description}</div>
+    </div>
+    ` : ''}
+
+    ${sessao.metadadosMotor.observations ? `
+    <div style="background: white; padding: 10px; border: 1px solid #ffe082; border-radius: 4px;">
+      <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 6px; font-weight: bold;">💡 Observações</div>
+      <div style="font-size: 12px; color: #2c3e50; line-height: 1.5;">${sessao.metadadosMotor.observations}</div>
+    </div>
+    ` : ''}
+  </div>
+  ` : ''}
 
   <!-- MÉTRICAS PRINCIPAIS -->
   <div class="secao avoid-break">
@@ -1209,7 +1290,7 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
     <table style="font-size: 11px;">
       <tr>
         <td><strong>Sistema de Aquisição:</strong></td>
-        <td>Balança GFIG Wi-Fi v2.0</td>
+        <td>balançaGFIG v2.0 - Campus Gaspar IFSC</td>
       </tr>
       <tr>
         <td><strong>Resolução:</strong></td>
@@ -1300,9 +1381,11 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
 
   <!-- RODAPÉ -->
   <div class="footer">
-    <p><strong>Relatório gerado automaticamente pelo Sistema GFIG</strong></p>
-    <p>Projeto de Foguetes de Modelismo Experimental - Campus Gaspar - IFC</p>
-    <p>© 2025 GFIG - Todos os direitos reservados</p>
+    <p><strong>Relatório gerado automaticamente pela balançaGFIG</strong></p>
+    <p><strong>Grupo de Foguetes do Campus Gaspar (GFIG)</strong></p>
+    <p>CompSteam • Projeto BoxSteam • Controle e Automação de Eletrodomésticos do Cotidiano</p>
+    <p>Instituto Federal de Santa Catarina (IFSC) - Campus Gaspar</p>
+    <p>© 2025 - Todos os direitos reservados</p>
     <p>Data de geração: ${new Date().toLocaleString('pt-BR')}</p>
   </div>
 
