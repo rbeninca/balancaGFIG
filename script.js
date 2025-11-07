@@ -2830,11 +2830,53 @@ async function editarMetadadosMotor(sessionId) {
 
   const meta = session.metadadosMotor || {};
 
+  // Formata datas para exibição com milissegundos
+  const formatarData = (dataStr) => {
+    if (!dataStr) return '---';
+    try {
+      const data = new Date(dataStr);
+      const dia = String(data.getDate()).padStart(2, '0');
+      const mes = String(data.getMonth() + 1).padStart(2, '0');
+      const ano = data.getFullYear();
+      const horas = String(data.getHours()).padStart(2, '0');
+      const minutos = String(data.getMinutes()).padStart(2, '0');
+      const segundos = String(data.getSeconds()).padStart(2, '0');
+      const milisegundos = String(data.getMilliseconds()).padStart(3, '0');
+      return `${dia}/${mes}/${ano} ${horas}:${minutos}:${segundos}.${milisegundos}`;
+    } catch {
+      return dataStr;
+    }
+  };
+
   // Cria um modal para edição
   const modalHtml = `
     <div id="modal-metadados" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000; overflow-y: auto;">
       <div style="background: var(--cor-fundo); padding: 1rem; border-radius: 12px; max-width: 1000px; width: 95%; box-shadow: 0 10px 40px rgba(0,0,0,0.3); margin: 1rem; max-height: 90vh; overflow-y: auto;">
         <h2 style="margin: 0 0 0.75rem 0; color: var(--cor-titulo); font-size: 1.25rem;">⚙️ Metadados do Motor - ${session.nome.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h2>
+
+        <!-- Seção de Datas da Sessão (Somente Visualização) -->
+        <div style="background: rgba(100,150,200,0.1); padding: 0.75rem; border-radius: 8px; margin-bottom: 0.75rem; border-left: 4px solid var(--cor-info, #3498db);">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+            <div>
+              <label style="display: block; margin-bottom: 0.25rem; font-weight: 600; font-size: 0.85rem; color: var(--cor-titulo);">📅 Data de Início</label>
+              <div style="padding: 0.5rem; background: var(--cor-fundo); border-radius: 4px; font-size: 0.9rem; border: 1px solid var(--cor-borda); font-family: 'Courier New', monospace;">
+                ${formatarData(session.data_inicio || session.timestamp)}
+              </div>
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 0.25rem; font-weight: 600; font-size: 0.85rem; color: var(--cor-titulo);">🏁 Data de Término</label>
+              <div style="padding: 0.5rem; background: var(--cor-fundo); border-radius: 4px; font-size: 0.9rem; border: 1px solid var(--cor-borda); font-family: 'Courier New', monospace;">
+                ${formatarData(session.data_fim)}
+              </div>
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 0.25rem; font-weight: 600; font-size: 0.85rem; color: var(--cor-titulo);">✏️ Última Modificação</label>
+              <div style="padding: 0.5rem; background: var(--cor-fundo); border-radius: 4px; font-size: 0.9rem; border: 1px solid var(--cor-borda); font-family: 'Courier New', monospace;">
+                ${formatarData(session.data_modificacao)}
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 0.5rem;">
           <div>
