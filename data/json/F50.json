@@ -1,0 +1,120 @@
+{
+  "id": 1762526564770,
+  "nome": "F50",
+  "data_inicio": "2025-11-07 14:42:44",
+  "data_fim": "2025-11-07 14:42:44",
+  "data_modificacao": "2025-11-07 14:45:22",
+  "metadadosMotor": {
+    "name": "",
+    "diameter": 45,
+    "length": 200,
+    "delay": 0,
+    "propweight": 0.1,
+    "totalweight": 0.25,
+    "manufacturer": "GFIG - Campus Gaspar IFSC",
+    "description": "",
+    "observations": "",
+    "temperatura": null,
+    "umidade": null,
+    "pressao": null
+  },
+  "burnMetadata": {
+    "burnStartTime": 0,
+    "burnEndTime": 1.71,
+    "lastModified": "2025-11-07T14:49:32.622Z"
+  },
+  "dadosTabela": [
+    {
+      "timestamp": "07/11/2025 11:42:44.000",
+      "tempo_esp": 0,
+      "newtons": 44.5,
+      "grama_forca": 4537.737147751782,
+      "quilo_forca": 4.537737147751781
+    },
+    {
+      "timestamp": "07/11/2025 11:42:44.000",
+      "tempo_esp": 0,
+      "newtons": 0,
+      "grama_forca": 0,
+      "quilo_forca": 0
+    },
+    {
+      "timestamp": "07/11/2025 11:42:44.000",
+      "tempo_esp": 0,
+      "newtons": 0,
+      "grama_forca": 0,
+      "quilo_forca": 0
+    },
+    {
+      "timestamp": "07/11/2025 11:42:44.000",
+      "tempo_esp": 0.02,
+      "newtons": 11.9325,
+      "grama_forca": 1216.776371135913,
+      "quilo_forca": 1.216776371135913
+    },
+    {
+      "timestamp": "07/11/2025 11:42:44.000",
+      "tempo_esp": 0.04,
+      "newtons": 23.865,
+      "grama_forca": 2433.552742271826,
+      "quilo_forca": 2.433552742271826
+    },
+    {
+      "timestamp": "07/11/2025 11:42:44.000",
+      "tempo_esp": 0.06,
+      "newtons": 35.7975,
+      "grama_forca": 3650.329113407739,
+      "quilo_forca": 3.650329113407739
+    },
+    {
+      "timestamp": "07/11/2025 11:42:44.000",
+      "tempo_esp": 0.08,
+      "newtons": 47.7301,
+      "grama_forca": 4867.115681705782,
+      "quilo_forca": 4.867115681705782
+    },
+    {
+      "timestamp": "07/11/2025 11:42:44.000",
+      "tempo_esp": 1.63,
+      "newtons": 47.7301,
+      "grama_forca": 4867.115681705782,
+      "quilo_forca": 4.867115681705782
+    },
+    {
+      "timestamp": "07/11/2025 11:42:44.000",
+      "tempo_esp": 1.65,
+      "newtons": 35.7975,
+      "grama_forca": 3650.329113407739,
+      "quilo_forca": 3.650329113407739
+    },
+    {
+      "timestamp": "07/11/2025 11:42:44.000",
+      "tempo_esp": 1.67,
+      "newtons": 23.865,
+      "grama_forca": 2433.552742271826,
+      "quilo_forca": 2.433552742271826
+    },
+    {
+      "timestamp": "07/11/2025 11:42:44.000",
+      "tempo_esp": 1.69,
+      "newtons": 11.9325,
+      "grama_forca": 1216.776371135913,
+      "quilo_forca": 1.216776371135913
+    },
+    {
+      "timestamp": "07/11/2025 11:42:44.000",
+      "tempo_esp": 1.71,
+      "newtons": 0,
+      "grama_forca": 0,
+      "quilo_forca": 0
+    },
+    {
+      "timestamp": "07/11/2025 11:42:44.000",
+      "tempo_esp": 1.76,
+      "newtons": 0,
+      "grama_forca": 0,
+      "quilo_forca": 0
+    }
+  ],
+  "timestamp": "2025-11-07 14:42:44"
+}

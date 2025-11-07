@@ -2590,6 +2590,55 @@ async function fetchDbSessions() {
   }
 }
 
+/**
+ * Carrega arquivos JSON de demonstração da pasta data/json/
+ * Usado automaticamente quando em modo GitHub Pages e não há sessões no localStorage
+ */
+async function loadDemoJsonSessions() {
+  const demoFiles = ['F50.json', 'G60.json', 'Teste_Automatizado_091512.json'];
+  const loadedSessions = [];
+
+  console.log('[loadDemoJsonSessions] Carregando arquivos JSON de demonstração...');
+
+  for (const filename of demoFiles) {
+    try {
+      const response = await fetch(`json/${filename}`);
+      if (!response.ok) {
+        console.warn(`[loadDemoJsonSessions] Não foi possível carregar ${filename}: ${response.statusText}`);
+        continue;
+      }
+
+      const sessionData = await response.json();
+
+      // Garante que o objeto tem a estrutura esperada
+      if (sessionData && sessionData.dadosTabela) {
+        loadedSessions.push(sessionData);
+        console.log(`[loadDemoJsonSessions] ✓ Carregado: ${filename} (${sessionData.nome || 'sem nome'})`);
+      } else {
+        console.warn(`[loadDemoJsonSessions] Arquivo ${filename} não tem estrutura válida`);
+      }
+    } catch (error) {
+      console.error(`[loadDemoJsonSessions] Erro ao carregar ${filename}:`, error);
+    }
+  }
+
+  // Salva as sessões no localStorage
+  if (loadedSessions.length > 0) {
+    try {
+      localStorage.setItem('balancaGravacoes', JSON.stringify(loadedSessions));
+      console.log(`[loadDemoJsonSessions] ${loadedSessions.length} sessões de demonstração salvas no localStorage`);
+      showNotification('success', `${loadedSessions.length} sessões de demonstração carregadas automaticamente!`);
+    } catch (error) {
+      console.error('[loadDemoJsonSessions] Erro ao salvar no localStorage:', error);
+      showNotification('error', 'Não foi possível salvar as sessões de demonstração no localStorage.');
+    }
+  } else {
+    console.warn('[loadDemoJsonSessions] Nenhuma sessão de demonstração foi carregada');
+  }
+
+  return loadedSessions;
+}
+
 async function loadAndDisplayAllSessions() {
   const listaGravacoesDiv = document.getElementById('lista-gravacoes');
   if (!listaGravacoesDiv) {
@@ -2607,7 +2656,20 @@ async function loadAndDisplayAllSessions() {
       console.error('[loadAndDisplayAllSessions] Erro ao fazer parse do localStorage:', e);
       localSessions = [];
     }
-    
+
+    // Se estiver no GitHub Pages e não houver sessões locais, carrega os JSONs de demonstração
+    if (isGitHubPages() && localSessions.length === 0) {
+      console.log('[loadAndDisplayAllSessions] Modo GitHub Pages detectado sem sessões locais. Carregando demonstração...');
+      await loadDemoJsonSessions();
+      // Recarrega as sessões após importar
+      try {
+        localSessions = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+      } catch (e) {
+        console.error('[loadAndDisplayAllSessions] Erro ao recarregar localStorage após demo:', e);
+        localSessions = [];
+      }
+    }
+
     const dbSessions = await fetchDbSessions(); // This now returns sessions with summary data
 
     console.log(`[loadAndDisplayAllSessions] Sessões locais encontradas: ${localSessions.length}`);
