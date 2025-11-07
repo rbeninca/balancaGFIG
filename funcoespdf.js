@@ -355,43 +355,22 @@ function gerarLinhasClassificacaoCompleta(impulsoTestado, classeTestada) {
   let linhas = '';
   classificacoes.forEach((c) => {
     const isMotorTestado = c.classe === classeTestada;
-    const impulsoAtual = isMotorTestado ? impulsoTestado : null;
 
-    // Estilo da linha: destaque forte para o motor testado
+    // Estilo da linha: destaque apenas para o motor testado
     let rowStyle = '';
     let markerHTML = '';
 
     if (isMotorTestado) {
-      rowStyle = `background: linear-gradient(90deg, ${c.cor}40 0%, ${c.cor}20 100%);
-                  border-left: 6px solid ${c.cor};
-                  border-right: 6px solid ${c.cor};
-                  font-weight: bold;
-                  box-shadow: 0 2px 8px rgba(0,0,0,0.15);`;
-      markerHTML = '<span style="font-size: 16px; margin-right: 5px;">🎯</span>';
+      rowStyle = `background: ${c.cor}30; border-left: 4px solid ${c.cor}; font-weight: bold;`;
+      markerHTML = '🎯 ';
     }
 
     linhas += `
       <tr style="${rowStyle}">
-        <td style="text-align: center; padding: 10px;">
-          <div style="display: flex; align-items: center; justify-content: center;">
-            ${markerHTML}
-            <span style="font-size: ${isMotorTestado ? '14px' : '11px'};">${c.classe}</span>
-          </div>
-          ${isMotorTestado ? `<div style="font-size: 9px; color: #666; margin-top: 3px;">(Seu motor)</div>` : ''}
-        </td>
-        <td style="text-align: center; padding: 10px;">
-          ${c.min.toFixed(4)}
-          ${isMotorTestado && impulsoAtual < (c.min + c.max) / 2 ? '<br><span style="color: #e67e22; font-size: 18px;">▼</span>' : ''}
-        </td>
-        <td style="text-align: center; padding: 10px;">
-          ${c.max.toFixed(4)}
-          ${isMotorTestado && impulsoAtual >= (c.min + c.max) / 2 ? '<br><span style="color: #e67e22; font-size: 18px;">▼</span>' : ''}
-        </td>
-        <td style="text-align: center; padding: 10px;">${c.tipo}</td>
-        <td style="text-align: center; padding: 10px;">${c.nivel}</td>
-        <td style="text-align: center; padding: 10px;">
-          <div style="width: 100%; height: 25px; background: ${c.cor}; border-radius: 4px; border: 1px solid #ccc;"></div>
-        </td>
+        <td style="text-align: center; padding: 4px;">${markerHTML}${c.classe}</td>
+        <td style="text-align: center; padding: 4px;">${c.min.toFixed(2)} - ${c.max.toFixed(2)}</td>
+        <td style="text-align: center; padding: 4px;">${c.tipo}</td>
+        <td style="text-align: center; padding: 4px;">${c.nivel}</td>
       </tr>
     `;
   });
@@ -595,126 +574,127 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
     
     body {
       font-family: Arial, sans-serif;
-      line-height: 1.6;
+      line-height: 1.4;
       color: #2c3e50;
       max-width: 210mm;
       margin: 0 auto;
-      padding: 15px;
+      padding: 10px;
       background: white;
+      font-size: 11px;
     }
-    
+
     .header {
       text-align: center;
-      border-bottom: 3px solid #3498db;
-      padding-bottom: 15px;
-      margin-bottom: 20px;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
     }
-    
+
     .header h1 {
       color: #2c3e50;
-      margin: 10px 0;
-      font-size: 26px;
+      margin: 5px 0;
+      font-size: 20px;
     }
-    
+
     .header .subtitle {
       color: #7f8c8d;
-      font-size: 13px;
-      margin: 5px 0;
+      font-size: 10px;
+      margin: 3px 0;
     }
-    
+
     .impulso-destaque {
       background: linear-gradient(135deg, ${classificacao.cor || '#667eea'} 0%, #764ba2 100%);
       color: white;
-      padding: 15px;
-      border-radius: 8px;
+      padding: 10px;
+      border-radius: 6px;
       text-align: center;
-      margin: 15px 0;
-      box-shadow: 0 3px 5px rgba(0,0,0,0.1);
+      margin: 8px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    
+
     .impulso-destaque h2 {
-      margin: 0 0 8px 0;
-      font-size: 28px;
+      margin: 0 0 5px 0;
+      font-size: 22px;
     }
-    
+
     .impulso-destaque .classe {
-      font-size: 20px;
+      font-size: 16px;
       font-weight: bold;
       background: rgba(255,255,255,0.2);
-      padding: 8px 15px;
-      border-radius: 5px;
+      padding: 5px 10px;
+      border-radius: 4px;
       display: inline-block;
-      margin-top: 8px;
+      margin-top: 5px;
     }
-    
+
     .metricas-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-      margin: 15px 0;
+      gap: 8px;
+      margin: 10px 0;
     }
-    
+
     .metrica-card {
       background: #f8f9fa;
-      padding: 12px;
-      border-radius: 6px;
-      border-left: 4px solid #3498db;
+      padding: 8px;
+      border-radius: 4px;
+      border-left: 3px solid #3498db;
     }
-    
+
     .metrica-card h3 {
-      margin: 0 0 5px 0;
-      font-size: 12px;
+      margin: 0 0 3px 0;
+      font-size: 10px;
       color: #7f8c8d;
       text-transform: uppercase;
     }
     
     .metrica-card .valor {
-      font-size: 20px;
+      font-size: 16px;
       font-weight: bold;
       color: #2c3e50;
     }
-    
+
     .metrica-card .unidade {
-      font-size: 12px;
+      font-size: 10px;
       color: #7f8c8d;
     }
-    
+
     .secao {
-      margin: 20px 0;
+      margin: 10px 0;
     }
-    
+
     .secao h2 {
       color: #2c3e50;
       border-bottom: 2px solid #3498db;
-      padding-bottom: 8px;
-      margin-bottom: 12px;
-      font-size: 18px;
+      padding-bottom: 5px;
+      margin-bottom: 8px;
+      font-size: 14px;
     }
-    
+
     .grafico-container {
       text-align: center;
-      margin: 15px 0;
+      margin: 8px 0;
       background: #f8f9fa;
-      padding: 15px;
-      border-radius: 8px;
+      padding: 10px;
+      border-radius: 6px;
     }
-    
+
     .grafico-container img {
       max-width: 100%;
       height: auto;
       border: 1px solid #dee2e6;
-      border-radius: 5px;
+      border-radius: 4px;
     }
-    
+
     table {
       width: 100%;
       border-collapse: collapse;
-      margin: 12px 0;
-      font-size: 10px;
+      margin: 8px 0;
+      font-size: 9px;
     }
-    
+
     th, td {
-      padding: 6px;
+      padding: 4px;
       text-align: left;
       border-bottom: 1px solid #dee2e6;
     }
@@ -799,179 +779,28 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
     <button class="btn-print btn-close" onclick="window.close()">❌ Fechar</button>
   </div>
 
-  <!-- CABEÇALHO -->
+  <!-- CABEÇALHO SIMPLIFICADO -->
   <div class="header avoid-break">
-    <h1>🚀 balançaGFIG - RELATÓRIO DE TESTE ESTÁTICO</h1>
-    <div class="subtitle">Grupo de Foguetes do Campus Gaspar (GFIG)</div>
-    <div class="subtitle" style="font-size: 12px; margin-top: 5px;">
-      CompSteam • Projeto BoxSteam • Controle e Automação de Eletrodomésticos do Cotidiano
-    </div>
-    <div class="subtitle" style="font-weight: bold; margin-top: 5px;">Instituto Federal de Santa Catarina (IFSC) - Campus Gaspar</div>
-    <h2 style="color: #3498db; margin: 12px 0;">${sessao.nome}</h2>
-    <div class="subtitle">Teste realizado em: ${dataSessao}</div>
-    <div class="subtitle">${sessao.dadosTabela.length} leituras coletadas • Taxa: ${(sessao.dadosTabela.length / dados.duracao).toFixed(0)} Hz</div>
+    <h1 style="font-size: 18px; margin: 5px 0;">🚀 balançaGFIG - RELATÓRIO DE TESTE ESTÁTICO</h1>
+    <div class="subtitle" style="font-size: 11px;">${sessao.nome} • ${dataSessao}</div>
+    <div class="subtitle" style="font-size: 9px;">IFSC Campus Gaspar • GFIG • CompSteam • BoxSteam</div>
   </div>
 
-  <!-- IMPULSO EM DESTAQUE -->
-  <div class="impulso-destaque avoid-break">
-    <h2>💥 ${impulsoData.impulsoTotal.toFixed(2)} N⋅s</h2>
-    <div>Impulso Total Positivo</div>
-    <div class="classe">Motor Classe ${classificacao.classe}</div>
-    <div style="margin-top: 8px; font-size: 13px;">
-      ${classificacao.tipo} • ${classificacao.nivel}
+  <!-- CLASSIFICAÇÃO E IMPULSO - Seção Sintética -->
+  <div class="secao avoid-break" style="background: ${classificacao.cor}20; border-left: 4px solid ${classificacao.cor}; padding: 8px; border-radius: 4px; margin: 8px 0;">
+    <div style="display: grid; grid-template-columns: auto 1fr; gap: 15px; align-items: center;">
+      <div style="text-align: center; padding: 10px; background: ${classificacao.cor}; color: white; border-radius: 4px; min-width: 80px;">
+        <div style="font-size: 20px; font-weight: bold;">${impulsoData.impulsoTotal.toFixed(2)}</div>
+        <div style="font-size: 9px;">N⋅s</div>
+      </div>
+      <div style="font-size: 10px; line-height: 1.6;">
+        <strong>Classe:</strong> ${classificacao.classe} • <strong>Tipo:</strong> ${classificacao.tipo} • <strong>Nível:</strong> ${classificacao.nivel}<br>
+        <strong>Faixa:</strong> ${classificacao.faixa} • <strong>Impulso Total:</strong> ${impulsoData.impulsoTotal.toFixed(2)} N⋅s
+      </div>
     </div>
   </div>
 
-  <!-- INFORMAÇÕES DE TEMPO - Novo Layout Estruturado -->
-  <div class="secao avoid-break" style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin: 16px 0;">
-    <h2 style="margin-bottom: 12px;">⏱️ Análise de Tempo da Sessão</h2>
-    
-    <!-- Teste Completo -->
-    <div style="margin-bottom: 16px;">
-      <div style="background: #3498db; color: white; padding: 8px 12px; border-radius: 4px 4px 0 0; font-weight: bold; font-size: 12px;">
-        📅 Teste Estático (Completo)
-      </div>
-      <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #dee2e6; font-size: 11px;">
-        <tr style="border-bottom: 1px solid #dee2e6; background: #f8f9fa;">
-          <td style="padding: 8px; width: 35%; font-weight: bold;">Horário Absoluto</td>
-          <td style="padding: 8px; width: 30%; font-weight: bold;">Tempo Relativo</td>
-          <td style="padding: 8px; width: 35%; font-weight: bold; text-align: right;">Descrição</td>
-        </tr>
-        <tr style="border-bottom: 1px solid #dee2e6; background: rgba(52, 152, 219, 0.05);">
-          <td style="padding: 8px; font-family: monospace;">
-            ${sessao.data_inicio ? (() => {
-              const startDate = new Date(sessao.data_inicio);
-              return startDate.toLocaleTimeString('pt-BR') + '.' + String(startDate.getMilliseconds()).padStart(3, '0');
-            })() : '---'}
-          </td>
-          <td style="padding: 8px; font-family: monospace; font-weight: bold; color: #3498db;">00:00.000s</td>
-          <td style="padding: 8px; text-align: right;">Início do teste</td>
-        </tr>
-        <tr style="background: rgba(52, 152, 219, 0.05);">
-          <td style="padding: 8px; font-family: monospace;">
-            ${sessao.data_fim && dados.tempos && dados.tempos.length > 0 ? (() => {
-              const totalDuration = Math.max(...dados.tempos) - Math.min(...dados.tempos);
-              const endDate = new Date(sessao.data_fim);
-              return endDate.toLocaleTimeString('pt-BR') + '.' + String(endDate.getMilliseconds()).padStart(3, '0');
-            })() : '---'}
-          </td>
-          <td style="padding: 8px; font-family: monospace; font-weight: bold; color: #3498db;">
-            ${dados.tempos && dados.tempos.length > 0 ? (() => {
-              const totalDuration = Math.max(...dados.tempos) - Math.min(...dados.tempos);
-              const mins = Math.floor(totalDuration / 60);
-              const secs = totalDuration % 60;
-              return String(mins).padStart(2, '0') + ':' + secs.toFixed(3).padStart(6, '0') + 's';
-            })() : '---'}
-          </td>
-          <td style="padding: 8px; text-align: right;">Fim do teste</td>
-        </tr>
-      </table>
-      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 8px;">
-        <div style="background: white; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; text-align: center;">
-          <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Duração Total</div>
-          <div style="font-size: 13px; font-weight: bold; color: #3498db;">${dadosTotais ? dadosTotais.duracao.toFixed(3) : dados.duracao.toFixed(3)} s</div>
-        </div>
-        <div style="background: white; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; text-align: center;">
-          <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Total de Leituras</div>
-          <div style="font-size: 13px; font-weight: bold; color: #3498db;">${dadosTotais ? dadosTotais.tempos.length : (dados.tempos ? dados.tempos.length : 0)} leituras</div>
-        </div>
-        <div style="background: white; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; text-align: center;">
-          <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Frequência</div>
-          <div style="font-size: 13px; font-weight: bold; color: #3498db;">${dadosTotais && dadosTotais.duracao > 0 ? (dadosTotais.tempos.length / dadosTotais.duracao).toFixed(1) : (dados.tempos && dados.duracao > 0 ? (dados.tempos.length / dados.duracao).toFixed(1) : '0.0')}/s</div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Queima Detectada -->
-    <div>
-      <div style="background: #27ae60; color: white; padding: 8px 12px; border-radius: 4px 4px 0 0; font-weight: bold; font-size: 12px;">
-        🔥 Queima Detectada (Intervalo Selecionado)${burnInfo && burnInfo.usandoPontosPersonalizados ? ' - Personalizado' : ' - Auto-detectado'}
-      </div>
-      <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #dee2e6; font-size: 11px;">
-        <tr style="border-bottom: 1px solid #dee2e6; background: #f8f9fa;">
-          <td style="padding: 8px; width: 35%; font-weight: bold;">Horário Absoluto</td>
-          <td style="padding: 8px; width: 30%; font-weight: bold;">Tempo Relativo ao Teste</td>
-          <td style="padding: 8px; width: 35%; font-weight: bold; text-align: right;">Descrição</td>
-        </tr>
-        ${burnInfo && sessao.data_inicio && dados.tempos && dados.tempos.length > 0 ? `
-        <tr style="border-bottom: 1px solid #dee2e6; background: rgba(39, 174, 96, 0.05);">
-          <td style="padding: 8px; font-family: monospace;">
-            ${(() => {
-              const testStart = new Date(sessao.data_inicio);
-              const firstReading = Math.min(...dados.tempos);
-              const burnStartRelative = burnInfo.startTime - firstReading;
-              const burnStart = new Date(testStart.getTime() + burnStartRelative * 1000);
-              return burnStart.toLocaleTimeString('pt-BR') + '.' + String(burnStart.getMilliseconds()).padStart(3, '0');
-            })()}
-          </td>
-          <td style="padding: 8px; font-family: monospace; font-weight: bold; color: #27ae60;">
-            ${(() => {
-              const firstReading = Math.min(...dados.tempos);
-              const burnStartRelative = burnInfo.startTime - firstReading;
-              const mins = Math.floor(burnStartRelative / 60);
-              const secs = burnStartRelative % 60;
-              return String(mins).padStart(2, '0') + ':' + secs.toFixed(3).padStart(6, '0') + 's';
-            })()}
-          </td>
-          <td style="padding: 8px; text-align: right;">Início da queima</td>
-        </tr>
-        <tr style="background: rgba(39, 174, 96, 0.05);">
-          <td style="padding: 8px; font-family: monospace;">
-            ${(() => {
-              const testStart = new Date(sessao.data_inicio);
-              const firstReading = Math.min(...dados.tempos);
-              const burnEndRelative = burnInfo.endTime - firstReading;
-              const burnEnd = new Date(testStart.getTime() + burnEndRelative * 1000);
-              return burnEnd.toLocaleTimeString('pt-BR') + '.' + String(burnEnd.getMilliseconds()).padStart(3, '0');
-            })()}
-          </td>
-          <td style="padding: 8px; font-family: monospace; font-weight: bold; color: #27ae60;">
-            ${(() => {
-              const firstReading = Math.min(...dados.tempos);
-              const burnEndRelative = burnInfo.endTime - firstReading;
-              const mins = Math.floor(burnEndRelative / 60);
-              const secs = burnEndRelative % 60;
-              return String(mins).padStart(2, '0') + ':' + secs.toFixed(3).padStart(6, '0') + 's';
-            })()}
-          </td>
-          <td style="padding: 8px; text-align: right;">Fim da queima</td>
-        </tr>
-        ` : `
-        <tr style="border-bottom: 1px solid #dee2e6; background: rgba(39, 174, 96, 0.05);">
-          <td style="padding: 8px; font-family: monospace;">---</td>
-          <td style="padding: 8px; font-family: monospace; font-weight: bold; color: #27ae60;">${impulsoData.tempoIgnicao?.toFixed(3) || '0.000'}s</td>
-          <td style="padding: 8px; text-align: right;">Início da queima</td>
-        </tr>
-        <tr style="background: rgba(39, 174, 96, 0.05);">
-          <td style="padding: 8px; font-family: monospace;">---</td>
-          <td style="padding: 8px; font-family: monospace; font-weight: bold; color: #27ae60;">${impulsoData.tempoBurnout?.toFixed(3) || '0.000'}s</td>
-          <td style="padding: 8px; text-align: right;">Fim da queima</td>
-        </tr>
-        `}
-      </table>
-      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 8px;">
-        <div style="background: white; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; text-align: center;">
-          <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Duração Queima</div>
-          <div style="font-size: 13px; font-weight: bold; color: #27ae60;">${impulsoData.duracaoQueima.toFixed(3)} s</div>
-        </div>
-        <div style="background: white; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; text-align: center;">
-          <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Leituras na Queima</div>
-          <div style="font-size: 13px; font-weight: bold; color: #27ae60;">
-            ${dados.tempos ? dados.tempos.length + ' leituras' : '---'}
-          </div>
-        </div>
-        <div style="background: white; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; text-align: center;">
-          <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Frequência</div>
-          <div style="font-size: 13px; font-weight: bold; color: #27ae60;">
-            ${dados.tempos && impulsoData.duracaoQueima > 0 ? (dados.tempos.length / impulsoData.duracaoQueima).toFixed(1) + '/s' : '0.0/s'}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  </div>
-
-  <!-- METADADOS DO MOTOR -->
+  <!-- METADADOS DO MOTOR - Versão Compacta -->
   ${sessao.metadadosMotor && (
     sessao.metadadosMotor.manufacturer ||
     sessao.metadadosMotor.diameter ||
@@ -981,125 +810,91 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
     sessao.metadadosMotor.description ||
     sessao.metadadosMotor.observations
   ) ? `
-  <div class="secao avoid-break" style="background: #fff9e6; padding: 16px; border-radius: 8px; margin: 16px 0; border: 2px solid #ffc107;">
-    <h2 style="margin-bottom: 12px; color: #f39c12;">⚙️ Metadados do Motor Testado</h2>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-      ${sessao.metadadosMotor.manufacturer ? `
-      <div style="background: white; padding: 10px; border: 1px solid #ffe082; border-radius: 4px;">
-        <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">🏭 Fabricante</div>
-        <div style="font-size: 13px; color: #2c3e50;">${sessao.metadadosMotor.manufacturer}</div>
-      </div>
-      ` : ''}
-
-      ${sessao.metadadosMotor.diameter ? `
-      <div style="background: white; padding: 10px; border: 1px solid #ffe082; border-radius: 4px;">
-        <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">📏 Diâmetro</div>
-        <div style="font-size: 13px; color: #2c3e50;">${sessao.metadadosMotor.diameter} mm</div>
-      </div>
-      ` : ''}
-
-      ${sessao.metadadosMotor.length ? `
-      <div style="background: white; padding: 10px; border: 1px solid #ffe082; border-radius: 4px;">
-        <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">📐 Comprimento</div>
-        <div style="font-size: 13px; color: #2c3e50;">${sessao.metadadosMotor.length} mm</div>
-      </div>
-      ` : ''}
-
-      ${sessao.metadadosMotor.propweight ? `
-      <div style="background: white; padding: 10px; border: 1px solid #ffe082; border-radius: 4px;">
-        <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">🔥 Massa do Propelente</div>
-        <div style="font-size: 13px; color: #2c3e50;">${sessao.metadadosMotor.propweight} g</div>
-      </div>
-      ` : ''}
-
-      ${sessao.metadadosMotor.totalweight ? `
-      <div style="background: white; padding: 10px; border: 1px solid #ffe082; border-radius: 4px;">
-        <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">⚖️ Massa Total</div>
-        <div style="font-size: 13px; color: #2c3e50;">${sessao.metadadosMotor.totalweight} g</div>
-      </div>
-      ` : ''}
-
-      ${sessao.metadadosMotor.propweight && sessao.metadadosMotor.totalweight ? `
-      <div style="background: white; padding: 10px; border: 1px solid #ffe082; border-radius: 4px;">
-        <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">📊 Fração de Propelente</div>
-        <div style="font-size: 13px; color: #2c3e50;">${((sessao.metadadosMotor.propweight / sessao.metadadosMotor.totalweight) * 100).toFixed(1)}%</div>
-      </div>
-      ` : ''}
+  <div class="secao avoid-break" style="background: #fff9e6; padding: 8px; border-radius: 4px; margin: 8px 0; border-left: 4px solid #ffc107;">
+    <h2 style="margin-bottom: 6px; color: #f39c12; font-size: 13px;">⚙️ Metadados do Motor</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 9px;">
+      ${sessao.metadadosMotor.manufacturer ? `<div><strong>Fabricante:</strong> ${sessao.metadadosMotor.manufacturer}</div>` : ''}
+      ${sessao.metadadosMotor.diameter ? `<div><strong>Diâmetro:</strong> ${sessao.metadadosMotor.diameter} mm</div>` : ''}
+      ${sessao.metadadosMotor.length ? `<div><strong>Comprimento:</strong> ${sessao.metadadosMotor.length} mm</div>` : ''}
+      ${sessao.metadadosMotor.propweight ? `<div><strong>Massa Propelente:</strong> ${sessao.metadadosMotor.propweight} g</div>` : ''}
+      ${sessao.metadadosMotor.totalweight ? `<div><strong>Massa Total:</strong> ${sessao.metadadosMotor.totalweight} g</div>` : ''}
+      ${sessao.metadadosMotor.propweight && sessao.metadadosMotor.totalweight ? `<div><strong>Fração:</strong> ${((sessao.metadadosMotor.propweight / sessao.metadadosMotor.totalweight) * 100).toFixed(1)}%</div>` : ''}
     </div>
-
-    ${sessao.metadadosMotor.description ? `
-    <div style="background: white; padding: 10px; border: 1px solid #ffe082; border-radius: 4px; margin-bottom: 12px;">
-      <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 6px; font-weight: bold;">📝 Descrição</div>
-      <div style="font-size: 12px; color: #2c3e50; line-height: 1.5;">${sessao.metadadosMotor.description}</div>
-    </div>
-    ` : ''}
-
-    ${sessao.metadadosMotor.observations ? `
-    <div style="background: white; padding: 10px; border: 1px solid #ffe082; border-radius: 4px;">
-      <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 6px; font-weight: bold;">💡 Observações</div>
-      <div style="font-size: 12px; color: #2c3e50; line-height: 1.5;">${sessao.metadadosMotor.observations}</div>
-    </div>
-    ` : ''}
+    ${sessao.metadadosMotor.description ? `<div style="margin-top: 6px; font-size: 9px;"><strong>Descrição:</strong> ${sessao.metadadosMotor.description}</div>` : ''}
+    ${sessao.metadadosMotor.observations ? `<div style="margin-top: 4px; font-size: 9px;"><strong>Observações:</strong> ${sessao.metadadosMotor.observations}</div>` : ''}
   </div>
   ` : ''}
 
-  <!-- MÉTRICAS PRINCIPAIS -->
+  <!-- MÉTRICAS DE DESEMPENHO - Formato Tabela Compacta -->
   <div class="secao avoid-break">
-    <h2>📈 Métricas de Desempenho</h2>
-    <div class="metricas-grid">
-      <div class="metrica-card">
-        <h3>Impulso Total</h3>
-        <div class="valor">${impulsoData.impulsoTotal.toFixed(2)}</div>
-        <div class="unidade">N⋅s</div>
-      </div>
-      <div class="metrica-card">
-        <h3>Força Máxima</h3>
-        <div class="valor">${impulsoData.forcaMaxima.toFixed(2)}</div>
-        <div class="unidade">N</div>
-      </div>
-      <div class="metrica-card">
-        <h3>Duração da Queima</h3>
-        <div class="valor">${impulsoData.duracaoQueima.toFixed(3)}</div>
-        <div class="unidade">segundos</div>
-      </div>
-      <div class="metrica-card">
-        <h3>Força Média (Queima)</h3>
-        <div class="valor">${(impulsoData.duracaoQueima > 0 ? impulsoData.impulsoTotal / impulsoData.duracaoQueima : 0).toFixed(2)}</div>
-        <div class="unidade">N</div>
-      </div>
-      <div class="metrica-card">
-        <h3>Tempo de Ignição</h3>
-        <div class="valor">${impulsoData.tempoIgnicao.toFixed(3)}</div>
-        <div class="unidade">segundos</div>
-      </div>
-      <div class="metrica-card">
-        <h3>Tempo de Burnout</h3>
-        <div class="valor">${impulsoData.tempoBurnout.toFixed(3)}</div>
-        <div class="unidade">segundos</div>
-      </div>
-      ${cardIsp}
-      <div class="metrica-card">
-        <h3>Impulso Líquido</h3>
-        <div class="valor">${impulsoData.impulsoLiquido.toFixed(2)}</div>
-        <div class="unidade">N⋅s</div>
-      </div>
-    </div>
-    <div class="info-box">
-      ${infoIsp}Para calcular, insira a massa do propelente queimado nos metadados do motor.
-    </div>
+    <h2 style="font-size: 13px; margin-bottom: 6px;">📈 Métricas de Desempenho</h2>
+    <table style="font-size: 9px; width: 100%;">
+      <tr style="background: #f8f9fa;">
+        <td style="padding: 4px; font-weight: bold;">Impulso Total</td>
+        <td style="padding: 4px;">${impulsoData.impulsoTotal.toFixed(2)} N⋅s</td>
+        <td style="padding: 4px; font-weight: bold;">Força Máxima</td>
+        <td style="padding: 4px;">${impulsoData.forcaMaxima.toFixed(2)} N</td>
+      </tr>
+      <tr>
+        <td style="padding: 4px; font-weight: bold;">Duração Queima</td>
+        <td style="padding: 4px;">${impulsoData.duracaoQueima.toFixed(3)} s</td>
+        <td style="padding: 4px; font-weight: bold;">Força Média (Queima)</td>
+        <td style="padding: 4px;">${(impulsoData.duracaoQueima > 0 ? impulsoData.impulsoTotal / impulsoData.duracaoQueima : 0).toFixed(2)} N</td>
+      </tr>
+      <tr style="background: #f8f9fa;">
+        <td style="padding: 4px; font-weight: bold;">Tempo Ignição</td>
+        <td style="padding: 4px;">${impulsoData.tempoIgnicao.toFixed(3)} s</td>
+        <td style="padding: 4px; font-weight: bold;">Tempo Burnout</td>
+        <td style="padding: 4px;">${impulsoData.tempoBurnout.toFixed(3)} s</td>
+      </tr>
+      <tr>
+        <td style="padding: 4px; font-weight: bold;">Impulso Líquido</td>
+        <td style="padding: 4px;">${impulsoData.impulsoLiquido.toFixed(2)} N⋅s</td>
+        <td style="padding: 4px; font-weight: bold;">Impulso Específico (Isp)</td>
+        <td style="padding: 4px;">${impulsoEspecifico !== null ? impulsoEspecifico.toFixed(2) + ' s' : 'N/A'}</td>
+      </tr>
+    </table>
   </div>
 
   <!-- GRÁFICO -->
   <div class="page-break"></div>
   <div class="secao">
-    <h2>📉 Curva de Propulsão</h2>
+    <h2 style="font-size: 14px;">📉 Curva de Propulsão</h2>
     <div class="grafico-container">
       <img src="${imagemGrafico}" alt="Gráfico de Propulsão" />
     </div>
-    <div class="info-box">
-      <strong>Legenda:</strong> A área sob a curva (preenchimento azul) representa o impulso total do motor. 
-      O ponto vermelho marca a força máxima atingida. As linhas tracejadas indicam ignição (verde) e burnout (laranja).
+  </div>
+
+  <!-- ANÁLISE DE TEMPO (Horários do Teste e Queima) -->
+  <div class="secao avoid-break" style="background: #f8f9fa; padding: 8px; border-radius: 4px; margin: 8px 0;">
+    <h2 style="margin-bottom: 6px; font-size: 13px;">⏱️ Análise de Tempo</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+      <!-- Teste Completo -->
+      <div>
+        <div style="background: #3498db; color: white; padding: 5px 8px; border-radius: 3px 3px 0 0; font-weight: bold; font-size: 10px;">
+          📅 Teste Completo
+        </div>
+        <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #dee2e6; font-size: 9px;">
+          <tr><td style="padding: 3px; font-weight: bold;">Início:</td><td style="padding: 3px;">00:00.000s</td></tr>
+          <tr><td style="padding: 3px; font-weight: bold;">Fim:</td><td style="padding: 3px;">${dados.tempos && dados.tempos.length > 0 ? (Math.max(...dados.tempos) - Math.min(...dados.tempos)).toFixed(3) + 's' : '---'}</td></tr>
+          <tr><td style="padding: 3px; font-weight: bold;">Duração:</td><td style="padding: 3px; font-weight: bold;">${dados.duracao.toFixed(3)} s</td></tr>
+          <tr><td style="padding: 3px; font-weight: bold;">Leituras:</td><td style="padding: 3px;">${dados.tempos ? dados.tempos.length : 0}</td></tr>
+          <tr><td style="padding: 3px; font-weight: bold;">Taxa:</td><td style="padding: 3px;">${dados.duracao > 0 ? (dados.tempos.length / dados.duracao).toFixed(1) : '0.0'} Hz</td></tr>
+        </table>
+      </div>
+      <!-- Queima Detectada -->
+      <div>
+        <div style="background: #27ae60; color: white; padding: 5px 8px; border-radius: 3px 3px 0 0; font-weight: bold; font-size: 10px;">
+          🔥 Queima
+        </div>
+        <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #dee2e6; font-size: 9px;">
+          <tr><td style="padding: 3px; font-weight: bold;">Ignição:</td><td style="padding: 3px;">${impulsoData.tempoIgnicao.toFixed(3)}s</td></tr>
+          <tr><td style="padding: 3px; font-weight: bold;">Burnout:</td><td style="padding: 3px;">${impulsoData.tempoBurnout.toFixed(3)}s</td></tr>
+          <tr><td style="padding: 3px; font-weight: bold;">Duração:</td><td style="padding: 3px; font-weight: bold;">${impulsoData.duracaoQueima.toFixed(3)} s</td></tr>
+          <tr><td style="padding: 3px; font-weight: bold;">Leituras:</td><td style="padding: 3px;">${dados.tempos ? dados.tempos.length : '---'}</td></tr>
+          <tr><td style="padding: 3px; font-weight: bold;">Taxa:</td><td style="padding: 3px;">${impulsoData.duracaoQueima > 0 ? (dados.tempos.length / impulsoData.duracaoQueima).toFixed(1) : '0.0'} Hz</td></tr>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -1315,62 +1110,27 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
     </table>
   </div>
 
-  <!-- CLASSIFICAÇÃO DO MOTOR -->
+  <!-- CLASSIFICAÇÃO DO MOTOR - Versão Compacta -->
   <div class="page-break"></div>
-  <div class="secao">
-    <h2>📊 Classificação do Motor (NAR/TRA)</h2>
-    <table style="font-size: 12px;">
-      <tr>
-        <td><strong>Classe:</strong></td>
-        <td>${classificacao.classe}</td>
-        <td><strong>Tipo:</strong></td>
-        <td>${classificacao.tipo}</td>
-      </tr>
-      <tr>
-        <td><strong>Nível:</strong></td>
-        <td>${classificacao.nivel}</td>
-        <td><strong>Faixa:</strong></td>
-        <td>${classificacao.faixa}</td>
-      </tr>
-      <tr>
-        <td><strong>Impulso Total:</strong></td>
-        <td>${impulsoData.impulsoTotal.toFixed(2)} N⋅s</td>
-        <td><strong>Status:</strong></td>
-        <td>✓ Dentro dos limites NAR/TRA</td>
-      </tr>
-    </table>
-    <div class="info-box" style="margin-top: 1rem;">
-      <strong>Informações de Classificação:</strong><br>
-      A classificação NAR/TRA segue os padrões estabelecidos pela National Association for Rocketry (NAR) e pela Tripoli Rocketry Association (TRA).
-      Os motores são classificados por letras (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P) baseado no impulso total em Newton-segundos.
-      Cada classe tem aproximadamente o dobro do impulso da classe anterior.
+  <div class="secao avoid-break" style="padding: 10px 0;">
+    <h2 style="font-size: 16px; margin-bottom: 8px;">📊 Classificação NAR/TRA</h2>
+    <div style="background: ${classificacao.cor}20; border-left: 4px solid ${classificacao.cor}; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; font-size: 11px;">
+        <div><strong>Classe:</strong> ${classificacao.classe}</div>
+        <div><strong>Tipo:</strong> ${classificacao.tipo}</div>
+        <div><strong>Nível:</strong> ${classificacao.nivel}</div>
+      </div>
+      <div style="margin-top: 8px; font-size: 10px; color: #555;">
+        <strong>Faixa:</strong> ${classificacao.faixa} • <strong>Impulso:</strong> ${impulsoData.impulsoTotal.toFixed(2)} N⋅s
+      </div>
     </div>
-  </div>
-
-  <!-- TABELA COMPLETA DE CLASSIFICAÇÕES COM DESTAQUE -->
-  <div class="page-break"></div>
-  <div class="secao">
-    <h2>📋 Tabela Completa de Classificações NAR/TRA</h2>
-    <div class="info-box" style="margin-bottom: 15px;">
-      <strong>🎯 Motor Testado:</strong> A linha em destaque abaixo indica onde seu motor se enquadra na tabela de classificações.
-      O impulso medido (${impulsoData.impulsoTotal.toFixed(2)} N⋅s) está dentro da faixa da classe <strong>${classificacao.classe}</strong>.
-    </div>
-
-    <!-- Representação Gráfica Visual -->
-    <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-      <h3 style="margin-top: 0; font-size: 14px; color: #2c3e50;">Posição Visual do Motor Testado:</h3>
-      ${gerarBarraVisualClassificacao(impulsoData.impulsoTotal, classificacao)}
-    </div>
-
-    <table style="font-size: 10px; width: 100%;">
+    <table style="font-size: 9px; width: 100%;">
       <thead>
         <tr>
-          <th style="width: 12%; text-align: center;">Classe</th>
-          <th style="width: 18%; text-align: center;">Impulso Mínimo (N⋅s)</th>
-          <th style="width: 18%; text-align: center;">Impulso Máximo (N⋅s)</th>
-          <th style="width: 22%; text-align: center;">Tipo</th>
-          <th style="width: 20%; text-align: center;">Nível</th>
-          <th style="width: 10%; text-align: center;">Cor</th>
+          <th style="padding: 4px; text-align: center;">Classe</th>
+          <th style="padding: 4px; text-align: center;">Faixa (N⋅s)</th>
+          <th style="padding: 4px; text-align: center;">Tipo</th>
+          <th style="padding: 4px; text-align: center;">Nível</th>
         </tr>
       </thead>
       <tbody>
