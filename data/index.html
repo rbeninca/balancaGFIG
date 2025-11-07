@@ -427,6 +427,21 @@
       </div>
     </main>
 
+    <!-- Ícone flutuante para toggle do rodapé -->
+    <div id="footer-toggle" title="Mostrar/Ocultar informações de status">
+      <div class="footer-toggle-indicators">
+        <div class="footer-toggle-dot" id="toggle-ws-indicator" title="WebSocket"></div>
+        <div class="footer-toggle-dot" id="toggle-mysql-indicator" title="MySQL"></div>
+        <div class="footer-toggle-dot" id="toggle-balanca-indicator" title="Balança"></div>
+          <div class="footer-section footer-time">
+        <span class="time-label" title="Horário atual do servidor (UTC-3 - America/Sao_Paulo)">🕐 Servidor:</span>
+        <span id="server-clock">--:--:--</span>
+        <button onclick="syncServerTime()" class="btn btn-sync" title="Sincronizar relógio do servidor com a hora do seu navegador">🔄</button>
+      </div>
+      </div>
+      <span class="footer-toggle-icon">▼</span>
+    </div>
+
     <footer id="footer-atalhos">
       <div class="footer-section footer-brand">
         <h3>🚀 balançaGFIG</h3>
@@ -454,11 +469,7 @@
         </div>
       </div>
       
-      <div class="footer-section footer-time">
-        <span class="time-label" title="Horário atual do servidor (UTC-3 - America/Sao_Paulo)">🕐 Servidor:</span>
-        <span id="server-clock">--:--:--</span>
-        <button onclick="syncServerTime()" class="btn btn-sync" title="Sincronizar relógio do servidor com a hora do seu navegador">🔄</button>
-      </div>
+    
       
       <div class="footer-section footer-shortcuts">
         <span class="shortcuts-title">⚡ ATALHOS:</span>

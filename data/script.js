@@ -4210,4 +4210,76 @@ window.addEventListener('load', () => {
 
   // Busca a hora do servidor a cada 5 minutos para corrigir drift
   setInterval(updateServerClock, 5 * 60 * 1000);
+
+  // Configuração do toggle do rodapé
+  initFooterToggle();
 });
+
+/**
+ * Inicializa o sistema de toggle do rodapé
+ */
+function initFooterToggle() {
+  const footerToggle = document.getElementById('footer-toggle');
+  const footer = document.getElementById('footer-atalhos');
+
+  if (!footerToggle || !footer) return;
+
+  // Carrega o estado salvo (se o usuário deixou aberto)
+  const isFooterOpen = localStorage.getItem('footerOpen') === 'true';
+  if (isFooterOpen) {
+    footer.classList.add('footer-visible');
+    footerToggle.classList.add('footer-open');
+  }
+
+  // Toggle ao clicar
+  footerToggle.addEventListener('click', () => {
+    const isOpen = footer.classList.toggle('footer-visible');
+    footerToggle.classList.toggle('footer-open');
+
+    // Salva o estado
+    localStorage.setItem('footerOpen', isOpen);
+  });
+
+  // Sincroniza os indicadores do toggle com os indicadores do rodapé
+  syncFooterToggleIndicators();
+
+  // Atualiza os indicadores a cada segundo
+  setInterval(syncFooterToggleIndicators, 1000);
+}
+
+/**
+ * Sincroniza os indicadores do ícone flutuante com os do rodapé
+ */
+function syncFooterToggleIndicators() {
+  // WebSocket
+  const wsIndicator = document.getElementById('ws-indicator');
+  const toggleWsIndicator = document.getElementById('toggle-ws-indicator');
+  if (wsIndicator && toggleWsIndicator) {
+    toggleWsIndicator.className = 'footer-toggle-dot ' +
+      (wsIndicator.classList.contains('conectado') ? 'conectado' :
+       wsIndicator.classList.contains('desconectado') ? 'desconectado' : '');
+  }
+
+  // MySQL
+  const mysqlIndicator = document.getElementById('mysql-indicator');
+  const toggleMysqlIndicator = document.getElementById('toggle-mysql-indicator');
+  if (mysqlIndicator && toggleMysqlIndicator) {
+    toggleMysqlIndicator.className = 'footer-toggle-dot ' +
+      (mysqlIndicator.classList.contains('conectado') ? 'conectado' :
+       mysqlIndicator.classList.contains('desconectado') ? 'desconectado' : '');
+  }
+
+  // Balança (usa o texto do status)
+  const balancaStatus = document.getElementById('balanca-status');
+  const toggleBalancaIndicator = document.getElementById('toggle-balanca-indicator');
+  if (balancaStatus && toggleBalancaIndicator) {
+    const statusText = balancaStatus.textContent.toLowerCase();
+    if (statusText.includes('conectado') || statusText.includes('lendo')) {
+      toggleBalancaIndicator.className = 'footer-toggle-dot conectado';
+    } else if (statusText.includes('aguardando') || statusText.includes('...')) {
+      toggleBalancaIndicator.className = 'footer-toggle-dot';
+    } else {
+      toggleBalancaIndicator.className = 'footer-toggle-dot desconectado';
+    }
+  }
+}

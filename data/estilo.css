@@ -1069,6 +1069,99 @@ tbody tr:last-child td {
   z-index: 100;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 0.7rem;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+#footer-atalhos.footer-visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* Ícone flutuante de status */
+#footer-toggle {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 101;
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  padding: 0.75rem 1rem;
+  border-radius: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), var(--sombra-lg);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+#footer-toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), var(--sombra-xl);
+  background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+}
+
+#footer-toggle.footer-open {
+  /* Fica visível logo acima do rodapé aberto, sem sair da tela */
+  bottom: 1rem;
+  right: 1rem;
+}
+
+#footer-toggle.footer-open:hover {
+  transform: translateY(-2px);
+}
+
+.footer-toggle-indicators {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.footer-toggle-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #95a5a6;
+  box-shadow: 0 0 8px rgba(149, 165, 166, 0.5);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.footer-toggle-dot::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.footer-toggle-dot.conectado {
+  background-color: #2ecc71;
+  box-shadow: 0 0 12px rgba(46, 204, 113, 0.8);
+}
+
+.footer-toggle-dot.desconectado {
+  background-color: #e74c3c;
+  box-shadow: 0 0 12px rgba(231, 76, 60, 0.8);
+  animation: pulse-disconnect 2s infinite;
+}
+
+.footer-toggle-icon {
+  font-size: 1rem;
+  color: #ecf0f1;
+  transition: transform 0.3s ease;
+}
+
+#footer-toggle.footer-open .footer-toggle-icon {
+  transform: rotate(180deg);
 }
 
 .footer-section {
