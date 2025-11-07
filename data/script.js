@@ -2833,59 +2833,70 @@ async function editarMetadadosMotor(sessionId) {
   // Cria um modal para edição
   const modalHtml = `
     <div id="modal-metadados" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000; overflow-y: auto;">
-      <div style="background: var(--cor-fundo); padding: 30px; border-radius: 12px; max-width: 700px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.3); margin: 20px;">
-        <h2 style="margin-top: 0; color: var(--cor-titulo);">⚙️ Metadados do Motor - ${session.nome}</h2>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+      <div style="background: var(--cor-fundo); padding: 1rem; border-radius: 12px; max-width: 1000px; width: 95%; box-shadow: 0 10px 40px rgba(0,0,0,0.3); margin: 1rem; max-height: 90vh; overflow-y: auto;">
+        <h2 style="margin: 0 0 0.75rem 0; color: var(--cor-titulo); font-size: 1.25rem;">⚙️ Metadados do Motor - ${session.nome.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h2>
+
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 0.5rem;">
           <div>
-            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Nome do Motor</label>
-            <input type="text" id="meta-name" value="${meta.name || ''}" placeholder="Ex: NFB_20" style="width: 100%; padding: 8px; border: 1px solid var(--cor-borda); border-radius: 4px;">
-          </div>
-          <div>
-            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Fabricante</label>
-            <input type="text" id="meta-manufacturer" value="${meta.manufacturer || 'Grupo de Foguetes - Campus Gaspar IFSC'}" style="width: 100%; padding: 8px; border: 1px solid var(--cor-borda); border-radius: 4px;">
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">Nome do Motor</label>
+            <input type="text" id="meta-name" value="${meta.name || ''}" placeholder="NFB_20" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
           </div>
           <div>
-            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Diâmetro (mm)</label>
-            <input type="number" id="meta-diameter" value="${meta.diameter || 45}" step="0.1" style="width: 100%; padding: 8px; border: 1px solid var(--cor-borda); border-radius: 4px;">
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">Diâmetro (mm)</label>
+            <input type="number" id="meta-diameter" value="${meta.diameter || 45}" step="0.1" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
           </div>
           <div>
-            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Comprimento (mm)</label>
-            <input type="number" id="meta-length" value="${meta.length || 200}" step="1" style="width: 100%; padding: 8px; border: 1px solid var(--cor-borda); border-radius: 4px;">
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">Comprimento (mm)</label>
+            <input type="number" id="meta-length" value="${meta.length || 200}" step="1" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
           </div>
           <div>
-            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Delay (s)</label>
-            <input type="number" id="meta-delay" value="${meta.delay || 0}" step="0.1" style="width: 100%; padding: 8px; border: 1px solid var(--cor-borda); border-radius: 4px;">
-          </div>
-          <div>
-            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Peso Propelente (kg)</label>
-            <input type="number" id="meta-propweight" value="${meta.propweight || 0.1}" step="0.001" style="width: 100%; padding: 8px; border: 1px solid var(--cor-borda); border-radius: 4px;">
-          </div>
-          <div style="grid-column: 1 / -1;">
-            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Peso Total (kg)</label>
-            <input type="number" id="meta-totalweight" value="${meta.totalweight || 0.25}" step="0.001" style="width: 100%; padding: 8px; border: 1px solid var(--cor-borda); border-radius: 4px;">
-          </div>
-          <div style="grid-column: 1 / -1;">
-            <label style="display: block; margin-bottom: 5px; font-weight: 600;">📝 Descrição</label>
-            <textarea id="meta-description" placeholder="Descrição detalhada do motor..." style="width: 100%; padding: 8px; border: 1px solid var(--cor-borda); border-radius: 4px; min-height: 80px; resize: vertical; font-family: inherit;">${meta.description || ''}</textarea>
-          </div>
-          <div style="grid-column: 1 / -1;">
-            <label style="display: block; margin-bottom: 5px; font-weight: 600;">💬 Observações</label>
-            <textarea id="meta-observations" placeholder="Observações adicionais sobre o teste..." style="width: 100%; padding: 8px; border: 1px solid var(--cor-borda); border-radius: 4px; min-height: 80px; resize: vertical; font-family: inherit;">${meta.observations || ''}</textarea>
-          </div>
-          <div>
-            <label style="display: block; margin-bottom: 5px; font-weight: 600;">🌡️ Temperatura (°C)</label>
-            <input type="number" id="meta-temperatura" value="${meta.temperatura !== undefined && meta.temperatura !== null ? meta.temperatura : ''}" step="0.1" placeholder="Ex: 25.5" style="width: 100%; padding: 8px; border: 1px solid var(--cor-borda); border-radius: 4px;">
-          </div>
-          <div>
-            <label style="display: block; margin-bottom: 5px; font-weight: 600;">💧 Umidade (%)</label>
-            <input type="number" id="meta-umidade" value="${meta.umidade !== undefined && meta.umidade !== null ? meta.umidade : ''}" min="0" max="100" step="0.1" placeholder="Ex: 65" style="width: 100%; padding: 8px; border: 1px solid var(--cor-borda); border-radius: 4px;">
-          </div>
-          <div>
-            <label style="display: block; margin-bottom: 5px; font-weight: 600;">🔵 Pressão (hPa)</label>
-            <input type="number" id="meta-pressao" value="${meta.pressao !== undefined && meta.pressao !== null ? meta.pressao : ''}" step="0.01" placeholder="Ex: 1013.25" style="width: 100%; padding: 8px; border: 1px solid var(--cor-borda); border-radius: 4px;">
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">Delay (s)</label>
+            <input type="number" id="meta-delay" value="${meta.delay || 0}" step="0.1" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
           </div>
         </div>
-        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 0.5rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">Prop. (kg)</label>
+            <input type="number" id="meta-propweight" value="${meta.propweight || 0.1}" step="0.001" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">Total (kg)</label>
+            <input type="number" id="meta-totalweight" value="${meta.totalweight || 0.25}" step="0.001" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">🌡️ Temp. (°C)</label>
+            <input type="number" id="meta-temperatura" value="${meta.temperatura !== undefined && meta.temperatura !== null ? meta.temperatura : ''}" step="0.1" placeholder="25.5" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">💧 Umid. (%)</label>
+            <input type="number" id="meta-umidade" value="${meta.umidade !== undefined && meta.umidade !== null ? meta.umidade : ''}" min="0" max="100" step="0.1" placeholder="65" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">Fabricante</label>
+            <input type="text" id="meta-manufacturer" value="${meta.manufacturer || 'GFIG - Campus Gaspar IFSC'}" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">🔵 Pressão (hPa)</label>
+            <input type="number" id="meta-pressao" value="${meta.pressao !== undefined && meta.pressao !== null ? meta.pressao : ''}" step="0.01" placeholder="1013.25" style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px;">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">📝 Descrição</label>
+            <textarea id="meta-description" placeholder="Descrição do motor..." style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px; min-height: 60px; resize: vertical; font-family: inherit;">${meta.description || ''}</textarea>
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.2rem; font-weight: 600; font-size: 0.85rem;">💬 Observações</label>
+            <textarea id="meta-observations" placeholder="Observações do teste..." style="width: 100%; padding: 0.4rem; border: 1px solid var(--cor-borda); border-radius: 4px; min-height: 60px; resize: vertical; font-family: inherit;">${meta.observations || ''}</textarea>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.75rem;">
           <button onclick="fecharModalMetadados()" class="btn btn-secundario">Cancelar</button>
           <button onclick="salvarMetadadosMotor(${sessionId})" class="btn btn-sucesso">💾 Salvar Metadados</button>
         </div>

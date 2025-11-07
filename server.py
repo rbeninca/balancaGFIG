@@ -133,8 +133,17 @@ serial_last_error = None
 # ================== MySQL Utils ==================
 def connect_to_mysql():
     global mysql_connection, mysql_connected
-    if mysql_connection and mysql_connection.open:
-        return mysql_connection
+
+    # Validate existing connection with ping
+    if mysql_connection:
+        try:
+            mysql_connection.ping(reconnect=False)
+            if mysql_connection.open:
+                return mysql_connection
+        except (pymysql.Error, AttributeError):
+            logging.warning("Conexão MySQL existente está inválida, criando nova conexão...")
+            mysql_connection = None
+            mysql_connected = False
 
     max_retries = 3
     for attempt in range(max_retries):
@@ -145,7 +154,9 @@ def connect_to_mysql():
                 password=MYSQL_PASSWORD,
                 database=MYSQL_DB,
                 cursorclass=pymysql.cursors.DictCursor,
-                connect_timeout=5
+                connect_timeout=5,
+                autocommit=False,
+                charset='utf8mb4'
             )
             logging.info("Conectado ao MySQL com sucesso!")
             mysql_connected = True
@@ -158,6 +169,7 @@ def connect_to_mysql():
             else:
                 logging.error(f"Erro ao conectar ao MySQL após {max_retries} tentativas: {e}")
                 mysql_connected = False
+                mysql_connection = None
                 return None
 
 def init_mysql_db():
@@ -342,12 +354,12 @@ def migrate_existing_sessions():
 
 async def save_session_to_mysql_db(session_data: Dict[str, Any]):
     global mysql_connection, mysql_connected
-    if not mysql_connected or not mysql_connection or not mysql_connection.open:
-        logging.warning("Tentando salvar sessão no MySQL, mas a conexão não está ativa. Tentando reconectar...")
-        mysql_connection = connect_to_mysql()
-        if not mysql_connection or not mysql_connected:
-            logging.error("Não foi possível reconectar ao MySQL. Sessão não salva.")
-            return False
+
+    # Force fresh connection validation before saving
+    mysql_connection = connect_to_mysql()
+    if not mysql_connection or not mysql_connected:
+        logging.error("Não foi possível conectar ao MySQL. Sessão não salva.")
+        return False
 
     try:
         # Validate required fields
@@ -527,6 +539,11 @@ async def save_session_to_mysql_db(session_data: Dict[str, Any]):
                 mysql_connection.rollback()
             except:
                 pass
+            try:
+                mysql_connection.close()
+            except:
+                pass
+        mysql_connection = None
         return False
     except Exception as e:
         logging.error(f"Erro inesperado ao salvar sessão no MySQL: {type(e).__name__}: {e}", exc_info=True)
