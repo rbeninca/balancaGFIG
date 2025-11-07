@@ -1,0 +1,2359 @@
+{
+  "id": 1762496824335,
+  "nome": "G60",
+  "data_inicio": "2025-11-07 06:27:04",
+  "data_fim": "2025-11-07 06:27:04",
+  "data_modificacao": "2025-11-07T17:02:46.248Z",
+  "metadadosMotor": {
+    "name": "",
+    "manufacturer": "GFCS UFPR",
+    "diameter": 45,
+    "length": 200,
+    "delay": 0,
+    "propweight": 0.1,
+    "totalweight": 0.25,
+    "description": "",
+    "observations": "",
+    "temperatura": null,
+    "umidade": null,
+    "pressao": null
+  },
+  "burnMetadata": {
+    "burnStartTime": 0,
+    "burnEndTime": 3.149
+  },
+  "dadosTabela": [
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0,
+      "newtons": 44.5,
+      "grama_forca": 4537.737147751782,
+      "quilo_forca": 4.537737147751781
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0,
+      "newtons": 0.28749,
+      "grama_forca": 29.31582140690246,
+      "quilo_forca": 0.029315821406902462
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.011,
+      "newtons": 0.30758,
+      "grama_forca": 31.36443127877512,
+      "quilo_forca": 0.03136443127877512
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.023,
+      "newtons": 0.29007,
+      "grama_forca": 29.578908189850765,
+      "quilo_forca": 0.029578908189850765
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.035,
+      "newtons": 0.32021,
+      "grama_forca": 32.65233285576624,
+      "quilo_forca": 0.03265233285576624
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.046,
+      "newtons": 0.32021,
+      "grama_forca": 32.65233285576624,
+      "quilo_forca": 0.03265233285576624
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.058,
+      "newtons": 0.30991,
+      "grama_forca": 31.602025156398977,
+      "quilo_forca": 0.031602025156398976
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.069,
+      "newtons": 0.30577,
+      "grama_forca": 31.179862644226112,
+      "quilo_forca": 0.031179862644226113
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.08,
+      "newtons": 0.34611,
+      "grama_forca": 35.293397847379076,
+      "quilo_forca": 0.035293397847379074
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.091,
+      "newtons": 0.34197,
+      "grama_forca": 34.87123533520621,
+      "quilo_forca": 0.03487123533520621
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.104,
+      "newtons": 0.3403,
+      "grama_forca": 34.700942727638896,
+      "quilo_forca": 0.0347009427276389
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.115,
+      "newtons": 0.33109,
+      "grama_forca": 33.76178409548623,
+      "quilo_forca": 0.033761784095486226
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.126,
+      "newtons": 0.3086,
+      "grama_forca": 31.468442332498867,
+      "quilo_forca": 0.03146844233249887
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.137,
+      "newtons": 0.31117,
+      "grama_forca": 31.730509399234197,
+      "quilo_forca": 0.0317305093992342
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.149,
+      "newtons": 0.31995,
+      "grama_forca": 32.62582023422882,
+      "quilo_forca": 0.03262582023422882
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.161,
+      "newtons": 0.31057,
+      "grama_forca": 31.66932642645552,
+      "quilo_forca": 0.03166932642645552
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.172,
+      "newtons": 0.34562,
+      "grama_forca": 35.24343175294316,
+      "quilo_forca": 0.03524343175294316
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.183,
+      "newtons": 0.36538,
+      "grama_forca": 37.25839098978754,
+      "quilo_forca": 0.037258390989787546
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.195,
+      "newtons": 0.36276,
+      "grama_forca": 36.99122534198733,
+      "quilo_forca": 0.03699122534198733
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.206,
+      "newtons": 0.36538,
+      "grama_forca": 37.25839098978754,
+      "quilo_forca": 0.037258390989787546
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.217,
+      "newtons": 0.37515,
+      "grama_forca": 38.25465372986698,
+      "quilo_forca": 0.03825465372986698
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.23,
+      "newtons": 0.40068,
+      "grama_forca": 40.85798922159963,
+      "quilo_forca": 0.04085798922159963
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.241,
+      "newtons": 0.44379,
+      "grama_forca": 45.25398581574748,
+      "quilo_forca": 0.04525398581574748
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.252,
+      "newtons": 0.46932,
+      "grama_forca": 47.857321307480134,
+      "quilo_forca": 0.04785732130748013
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.263,
+      "newtons": 0.49215,
+      "grama_forca": 50.185333421708734,
+      "quilo_forca": 0.050185333421708736
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.275,
+      "newtons": 0.45858,
+      "grama_forca": 46.76214609474184,
+      "quilo_forca": 0.04676214609474184
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.287,
+      "newtons": 0.42362,
+      "grama_forca": 43.197218214170995,
+      "quilo_forca": 0.043197218214170996
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.298,
+      "newtons": 0.4213,
+      "grama_forca": 42.960644052760124,
+      "quilo_forca": 0.04296064405276012
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.309,
+      "newtons": 0.43407,
+      "grama_forca": 44.26282165673293,
+      "quilo_forca": 0.04426282165673293
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.321,
+      "newtons": 0.42362,
+      "grama_forca": 43.197218214170995,
+      "quilo_forca": 0.043197218214170996
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.332,
+      "newtons": 0.403,
+      "grama_forca": 41.09456338301051,
+      "quilo_forca": 0.04109456338301051
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.343,
+      "newtons": 0.4612,
+      "grama_forca": 47.029311742542056,
+      "quilo_forca": 0.04702931174254205
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.356,
+      "newtons": 0.51172,
+      "grama_forca": 52.18091805050654,
+      "quilo_forca": 0.05218091805050654
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.367,
+      "newtons": 0.51429,
+      "grama_forca": 52.44298511724188,
+      "quilo_forca": 0.05244298511724188
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.378,
+      "newtons": 0.53196,
+      "grama_forca": 54.24482366557387,
+      "quilo_forca": 0.05424482366557387
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.389,
+      "newtons": 0.5621,
+      "grama_forca": 57.31824833148935,
+      "quilo_forca": 0.05731824833148935
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.401,
+      "newtons": 0.57487,
+      "grama_forca": 58.620425935462166,
+      "quilo_forca": 0.05862042593546216
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.413,
+      "newtons": 0.5572,
+      "grama_forca": 56.818587387130165,
+      "quilo_forca": 0.056818587387130165
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.424,
+      "newtons": 0.5572,
+      "grama_forca": 56.818587387130165,
+      "quilo_forca": 0.056818587387130165
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.435,
+      "newtons": 0.55952,
+      "grama_forca": 57.055161548541044,
+      "quilo_forca": 0.057055161548541046
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.447,
+      "newtons": 0.5361,
+      "grama_forca": 54.66698617774674,
+      "quilo_forca": 0.05466698617774674
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.458,
+      "newtons": 0.48883,
+      "grama_forca": 49.84678763900006,
+      "quilo_forca": 0.049846787639000065
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.469,
+      "newtons": 0.46804,
+      "grama_forca": 47.72679763221896,
+      "quilo_forca": 0.04772679763221896
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.481,
+      "newtons": 0.43535,
+      "grama_forca": 44.39334533199411,
+      "quilo_forca": 0.044393345331994113
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.493,
+      "newtons": 0.44077,
+      "grama_forca": 44.946031519428146,
+      "quilo_forca": 0.044946031519428144
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.504,
+      "newtons": 0.43379,
+      "grama_forca": 44.23426960276956,
+      "quilo_forca": 0.044234269602769556
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.515,
+      "newtons": 0.44904,
+      "grama_forca": 45.789336827560895,
+      "quilo_forca": 0.045789336827560895
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.527,
+      "newtons": 0.45949,
+      "grama_forca": 46.85494027012283,
+      "quilo_forca": 0.04685494027012283
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.539,
+      "newtons": 0.48202,
+      "grama_forca": 49.1523608979621,
+      "quilo_forca": 0.0491523608979621
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.55,
+      "newtons": 0.50755,
+      "grama_forca": 51.75569638969475,
+      "quilo_forca": 0.051755696389694746
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.561,
+      "newtons": 0.53308,
+      "grama_forca": 54.3590318814274,
+      "quilo_forca": 0.0543590318814274
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.573,
+      "newtons": 0.55861,
+      "grama_forca": 56.962367373160056,
+      "quilo_forca": 0.05696236737316006
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.584,
+      "newtons": 0.60697,
+      "grama_forca": 61.89371497912131,
+      "quilo_forca": 0.061893714979121314
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.595,
+      "newtons": 0.64054,
+      "grama_forca": 65.31690230608822,
+      "quilo_forca": 0.06531690230608822
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.607,
+      "newtons": 0.61799,
+      "grama_forca": 63.01744224582299,
+      "quilo_forca": 0.063017442245823
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.619,
+      "newtons": 0.59246,
+      "grama_forca": 60.41410675409034,
+      "quilo_forca": 0.06041410675409034
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.63,
+      "newtons": 0.54935,
+      "grama_forca": 56.018110159942495,
+      "quilo_forca": 0.05601811015994249
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.641,
+      "newtons": 0.53658,
+      "grama_forca": 54.715932555969665,
+      "quilo_forca": 0.05471593255596967
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.652,
+      "newtons": 0.53658,
+      "grama_forca": 54.715932555969665,
+      "quilo_forca": 0.05471593255596967
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.664,
+      "newtons": 0.55133,
+      "grama_forca": 56.22001397011212,
+      "quilo_forca": 0.05622001397011212
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.676,
+      "newtons": 0.58276,
+      "grama_forca": 59.42498202750175,
+      "quilo_forca": 0.059424982027501745
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.687,
+      "newtons": 0.58276,
+      "grama_forca": 59.42498202750175,
+      "quilo_forca": 0.059424982027501745
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.699,
+      "newtons": 0.58276,
+      "grama_forca": 59.42498202750175,
+      "quilo_forca": 0.059424982027501745
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.71,
+      "newtons": 0.58276,
+      "grama_forca": 59.42498202750175,
+      "quilo_forca": 0.059424982027501745
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.721,
+      "newtons": 0.58276,
+      "grama_forca": 59.42498202750175,
+      "quilo_forca": 0.059424982027501745
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.733,
+      "newtons": 0.62588,
+      "grama_forca": 63.821998337862574,
+      "quilo_forca": 0.06382199833786258
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.745,
+      "newtons": 0.65309,
+      "grama_forca": 66.59664615337552,
+      "quilo_forca": 0.06659664615337552
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.756,
+      "newtons": 0.66783,
+      "grama_forca": 68.099707851305,
+      "quilo_forca": 0.068099707851305
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.767,
+      "newtons": 0.69898,
+      "grama_forca": 71.27612385473124,
+      "quilo_forca": 0.07127612385473124
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.778,
+      "newtons": 0.73041,
+      "grama_forca": 74.48109191212086,
+      "quilo_forca": 0.07448109191212086
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.79,
+      "newtons": 0.77075,
+      "grama_forca": 78.59462711527384,
+      "quilo_forca": 0.07859462711527383
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.802,
+      "newtons": 0.81138,
+      "grama_forca": 82.73773408860315,
+      "quilo_forca": 0.08273773408860315
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.813,
+      "newtons": 0.86096,
+      "grama_forca": 87.7934870725477,
+      "quilo_forca": 0.08779348707254771
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.825,
+      "newtons": 0.88817,
+      "grama_forca": 90.56813488806065,
+      "quilo_forca": 0.09056813488806066
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.836,
+      "newtons": 0.91568,
+      "grama_forca": 93.37337418996295,
+      "quilo_forca": 0.09337337418996294
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.847,
+      "newtons": 0.96375,
+      "grama_forca": 98.27515002574783,
+      "quilo_forca": 0.09827515002574784
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.859,
+      "newtons": 0.98281,
+      "grama_forca": 100.21872912768377,
+      "quilo_forca": 0.10021872912768377
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.871,
+      "newtons": 1.02592,
+      "grama_forca": 104.61472572183162,
+      "quilo_forca": 0.10461472572183161
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.882,
+      "newtons": 1.08082,
+      "grama_forca": 110.21296773108044,
+      "quilo_forca": 0.11021296773108044
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.893,
+      "newtons": 1.14853,
+      "grama_forca": 117.117466209154,
+      "quilo_forca": 0.117117466209154
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.904,
+      "newtons": 1.21624,
+      "grama_forca": 124.02196468722755,
+      "quilo_forca": 0.12402196468722755
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.916,
+      "newtons": 1.25866,
+      "grama_forca": 128.3476008626799,
+      "quilo_forca": 0.1283476008626799
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.928,
+      "newtons": 1.28981,
+      "grama_forca": 131.52401686610617,
+      "quilo_forca": 0.13152401686610615
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.939,
+      "newtons": 1.32887,
+      "grama_forca": 135.50702839399796,
+      "quilo_forca": 0.13550702839399795
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.95,
+      "newtons": 1.34683,
+      "grama_forca": 137.3384387125063,
+      "quilo_forca": 0.1373384387125063
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.962,
+      "newtons": 1.39225,
+      "grama_forca": 141.96998975185207,
+      "quilo_forca": 0.14196998975185207
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.973,
+      "newtons": 1.43766,
+      "grama_forca": 146.60052107498484,
+      "quilo_forca": 0.14660052107498484
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.985,
+      "newtons": 1.43098,
+      "grama_forca": 145.9193506447156,
+      "quilo_forca": 0.1459193506447156
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 0.997,
+      "newtons": 1.46213,
+      "grama_forca": 149.09576664814185,
+      "quilo_forca": 0.14909576664814184
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.008,
+      "newtons": 1.45545,
+      "grama_forca": 148.41459621787257,
+      "quilo_forca": 0.14841459621787256
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.019,
+      "newtons": 1.49608,
+      "grama_forca": 152.5577031912019,
+      "quilo_forca": 0.1525577031912019
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.03,
+      "newtons": 1.49608,
+      "grama_forca": 152.5577031912019,
+      "quilo_forca": 0.1525577031912019
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.042,
+      "newtons": 1.5385,
+      "grama_forca": 156.88333936665427,
+      "quilo_forca": 0.15688333936665427
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.054,
+      "newtons": 1.59341,
+      "grama_forca": 162.48260109211606,
+      "quilo_forca": 0.16248260109211607
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.065,
+      "newtons": 1.62727,
+      "grama_forca": 165.93536018925934,
+      "quilo_forca": 0.16593536018925933
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.076,
+      "newtons": 1.6193,
+      "grama_forca": 165.12264636751593,
+      "quilo_forca": 0.16512264636751592
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.088,
+      "newtons": 1.71479,
+      "grama_forca": 174.8599164852422,
+      "quilo_forca": 0.17485991648524218
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.099,
+      "newtons": 1.69195,
+      "grama_forca": 172.5308846548006,
+      "quilo_forca": 0.1725308846548006
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.111,
+      "newtons": 1.6621,
+      "grama_forca": 169.48703175906147,
+      "quilo_forca": 0.16948703175906146
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.122,
+      "newtons": 1.70273,
+      "grama_forca": 173.6301387323908,
+      "quilo_forca": 0.1736301387323908
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.134,
+      "newtons": 1.7356,
+      "grama_forca": 176.98194592444924,
+      "quilo_forca": 0.17698194592444924
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.145,
+      "newtons": 1.72086,
+      "grama_forca": 175.47888422651977,
+      "quilo_forca": 0.17547888422651978
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.156,
+      "newtons": 1.72343,
+      "grama_forca": 175.74095129325508,
+      "quilo_forca": 0.1757409512932551
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.168,
+      "newtons": 1.76017,
+      "grama_forca": 179.487388659736,
+      "quilo_forca": 0.179487388659736
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.18,
+      "newtons": 1.76559,
+      "grama_forca": 180.04007484717005,
+      "quilo_forca": 0.18004007484717005
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.191,
+      "newtons": 1.83331,
+      "grama_forca": 186.9455930414566,
+      "quilo_forca": 0.18694559304145658
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.202,
+      "newtons": 1.84608,
+      "grama_forca": 188.2477706454294,
+      "quilo_forca": 0.18824777064542939
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.214,
+      "newtons": 1.86793,
+      "grama_forca": 190.47585057078618,
+      "quilo_forca": 0.19047585057078617
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.225,
+      "newtons": 1.82086,
+      "grama_forca": 185.67604635629905,
+      "quilo_forca": 0.18567604635629906
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.237,
+      "newtons": 1.87335,
+      "grama_forca": 191.0285367582202,
+      "quilo_forca": 0.1910285367582202
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.248,
+      "newtons": 1.89917,
+      "grama_forca": 193.6614440201292,
+      "quilo_forca": 0.19366144402012922
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.26,
+      "newtons": 1.91422,
+      "grama_forca": 195.19611692066098,
+      "quilo_forca": 0.195196116920661
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.271,
+      "newtons": 1.91964,
+      "grama_forca": 195.74880310809502,
+      "quilo_forca": 0.19574880310809503
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.282,
+      "newtons": 1.97823,
+      "grama_forca": 201.7233203999327,
+      "quilo_forca": 0.2017233203999327
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.293,
+      "newtons": 1.97566,
+      "grama_forca": 201.4612533331974,
+      "quilo_forca": 0.2014612533331974
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.306,
+      "newtons": 1.94983,
+      "grama_forca": 198.82732635507537,
+      "quilo_forca": 0.19882732635507538
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.317,
+      "newtons": 1.97281,
+      "grama_forca": 201.17063421249867,
+      "quilo_forca": 0.20117063421249867
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.328,
+      "newtons": 2.01344,
+      "grama_forca": 205.313741185828,
+      "quilo_forca": 0.205313741185828
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.34,
+      "newtons": 2.04601,
+      "grama_forca": 208.6349568914971,
+      "quilo_forca": 0.2086349568914971
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.351,
+      "newtons": 2.10121,
+      "grama_forca": 214.2637903871353,
+      "quilo_forca": 0.21426379038713528
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.363,
+      "newtons": 2.06885,
+      "grama_forca": 210.9639887219387,
+      "quilo_forca": 0.2109639887219387
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.374,
+      "newtons": 2.06187,
+      "grama_forca": 210.2522268052801,
+      "quilo_forca": 0.21025222680528008
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.386,
+      "newtons": 2.08641,
+      "grama_forca": 212.7546103919279,
+      "quilo_forca": 0.21275461039192792
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.397,
+      "newtons": 2.13081,
+      "grama_forca": 217.28215037754993,
+      "quilo_forca": 0.21728215037754992
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.408,
+      "newtons": 2.12539,
+      "grama_forca": 216.72946419011592,
+      "quilo_forca": 0.2167294641901159
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.419,
+      "newtons": 2.18188,
+      "grama_forca": 222.48984107722822,
+      "quilo_forca": 0.22248984107722822
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.432,
+      "newtons": 2.23837,
+      "grama_forca": 228.25021796434055,
+      "quilo_forca": 0.22825021796434056
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.443,
+      "newtons": 2.27743,
+      "grama_forca": 232.23322949223228,
+      "quilo_forca": 0.2322332294922323
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.454,
+      "newtons": 2.36392,
+      "grama_forca": 241.05275501827842,
+      "quilo_forca": 0.24105275501827841
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.466,
+      "newtons": 2.35115,
+      "grama_forca": 239.7505774143056,
+      "quilo_forca": 0.2397505774143056
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.477,
+      "newtons": 2.43005,
+      "grama_forca": 247.79613833470145,
+      "quilo_forca": 0.24779613833470146
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.489,
+      "newtons": 2.4405,
+      "grama_forca": 248.8617417772634,
+      "quilo_forca": 0.24886174177726342
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.5,
+      "newtons": 2.58421,
+      "grama_forca": 263.5160834739692,
+      "quilo_forca": 0.2635160834739692
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.512,
+      "newtons": 2.61143,
+      "grama_forca": 266.2917510056951,
+      "quilo_forca": 0.26629175100569513
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.523,
+      "newtons": 2.66324,
+      "grama_forca": 271.5749007051338,
+      "quilo_forca": 0.2715749007051338
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.534,
+      "newtons": 2.69046,
+      "grama_forca": 274.35056823685966,
+      "quilo_forca": 0.27435056823685966
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.545,
+      "newtons": 2.79616,
+      "grama_forca": 285.12896860803636,
+      "quilo_forca": 0.2851289686080364
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.558,
+      "newtons": 2.85595,
+      "grama_forca": 291.2258518454314,
+      "quilo_forca": 0.2912258518454314
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.569,
+      "newtons": 2.86872,
+      "grama_forca": 292.52802944940424,
+      "quilo_forca": 0.29252802944940426
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.58,
+      "newtons": 3.06211,
+      "grama_forca": 312.2483212921844,
+      "quilo_forca": 0.31224832129218444
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.591,
+      "newtons": 3.05166,
+      "grama_forca": 311.18271784962246,
+      "quilo_forca": 0.3111827178496225
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.603,
+      "newtons": 3.12541,
+      "grama_forca": 318.7031249203347,
+      "quilo_forca": 0.3187031249203347
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.615,
+      "newtons": 3.21783,
+      "grama_forca": 328.12734216067673,
+      "quilo_forca": 0.32812734216067674
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.626,
+      "newtons": 3.29732,
+      "grama_forca": 336.23306633763826,
+      "quilo_forca": 0.3362330663376383
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.638,
+      "newtons": 3.38222,
+      "grama_forca": 344.89045698582083,
+      "quilo_forca": 0.3448904569858208
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.649,
+      "newtons": 3.50801,
+      "grama_forca": 357.7174672288702,
+      "quilo_forca": 0.3577174672288702
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.66,
+      "newtons": 3.61568,
+      "grama_forca": 368.6967516940036,
+      "quilo_forca": 0.36869675169400357
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.671,
+      "newtons": 3.80579,
+      "grama_forca": 388.08257661892696,
+      "quilo_forca": 0.388082576618927
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.684,
+      "newtons": 4.00656,
+      "grama_forca": 408.55541902688486,
+      "quilo_forca": 0.40855541902688486
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.695,
+      "newtons": 4.21799,
+      "grama_forca": 430.1152789178772,
+      "quilo_forca": 0.4301152789178772
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.706,
+      "newtons": 4.39427,
+      "grama_forca": 448.09083632025204,
+      "quilo_forca": 0.44809083632025204
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.717,
+      "newtons": 4.66419,
+      "grama_forca": 475.6150163409523,
+      "quilo_forca": 0.4756150163409523
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.729,
+      "newtons": 5.05321,
+      "grama_forca": 515.2840164582198,
+      "quilo_forca": 0.5152840164582198
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.741,
+      "newtons": 5.45857,
+      "grama_forca": 556.619232867493,
+      "quilo_forca": 0.556619232867493
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.752,
+      "newtons": 5.82084,
+      "grama_forca": 593.5604921150443,
+      "quilo_forca": 0.5935604921150444
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.764,
+      "newtons": 6.16701,
+      "grama_forca": 628.8600082597013,
+      "quilo_forca": 0.6288600082597013
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.775,
+      "newtons": 6.44975,
+      "grama_forca": 657.6914644654393,
+      "quilo_forca": 0.6576914644654392
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.786,
+      "newtons": 6.68138,
+      "grama_forca": 681.3111511066471,
+      "quilo_forca": 0.6813111511066471
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.797,
+      "newtons": 6.95259,
+      "grama_forca": 708.9668745188214,
+      "quilo_forca": 0.7089668745188215
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.81,
+      "newtons": 7.45877,
+      "grama_forca": 760.5828697873383,
+      "quilo_forca": 0.7605828697873382
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.821,
+      "newtons": 7.91387,
+      "grama_forca": 806.9901546399639,
+      "quilo_forca": 0.8069901546399638
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.832,
+      "newtons": 8.35479,
+      "grama_forca": 851.9514819025865,
+      "quilo_forca": 0.8519514819025865
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.843,
+      "newtons": 8.91829,
+      "grama_forca": 909.412490503893,
+      "quilo_forca": 0.909412490503893
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.855,
+      "newtons": 9.52579,
+      "grama_forca": 971.360250442302,
+      "quilo_forca": 0.971360250442302
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.867,
+      "newtons": 10.2011,
+      "grama_forca": 1040.2227060209143,
+      "quilo_forca": 1.0402227060209144
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.878,
+      "newtons": 10.8981,
+      "grama_forca": 1111.2969260654759,
+      "quilo_forca": 1.111296926065476
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.889,
+      "newtons": 11.6791,
+      "grama_forca": 1190.9367622990524,
+      "quilo_forca": 1.1909367622990523
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.901,
+      "newtons": 12.5845,
+      "grama_forca": 1283.261868222074,
+      "quilo_forca": 1.283261868222074
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.912,
+      "newtons": 13.6283,
+      "grama_forca": 1389.69984653271,
+      "quilo_forca": 1.38969984653271
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.923,
+      "newtons": 14.4923,
+      "grama_forca": 1477.803327334003,
+      "quilo_forca": 1.477803327334003
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.936,
+      "newtons": 15.3414,
+      "grama_forca": 1564.387430977959,
+      "quilo_forca": 1.5643874309779588
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.947,
+      "newtons": 16.2994,
+      "grama_forca": 1662.0762441812442,
+      "quilo_forca": 1.6620762441812442
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.958,
+      "newtons": 17.3927,
+      "grama_forca": 1773.5618177461215,
+      "quilo_forca": 1.7735618177461214
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.969,
+      "newtons": 18.5138,
+      "grama_forca": 1887.882202383077,
+      "quilo_forca": 1.8878822023830768
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.981,
+      "newtons": 19.626,
+      "grama_forca": 2001.2950395904822,
+      "quilo_forca": 2.0012950395904823
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 1.993,
+      "newtons": 20.737,
+      "grama_forca": 2114.5855108523297,
+      "quilo_forca": 2.1145855108523297
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.004,
+      "newtons": 21.8412,
+      "grama_forca": 2227.182575089353,
+      "quilo_forca": 2.227182575089353
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.015,
+      "newtons": 23.0489,
+      "grama_forca": 2350.333702130697,
+      "quilo_forca": 2.350333702130697
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.027,
+      "newtons": 24.1611,
+      "grama_forca": 2463.7465393381026,
+      "quilo_forca": 2.4637465393381026
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.038,
+      "newtons": 25.3949,
+      "grama_forca": 2589.559125695319,
+      "quilo_forca": 2.589559125695319
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.049,
+      "newtons": 26.7318,
+      "grama_forca": 2725.8849862083384,
+      "quilo_forca": 2.7258849862083383
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.061,
+      "newtons": 28.3206,
+      "grama_forca": 2887.8974981262713,
+      "quilo_forca": 2.8878974981262715
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.073,
+      "newtons": 30.0273,
+      "grama_forca": 3061.932464195215,
+      "quilo_forca": 3.061932464195215
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.084,
+      "newtons": 32.1564,
+      "grama_forca": 3279.0402431003454,
+      "quilo_forca": 3.2790402431003454
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.095,
+      "newtons": 34.3792,
+      "grama_forca": 3505.7027629210793,
+      "quilo_forca": 3.505702762921079
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.107,
+      "newtons": 36.8972,
+      "grama_forca": 3762.4673053489214,
+      "quilo_forca": 3.7624673053489213
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.119,
+      "newtons": 39.3737,
+      "grama_forca": 4015.000025492905,
+      "quilo_forca": 4.015000025492905
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.13,
+      "newtons": 42.1256,
+      "grama_forca": 4295.615730142302,
+      "quilo_forca": 4.295615730142302
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.141,
+      "newtons": 45.5675,
+      "grama_forca": 4646.591853487175,
+      "quilo_forca": 4.646591853487175
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.153,
+      "newtons": 49.0093,
+      "grama_forca": 4997.557779669918,
+      "quilo_forca": 4.997557779669918
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.164,
+      "newtons": 51.9378,
+      "grama_forca": 5296.181672640505,
+      "quilo_forca": 5.296181672640505
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.175,
+      "newtons": 54.7764,
+      "grama_forca": 5585.63831685642,
+      "quilo_forca": 5.58563831685642
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.187,
+      "newtons": 57.6378,
+      "grama_forca": 5877.419914037923,
+      "quilo_forca": 5.877419914037923
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.199,
+      "newtons": 60.2277,
+      "grama_forca": 6141.516216037077,
+      "quilo_forca": 6.141516216037077
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.21,
+      "newtons": 63.2254,
+      "grama_forca": 6447.19654520147,
+      "quilo_forca": 6.447196545201471
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.221,
+      "newtons": 66.237,
+      "grama_forca": 6754.294279901903,
+      "quilo_forca": 6.754294279901903
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.233,
+      "newtons": 69.0132,
+      "grama_forca": 7037.387894948835,
+      "quilo_forca": 7.037387894948836
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.245,
+      "newtons": 71.142,
+      "grama_forca": 7254.465082367577,
+      "quilo_forca": 7.254465082367577
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.256,
+      "newtons": 73.2671,
+      "grama_forca": 7471.164974787517,
+      "quilo_forca": 7.471164974787517
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.267,
+      "newtons": 76.8631,
+      "grama_forca": 7837.854924974381,
+      "quilo_forca": 7.837854924974381
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.279,
+      "newtons": 80.6575,
+      "grama_forca": 8224.776044826725,
+      "quilo_forca": 8.224776044826726
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.29,
+      "newtons": 82.783,
+      "grama_forca": 8441.516725895184,
+      "quilo_forca": 8.441516725895184
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.301,
+      "newtons": 85.4641,
+      "grama_forca": 8714.912839756696,
+      "quilo_forca": 8.714912839756696
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.313,
+      "newtons": 88.5315,
+      "grama_forca": 9027.700590925546,
+      "quilo_forca": 9.027700590925546
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.325,
+      "newtons": 91.4417,
+      "grama_forca": 9324.458403226383,
+      "quilo_forca": 9.324458403226382
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.336,
+      "newtons": 94.6166,
+      "grama_forca": 9648.208103684747,
+      "quilo_forca": 9.648208103684746
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.347,
+      "newtons": 98.2125,
+      "grama_forca": 10014.887856709478,
+      "quilo_forca": 10.014887856709478
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.358,
+      "newtons": 101.794,
+      "grama_forca": 10380.099218387522,
+      "quilo_forca": 10.380099218387523
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.371,
+      "newtons": 105.799,
+      "grama_forca": 10788.495561685184,
+      "quilo_forca": 10.788495561685185
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.382,
+      "newtons": 109.728,
+      "grama_forca": 11189.142061764212,
+      "quilo_forca": 11.189142061764212
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.393,
+      "newtons": 114.073,
+      "grama_forca": 11632.20875630312,
+      "quilo_forca": 11.63220875630312
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.405,
+      "newtons": 117.659,
+      "grama_forca": 11997.878990277008,
+      "quilo_forca": 11.997878990277007
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.416,
+      "newtons": 121.312,
+      "grama_forca": 12370.381322877844,
+      "quilo_forca": 12.370381322877844
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.427,
+      "newtons": 125.521,
+      "grama_forca": 12799.579876920254,
+      "quilo_forca": 12.799579876920253
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.439,
+      "newtons": 129.633,
+      "grama_forca": 13218.88718369678,
+      "quilo_forca": 13.21888718369678
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.451,
+      "newtons": 133.712,
+      "grama_forca": 13634.829426970473,
+      "quilo_forca": 13.634829426970473
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.462,
+      "newtons": 136.928,
+      "grama_forca": 13962.770161064176,
+      "quilo_forca": 13.962770161064176
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.473,
+      "newtons": 137.698,
+      "grama_forca": 14041.288309463478,
+      "quilo_forca": 14.041288309463479
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.484,
+      "newtons": 136.45,
+      "grama_forca": 13914.02772608383,
+      "quilo_forca": 13.91402772608383
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.496,
+      "newtons": 135.567,
+      "grama_forca": 13823.986784477882,
+      "quilo_forca": 13.823986784477881
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.508,
+      "newtons": 132.61,
+      "grama_forca": 13522.456700300309,
+      "quilo_forca": 13.522456700300308
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.519,
+      "newtons": 129.985,
+      "grama_forca": 13254.781194393603,
+      "quilo_forca": 13.254781194393603
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.53,
+      "newtons": 129.487,
+      "grama_forca": 13203.9993269873,
+      "quilo_forca": 13.203999326987299
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.542,
+      "newtons": 131.889,
+      "grama_forca": 13448.9351613446,
+      "quilo_forca": 13.4489351613446
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.553,
+      "newtons": 130.827,
+      "grama_forca": 13340.641299526344,
+      "quilo_forca": 13.340641299526343
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.565,
+      "newtons": 127.754,
+      "grama_forca": 13027.282507278225,
+      "quilo_forca": 13.027282507278226
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.577,
+      "newtons": 128.352,
+      "grama_forca": 13088.261536814305,
+      "quilo_forca": 13.088261536814306
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.588,
+      "newtons": 127.937,
+      "grama_forca": 13045.943313975722,
+      "quilo_forca": 13.045943313975721
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.599,
+      "newtons": 126.931,
+      "grama_forca": 12943.359862950141,
+      "quilo_forca": 12.94335986295014
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.61,
+      "newtons": 126.957,
+      "grama_forca": 12946.011125103883,
+      "quilo_forca": 12.946011125103883
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.622,
+      "newtons": 128.377,
+      "grama_forca": 13090.81082734675,
+      "quilo_forca": 13.09081082734675
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.634,
+      "newtons": 128.592,
+      "grama_forca": 13112.734725925779,
+      "quilo_forca": 13.112734725925778
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.645,
+      "newtons": 133.191,
+      "grama_forca": 13581.702212274324,
+      "quilo_forca": 13.581702212274324
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.656,
+      "newtons": 132.359,
+      "grama_forca": 13496.861823354562,
+      "quilo_forca": 13.496861823354562
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.668,
+      "newtons": 130.962,
+      "grama_forca": 13354.407468401543,
+      "quilo_forca": 13.354407468401543
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.679,
+      "newtons": 130.662,
+      "grama_forca": 13323.815982012207,
+      "quilo_forca": 13.323815982012208
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.691,
+      "newtons": 128.585,
+      "grama_forca": 13112.020924576693,
+      "quilo_forca": 13.112020924576692
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.703,
+      "newtons": 126.934,
+      "grama_forca": 12943.665777814034,
+      "quilo_forca": 12.943665777814035
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.714,
+      "newtons": 124.973,
+      "grama_forca": 12743.699428449065,
+      "quilo_forca": 12.743699428449064
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.725,
+      "newtons": 125.663,
+      "grama_forca": 12814.05984714454,
+      "quilo_forca": 12.81405984714454
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.736,
+      "newtons": 122.877,
+      "grama_forca": 12529.96691020889,
+      "quilo_forca": 12.52996691020889
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.748,
+      "newtons": 120.135,
+      "grama_forca": 12250.360724610342,
+      "quilo_forca": 12.250360724610342
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.76,
+      "newtons": 120.439,
+      "grama_forca": 12281.360097484869,
+      "quilo_forca": 12.28136009748487
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.771,
+      "newtons": 117.68,
+      "grama_forca": 12000.020394324261,
+      "quilo_forca": 12.000020394324261
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.782,
+      "newtons": 115.698,
+      "grama_forca": 11797.912640912034,
+      "quilo_forca": 11.797912640912035
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.794,
+      "newtons": 115.137,
+      "grama_forca": 11740.706561363973,
+      "quilo_forca": 11.740706561363973
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.805,
+      "newtons": 109.394,
+      "grama_forca": 11155.083540250751,
+      "quilo_forca": 11.15508354025075
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.817,
+      "newtons": 104.375,
+      "grama_forca": 10643.287972957127,
+      "quilo_forca": 10.643287972957127
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.828,
+      "newtons": 103.678,
+      "grama_forca": 10572.213752912565,
+      "quilo_forca": 10.572213752912564
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.84,
+      "newtons": 99.6539,
+      "grama_forca": 10161.869751648115,
+      "quilo_forca": 10.161869751648116
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.851,
+      "newtons": 95.5091,
+      "grama_forca": 9739.217775693027,
+      "quilo_forca": 9.739217775693026
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.862,
+      "newtons": 91.197,
+      "grama_forca": 9299.505947494814,
+      "quilo_forca": 9.299505947494813
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.874,
+      "newtons": 85.4615,
+      "grama_forca": 8714.64771354132,
+      "quilo_forca": 8.714647713541321
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.886,
+      "newtons": 81.0565,
+      "grama_forca": 8265.462721724545,
+      "quilo_forca": 8.265462721724544
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.897,
+      "newtons": 77.0699,
+      "grama_forca": 7858.942656258763,
+      "quilo_forca": 7.858942656258764
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.908,
+      "newtons": 72.5597,
+      "grama_forca": 7399.030249881459,
+      "quilo_forca": 7.399030249881459
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.92,
+      "newtons": 67.35,
+      "grama_forca": 6867.788694406347,
+      "quilo_forca": 6.867788694406347
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.931,
+      "newtons": 62.1233,
+      "grama_forca": 6334.813621369173,
+      "quilo_forca": 6.3348136213691735
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.943,
+      "newtons": 56.3553,
+      "grama_forca": 5746.6413097235045,
+      "quilo_forca": 5.746641309723504
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.954,
+      "newtons": 49.7091,
+      "grama_forca": 5068.917520254114,
+      "quilo_forca": 5.0689175202541135
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.966,
+      "newtons": 43.0686,
+      "grama_forca": 4391.774969026121,
+      "quilo_forca": 4.3917749690261205
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.977,
+      "newtons": 37.6755,
+      "grama_forca": 3841.8318182049934,
+      "quilo_forca": 3.8418318182049935
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.988,
+      "newtons": 32.3096,
+      "grama_forca": 3294.6622954831673,
+      "quilo_forca": 3.2946622954831675
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 2.999,
+      "newtons": 27.2492,
+      "grama_forca": 2778.6451030678163,
+      "quilo_forca": 2.778645103067816
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.012,
+      "newtons": 23.3456,
+      "grama_forca": 2380.5886821697527,
+      "quilo_forca": 2.3805886821697526
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.023,
+      "newtons": 20.0057,
+      "grama_forca": 2040.0136641972542,
+      "quilo_forca": 2.040013664197254
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.034,
+      "newtons": 17.6672,
+      "grama_forca": 1801.5530277923658,
+      "quilo_forca": 1.8015530277923657
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.046,
+      "newtons": 15.6248,
+      "grama_forca": 1593.2861884537535,
+      "quilo_forca": 1.5932861884537535
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.057,
+      "newtons": 13.8848,
+      "grama_forca": 1415.8555673955939,
+      "quilo_forca": 1.415855567395594
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.069,
+      "newtons": 12.2672,
+      "grama_forca": 1250.9062727842843,
+      "quilo_forca": 1.2509062727842843
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.08,
+      "newtons": 11.1286,
+      "grama_forca": 1134.8013847746174,
+      "quilo_forca": 1.1348013847746174
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.092,
+      "newtons": 10.2753,
+      "grama_forca": 1047.7890003212108,
+      "quilo_forca": 1.0477890003212107
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.103,
+      "newtons": 9.48583,
+      "grama_forca": 967.2854644552422,
+      "quilo_forca": 0.9672854644552422
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.114,
+      "newtons": 8.73078,
+      "grama_forca": 890.2917917943436,
+      "quilo_forca": 0.8902917917943436
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.125,
+      "newtons": 8.30781,
+      "grama_forca": 847.1608551340163,
+      "quilo_forca": 0.8471608551340163
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.138,
+      "newtons": 7.80597,
+      "grama_forca": 795.9874167019319,
+      "quilo_forca": 0.795987416701932
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.149,
+      "newtons": 7.30443,
+      "grama_forca": 744.8445697562369,
+      "quilo_forca": 0.7448445697562369
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.16,
+      "newtons": 6.78306,
+      "grama_forca": 691.6796255602065,
+      "quilo_forca": 0.6916796255602066
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.172,
+      "newtons": 6.373,
+      "grama_forca": 649.8651425308337,
+      "quilo_forca": 0.6498651425308337
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.183,
+      "newtons": 5.88507,
+      "grama_forca": 600.1101293510017,
+      "quilo_forca": 0.6001101293510016
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.195,
+      "newtons": 5.58223,
+      "grama_forca": 569.2290435571781,
+      "quilo_forca": 0.5692290435571781
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.206,
+      "newtons": 5.305,
+      "grama_forca": 540.9594509847909,
+      "quilo_forca": 0.5409594509847909
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.218,
+      "newtons": 5.02807,
+      "grama_forca": 512.7204498987932,
+      "quilo_forca": 0.5127204498987932
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.229,
+      "newtons": 4.80543,
+      "grama_forca": 490.0174881330526,
+      "quilo_forca": 0.4900174881330526
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.24,
+      "newtons": 4.57679,
+      "grama_forca": 466.70269663952524,
+      "quilo_forca": 0.46670269663952524
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.251,
+      "newtons": 4.37863,
+      "grama_forca": 446.49600016315463,
+      "quilo_forca": 0.44649600016315466
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.264,
+      "newtons": 4.23136,
+      "grama_forca": 431.4786394946286,
+      "quilo_forca": 0.4314786394946286
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.275,
+      "newtons": 4.01353,
+      "grama_forca": 409.2661612273305,
+      "quilo_forca": 0.4092661612273305
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.286,
+      "newtons": 3.82812,
+      "grama_forca": 390.3596029225067,
+      "quilo_forca": 0.3903596029225067
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.297,
+      "newtons": 3.67627,
+      "grama_forca": 374.87521222843685,
+      "quilo_forca": 0.37487521222843684
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.309,
+      "newtons": 3.50801,
+      "grama_forca": 357.7174672288702,
+      "quilo_forca": 0.3577174672288702
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.321,
+      "newtons": 3.38222,
+      "grama_forca": 344.89045698582083,
+      "quilo_forca": 0.3448904569858208
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.332,
+      "newtons": 3.30846,
+      "grama_forca": 337.3690301988957,
+      "quilo_forca": 0.3373690301988957
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.344,
+      "newtons": 3.17612,
+      "grama_forca": 323.8741058363458,
+      "quilo_forca": 0.3238741058363458
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.355,
+      "newtons": 3.01283,
+      "grama_forca": 307.22315979462917,
+      "quilo_forca": 0.30722315979462916
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.366,
+      "newtons": 2.89258,
+      "grama_forca": 294.96107233356963,
+      "quilo_forca": 0.2949610723335696
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.377,
+      "newtons": 2.77512,
+      "grama_forca": 282.98348569593077,
+      "quilo_forca": 0.2829834856959308
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.39,
+      "newtons": 2.66845,
+      "grama_forca": 272.10617285209526,
+      "quilo_forca": 0.27210617285209526
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.401,
+      "newtons": 2.56306,
+      "grama_forca": 261.3593836835209,
+      "quilo_forca": 0.2613593836835209
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.412,
+      "newtons": 2.44688,
+      "grama_forca": 249.51232072114334,
+      "quilo_forca": 0.24951232072114335
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.423,
+      "newtons": 2.38233,
+      "grama_forca": 242.9300525663708,
+      "quilo_forca": 0.2429300525663708
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.435,
+      "newtons": 2.32365,
+      "grama_forca": 236.94635782861633,
+      "quilo_forca": 0.23694635782861634
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.447,
+      "newtons": 2.20619,
+      "grama_forca": 224.96877119097755,
+      "quilo_forca": 0.22496877119097755
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.458,
+      "newtons": 2.12457,
+      "grama_forca": 216.64584746065168,
+      "quilo_forca": 0.21664584746065169
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.469,
+      "newtons": 2.07857,
+      "grama_forca": 211.95515288095322,
+      "quilo_forca": 0.21195515288095323
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.481,
+      "newtons": 2.04183,
+      "grama_forca": 208.20871551447235,
+      "quilo_forca": 0.20820871551447234
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.492,
+      "newtons": 1.98534,
+      "grama_forca": 202.44833862736004,
+      "quilo_forca": 0.20244833862736003
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.503,
+      "newtons": 1.90273,
+      "grama_forca": 194.02446299194938,
+      "quilo_forca": 0.19402446299194936
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.516,
+      "newtons": 1.84006,
+      "grama_forca": 187.63390148521668,
+      "quilo_forca": 0.1876339014852167
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.527,
+      "newtons": 1.78139,
+      "grama_forca": 181.6512264636752,
+      "quilo_forca": 0.18165122646367518
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.538,
+      "newtons": 1.72086,
+      "grama_forca": 175.47888422651977,
+      "quilo_forca": 0.17547888422651978
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.549,
+      "newtons": 1.67585,
+      "grama_forca": 170.88914155190614,
+      "quilo_forca": 0.17088914155190613
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.561,
+      "newtons": 1.6021,
+      "grama_forca": 163.3687344811939,
+      "quilo_forca": 0.1633687344811939
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.572,
+      "newtons": 1.54157,
+      "grama_forca": 157.1963922440385,
+      "quilo_forca": 0.1571963922440385
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.584,
+      "newtons": 1.48133,
+      "grama_forca": 151.05362177705945,
+      "quilo_forca": 0.15105362177705944
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.595,
+      "newtons": 1.41678,
+      "grama_forca": 144.47135362228693,
+      "quilo_forca": 0.1444713536222869
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.607,
+      "newtons": 1.39573,
+      "grama_forca": 142.32485099396837,
+      "quilo_forca": 0.14232485099396838
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.618,
+      "newtons": 1.37777,
+      "grama_forca": 140.49344067546002,
+      "quilo_forca": 0.14049344067546002
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.629,
+      "newtons": 1.30173,
+      "grama_forca": 132.73951859197587,
+      "quilo_forca": 0.13273951859197586
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.642,
+      "newtons": 1.28911,
+      "grama_forca": 131.4526367311977,
+      "quilo_forca": 0.13145263673119773
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.653,
+      "newtons": 1.27436,
+      "grama_forca": 129.94855531705525,
+      "quilo_forca": 0.12994855531705526
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.664,
+      "newtons": 1.24715,
+      "grama_forca": 127.17390750154235,
+      "quilo_forca": 0.12717390750154234
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.675,
+      "newtons": 1.2576,
+      "grama_forca": 128.23951094410427,
+      "quilo_forca": 0.12823951094410427
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.687,
+      "newtons": 1.20466,
+      "grama_forca": 122.84113331259911,
+      "quilo_forca": 0.12284113331259912
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.698,
+      "newtons": 1.18182,
+      "grama_forca": 120.51210148215753,
+      "quilo_forca": 0.12051210148215753
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.71,
+      "newtons": 1.19656,
+      "grama_forca": 122.015163180087,
+      "quilo_forca": 0.122015163180087
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.721,
+      "newtons": 1.17074,
+      "grama_forca": 119.38225591817798,
+      "quilo_forca": 0.11938225591817797
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.733,
+      "newtons": 1.13817,
+      "grama_forca": 116.06104021250886,
+      "quilo_forca": 0.11606104021250886
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.744,
+      "newtons": 1.11441,
+      "grama_forca": 113.6381944904733,
+      "quilo_forca": 0.1136381944904733
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.755,
+      "newtons": 1.10178,
+      "grama_forca": 112.35029291348218,
+      "quilo_forca": 0.11235029291348218
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.767,
+      "newtons": 1.07654,
+      "grama_forca": 109.7765291919259,
+      "quilo_forca": 0.1097765291919259
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.779,
+      "newtons": 1.07912,
+      "grama_forca": 110.03961597487421,
+      "quilo_forca": 0.1100396159748742
+    },
+    {
+      "timestamp": "07/11/2025 03:27:04.000",
+      "tempo_esp": 3.79,
+      "newtons": 1.04382,
+      "grama_forca": 106.44001774306211,
+      "quilo_forca": 0.10644001774306211
+    }
+  ],
+  "timestamp": "2025-11-07 06:27:04"
+}
