@@ -1,0 +1,61 @@
+{
+  "id": 1761567312166,
+  "nome": "Teste Automatizado 091512",
+  "timestamp": "2025-10-27 09:15:12",
+  "data_inicio": "2025-10-27 09:15:12",
+  "data_fim": "2025-10-27 09:15:12",
+  "data_modificacao": "2025-11-07 01:23:44",
+  "dadosTabela": [
+    {
+      "timestamp": "",
+      "tempo_esp": 0,
+      "newtons": 10,
+      "grama_forca": 1019.7162129779282,
+      "quilo_forca": 1.0197162129779282
+    },
+    {
+      "timestamp": "",
+      "tempo_esp": 0.1,
+      "newtons": 10.5,
+      "grama_forca": 1070.7020236268247,
+      "quilo_forca": 1.0707020236268248
+    },
+    {
+      "timestamp": "",
+      "tempo_esp": 0.2,
+      "newtons": 11,
+      "grama_forca": 1121.6878342757211,
+      "quilo_forca": 1.121687834275721
+    },
+    {
+      "timestamp": "",
+      "tempo_esp": 0.3,
+      "newtons": 11.5,
+      "grama_forca": 1172.6736449246175,
+      "quilo_forca": 1.1726736449246176
+    },
+    {
+      "timestamp": "",
+      "tempo_esp": 0.4,
+      "newtons": 12,
+      "grama_forca": 1223.659455573514,
+      "quilo_forca": 1.2236594555735139
+    }
+  ],
+  "metadadosMotor": {
+    "name": "",
+    "diameter": 45,
+    "length": 200,
+    "delay": 0,
+    "propweight": 0.1,
+    "totalweight": 0.25,
+    "manufacturer": "Grupo de Foguetes - Campus Gaspar IFSC",
+    "description": "",
+    "observations": "",
+    "temperatura": null,
+    "umidade": null,
+    "pressao": 10000
+  },
+  "burnMetadata": {},
+  "savedToMysql": true
+}

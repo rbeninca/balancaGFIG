@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste de Carregamento Automático - Demo JSON</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 { color: #2c3e50; }
+    .status {
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+    .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .log {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 5px;
+      padding: 15px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover { background: #0056b3; }
+    button.danger { background: #dc3545; }
+    button.danger:hover { background: #c82333; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Teste de Carregamento Automático</h1>
+    <p>Este teste verifica se os arquivos JSON de demonstração são carregados automaticamente quando:</p>
+    <ul>
+      <li>A aplicação detecta modo GitHub Pages (simulado aqui)</li>
+      <li>Não há sessões gravadas no localStorage</li>
+    </ul>
+
+    <div id="github-status" class="status info">
+      🔍 Verificando modo GitHub Pages...
+    </div>
+
+    <div id="localstorage-status" class="status info">
+      📦 Verificando localStorage...
+    </div>
+
+    <div id="demo-load-status" class="status info">
+      ⏳ Aguardando teste...
+    </div>
+
+    <div style="margin: 20px 0;">
+      <button onclick="runTest()">▶️ Executar Teste</button>
+      <button onclick="clearLocalStorage()" class="danger">🗑️ Limpar localStorage</button>
+      <button onclick="showLocalStorage()">📋 Mostrar localStorage</button>
+    </div>
+
+    <h3>📝 Log de Console:</h3>
+    <div id="console-log" class="log"></div>
+  </div>
+
+  <script>
+    // Intercepta console.log
+    const logDiv = document.getElementById('console-log');
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+
+    function addToLog(type, ...args) {
+      const timestamp = new Date().toLocaleTimeString();
+      const message = args.map(arg =>
+        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+      ).join(' ');
+      logDiv.innerHTML += `[${timestamp}] [${type}] ${message}\n`;
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      addToLog('LOG', ...args);
+    };
+
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      addToLog('ERROR', ...args);
+    };
+
+    console.warn = function(...args) {
+      originalWarn.apply(console, args);
+      addToLog('WARN', ...args);
+    };
+
+    // Simula a função isGitHubPages retornando true
+    function isGitHubPages() {
+      return true; // Forçado para teste
+    }
+
+    // Copia a função do script.js
+    async function loadDemoJsonSessions() {
+      const demoFiles = ['F50.json', 'G60.json', 'Teste_Automatizado_091512.json'];
+      const loadedSessions = [];
+
+      console.log('[loadDemoJsonSessions] Carregando arquivos JSON de demonstração...');
+
+      for (const filename of demoFiles) {
+        try {
+          const response = await fetch(`json/${filename}`);
+          if (!response.ok) {
+            console.warn(`[loadDemoJsonSessions] Não foi possível carregar ${filename}: ${response.statusText}`);
+            continue;
+          }
+
+          const sessionData = await response.json();
+
+          if (sessionData && sessionData.dadosTabela) {
+            loadedSessions.push(sessionData);
+            console.log(`[loadDemoJsonSessions] ✓ Carregado: ${filename} (${sessionData.nome || 'sem nome'})`);
+          } else {
+            console.warn(`[loadDemoJsonSessions] Arquivo ${filename} não tem estrutura válida`);
+          }
+        } catch (error) {
+          console.error(`[loadDemoJsonSessions] Erro ao carregar ${filename}:`, error);
+        }
+      }
+
+      if (loadedSessions.length > 0) {
+        try {
+          localStorage.setItem('balancaGravacoes', JSON.stringify(loadedSessions));
+          console.log(`[loadDemoJsonSessions] ${loadedSessions.length} sessões de demonstração salvas no localStorage`);
+          return loadedSessions;
+        } catch (error) {
+          console.error('[loadDemoJsonSessions] Erro ao salvar no localStorage:', error);
+        }
+      } else {
+        console.warn('[loadDemoJsonSessions] Nenhuma sessão de demonstração foi carregada');
+      }
+
+      return loadedSessions;
+    }
+
+    async function runTest() {
+      logDiv.innerHTML = '';
+      console.log('=== INICIANDO TESTE ===');
+
+      // 1. Verifica modo GitHub Pages
+      const isGithub = isGitHubPages();
+      const githubStatus = document.getElementById('github-status');
+      if (isGithub) {
+        githubStatus.className = 'status success';
+        githubStatus.innerHTML = '✅ Modo GitHub Pages: ATIVO (simulado)';
+        console.log('✅ Modo GitHub Pages detectado');
+      } else {
+        githubStatus.className = 'status error';
+        githubStatus.innerHTML = '❌ Modo GitHub Pages: INATIVO';
+        console.log('❌ Modo GitHub Pages não detectado');
+      }
+
+      // 2. Verifica localStorage
+      let sessions = [];
+      try {
+        sessions = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+      } catch (e) {
+        console.error('Erro ao ler localStorage:', e);
+      }
+
+      const localStorageStatus = document.getElementById('localstorage-status');
+      if (sessions.length === 0) {
+        localStorageStatus.className = 'status info';
+        localStorageStatus.innerHTML = `📦 localStorage: VAZIO (${sessions.length} sessões)`;
+        console.log('📦 localStorage vazio - condição atendida para carregamento automático');
+      } else {
+        localStorageStatus.className = 'status success';
+        localStorageStatus.innerHTML = `📦 localStorage: ${sessions.length} sessão(ões) encontrada(s)`;
+        console.log(`📦 localStorage contém ${sessions.length} sessão(ões)`);
+      }
+
+      // 3. Testa carregamento
+      const demoLoadStatus = document.getElementById('demo-load-status');
+
+      if (isGithub && sessions.length === 0) {
+        demoLoadStatus.className = 'status info';
+        demoLoadStatus.innerHTML = '⏳ Condições atendidas! Carregando arquivos JSON...';
+        console.log('🚀 Iniciando carregamento automático dos arquivos de demonstração...');
+
+        try {
+          const loaded = await loadDemoJsonSessions();
+
+          if (loaded && loaded.length > 0) {
+            demoLoadStatus.className = 'status success';
+            demoLoadStatus.innerHTML = `✅ SUCESSO! ${loaded.length} arquivo(s) JSON carregado(s) e salvos no localStorage`;
+            console.log(`✅ Teste concluído com sucesso! ${loaded.length} arquivo(s) carregado(s)`);
+            console.log('Sessões carregadas:', loaded.map(s => s.nome).join(', '));
+
+            // Atualiza status do localStorage
+            localStorageStatus.className = 'status success';
+            localStorageStatus.innerHTML = `📦 localStorage: ${loaded.length} sessão(ões) - ATUALIZADO`;
+          } else {
+            demoLoadStatus.className = 'status error';
+            demoLoadStatus.innerHTML = '❌ ERRO: Nenhum arquivo foi carregado';
+            console.error('❌ Falha: Nenhum arquivo foi carregado');
+          }
+        } catch (error) {
+          demoLoadStatus.className = 'status error';
+          demoLoadStatus.innerHTML = `❌ ERRO: ${error.message}`;
+          console.error('❌ Erro durante o carregamento:', error);
+        }
+      } else {
+        demoLoadStatus.className = 'status info';
+        demoLoadStatus.innerHTML = '⚠️ Condições não atendidas - carregamento não executado';
+        if (!isGithub) {
+          console.warn('⚠️ Modo GitHub Pages não está ativo');
+        }
+        if (sessions.length > 0) {
+          console.warn('⚠️ localStorage já contém sessões');
+        }
+      }
+
+      console.log('=== TESTE FINALIZADO ===');
+    }
+
+    function clearLocalStorage() {
+      localStorage.removeItem('balancaGravacoes');
+      console.log('🗑️ localStorage limpo');
+      document.getElementById('localstorage-status').className = 'status info';
+      document.getElementById('localstorage-status').innerHTML = '📦 localStorage: VAZIO (0 sessões)';
+    }
+
+    function showLocalStorage() {
+      const sessions = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+      console.log('📋 Conteúdo do localStorage:');
+      console.log(`Total de sessões: ${sessions.length}`);
+      if (sessions.length > 0) {
+        sessions.forEach((session, index) => {
+          console.log(`\nSessão ${index + 1}:`);
+          console.log(`  ID: ${session.id}`);
+          console.log(`  Nome: ${session.nome}`);
+          console.log(`  Data início: ${session.data_inicio}`);
+          console.log(`  Leituras: ${session.dadosTabela ? session.dadosTabela.length : 0}`);
+        });
+      }
+    }
+
+    // Executa verificações iniciais ao carregar
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('🔧 Página de teste carregada');
+      console.log('👉 Clique em "Executar Teste" para iniciar');
+    });
+  </script>
+</body>
+</html>
