@@ -294,11 +294,23 @@ function renderBurnAnalysisChart(dados) {
   const segmentSeries = classificacoes.map((c, idx) => {
     const segData = dados.tempos.map((t, i) => {
       const dentroQueima = (t >= burnStartTime && t <= burnEndTime);
-      const exclusivoDestaClasse = (classIndexByPoint[i] === idx);
-      return {
-        x: t,
-        y: (dentroQueima && exclusivoDestaClasse) ? dados.newtons[i] : null
-      };
+      if (!dentroQueima) return { x: t, y: null };
+
+      const currentClass = classIndexByPoint[i];
+      const prevClass = (i > 0) ? classIndexByPoint[i - 1] : -1;
+
+      // O ponto `i` pertence a esta série se:
+      // 1. A classe do ponto atual é `idx`.
+      if (currentClass === idx) {
+        return { x: t, y: dados.newtons[i] };
+      }
+      // 2. A classe do ponto *anterior* era `idx` e a atual é diferente.
+      //    Isso "fecha" a área da série anterior, evitando lacunas.
+      if (prevClass === idx && currentClass !== idx) {
+        return { x: t, y: dados.newtons[i] };
+      }
+
+      return { x: t, y: null };
     });
     return { name: c.classe, type: 'area', data: segData };
   });
