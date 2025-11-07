@@ -32,5 +32,11 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Copy the rest of the application code
 COPY . /app
 
+# Make entrypoint script executable
+RUN chmod +x /app/docker-entrypoint.sh
+
 EXPOSE 80 81
+
+# Use entrypoint script
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["python", "/app/server.py"]

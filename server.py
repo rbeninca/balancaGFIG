@@ -127,6 +127,8 @@ serial_connection: Optional[serial.Serial] = None
 serial_lock = threading.Lock()
 mysql_connection = None
 mysql_connected = False
+serial_connected = False
+serial_last_error = None
 
 # ================== MySQL Utils ==================
 def connect_to_mysql():
@@ -998,8 +1000,12 @@ async def ws_handler(websocket):
     CONNECTED_CLIENTS.add(websocket)
     try:
         # Send initial status on connect
-        await websocket.send(json.dumps({"mysql_connected": mysql_connected}))
-        
+        await websocket.send(json.dumps({
+            "mysql_connected": mysql_connected,
+            "serial_connected": serial_connected,
+            "serial_error": serial_last_error
+        }))
+
         async for message in websocket:
             try:
                 cmd = json.loads(message)
@@ -1063,6 +1069,8 @@ async def broadcast_json(obj: Dict[str, Any]):
     if not CONNECTED_CLIENTS:
         return
     obj["mysql_connected"] = mysql_connected
+    obj["serial_connected"] = serial_connected
+    obj["serial_error"] = serial_last_error
     sanitized = sanitize_for_json(obj)
     data = json.dumps(sanitized, separators=(",", ":"))
     await asyncio.gather(*[ws.send(data) for ws in list(CONNECTED_CLIENTS)], return_exceptions=True)
@@ -1177,14 +1185,50 @@ def find_serial_port() -> Optional[str]:
     return ports[0] if ports else None
 
 def serial_reader(loop: asyncio.AbstractEventLoop):
-    global serial_connection
+    global serial_connection, serial_connected, serial_last_error
+    retry_count = 0
+    max_retry_log = 5  # Logar apenas as primeiras 5 tentativas
+
     while True:
         port = find_serial_port()
         if not port:
-            time.sleep(3)
+            retry_count += 1
+            if retry_count <= max_retry_log:
+                logging.warning(f"Porta serial não encontrada (tentativa {retry_count}). Aguardando dispositivo USB...")
+            elif retry_count == max_retry_log + 1:
+                logging.warning("Porta serial não encontrada. Continuarei tentando silenciosamente em background...")
+
+            if not serial_connected:
+                serial_connected = False
+                serial_last_error = "Dispositivo USB não encontrado. Verifique a conexão do ESP32/NodeMCU."
+                # Broadcast status update
+                status_update = {
+                    "type": "serial_status",
+                    "connected": False,
+                    "error": serial_last_error
+                }
+                asyncio.run_coroutine_threadsafe(broadcast_json(status_update), loop)
+
+            time.sleep(5)  # Aguarda 5 segundos antes de tentar novamente
             continue
+
         try:
+            logging.info(f"Tentando conectar à porta serial {port}...")
             serial_connection = serial.Serial(port, SERIAL_BAUD, timeout=1.0)
+            serial_connected = True
+            serial_last_error = None
+            retry_count = 0  # Reset contador de tentativas
+            logging.info(f"✓ Conectado à porta serial {port} (baud rate: {SERIAL_BAUD})")
+
+            # Broadcast successful connection
+            status_update = {
+                "type": "serial_status",
+                "connected": True,
+                "port": port,
+                "baudrate": SERIAL_BAUD
+            }
+            asyncio.run_coroutine_threadsafe(broadcast_json(status_update), loop)
+
             buf = bytearray()
             invalid_packet_count = 0
             max_invalid_packets = 10  # Limite para evitar travamento com dados corrompidos
@@ -1250,8 +1294,37 @@ def serial_reader(loop: asyncio.AbstractEventLoop):
                             buf.clear()
                             invalid_packet_count = 0
                             
+        except serial.SerialException as e:
+            error_msg = str(e)
+            if "device reports readiness" in error_msg.lower() or "disconnected" in error_msg.lower():
+                logging.warning(f"Dispositivo USB desconectado ou com problemas: {error_msg}")
+                serial_last_error = "Dispositivo USB desconectado ou instável. Verifique o cabo USB e a conexão."
+            else:
+                logging.error(f"Erro na porta serial: {error_msg}")
+                serial_last_error = f"Erro de comunicação serial: {error_msg}"
+
+            serial_connected = False
+            # Broadcast error status
+            status_update = {
+                "type": "serial_status",
+                "connected": False,
+                "error": serial_last_error
+            }
+            asyncio.run_coroutine_threadsafe(broadcast_json(status_update), loop)
+
         except Exception as e:
-            logging.error(f"Erro de leitura serial: {e}", exc_info=False)
+            logging.error(f"Erro inesperado na leitura serial: {e}", exc_info=True)
+            serial_connected = False
+            serial_last_error = f"Erro inesperado: {str(e)}"
+
+            # Broadcast error status
+            status_update = {
+                "type": "serial_status",
+                "connected": False,
+                "error": serial_last_error
+            }
+            asyncio.run_coroutine_threadsafe(broadcast_json(status_update), loop)
+
         finally:
             if serial_connection:
                 try:
@@ -1259,7 +1332,8 @@ def serial_reader(loop: asyncio.AbstractEventLoop):
                 except:
                     pass
             serial_connection = None
-            time.sleep(1)
+            serial_connected = False
+            time.sleep(3)  # Aguarda antes de tentar reconectar
 
 # ================== Main ==================
 async def main():

@@ -223,6 +223,17 @@ function processWebSocketMessage(data) {
         self.postMessage({ type: 'mysql_status_update', payload: data.mysql_connected });
     }
 
+    // NEW: Extract serial connection status
+    if (data.serial_connected !== undefined) {
+        self.postMessage({
+            type: 'serial_status_update',
+            payload: {
+                connected: data.serial_connected,
+                error: data.serial_error || null
+            }
+        });
+    }
+
     if (Array.isArray(data)) {
         // Array de leituras
         data.forEach(reading => {
@@ -231,6 +242,19 @@ function processWebSocketMessage(data) {
     }
     else if (typeof data === 'object' && data.type) {
         switch (data.type) {
+            case "serial_status":
+                // Dedicated serial status update
+                self.postMessage({
+                    type: 'serial_status_update',
+                    payload: {
+                        connected: data.connected,
+                        error: data.error || null,
+                        port: data.port || null,
+                        baudrate: data.baudrate || null
+                    }
+                });
+                break;
+
             case "data":
                 processDataPoint(data);
                 break;
