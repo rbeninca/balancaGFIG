@@ -1740,6 +1740,9 @@ async function salvarDadosDaSessao(nome, tabela) {
     totalweight: parseFloat(document.getElementById('sessao-meta-peso-total')?.value) || null,
     description: document.getElementById('sessao-meta-descricao')?.value?.trim() || null,
     observations: document.getElementById('sessao-meta-observacoes')?.value?.trim() || null,
+    temperatura: document.getElementById('sessao-meta-temperatura')?.value ? parseFloat(document.getElementById('sessao-meta-temperatura').value) : null,
+    umidade: document.getElementById('sessao-meta-umidade')?.value ? parseFloat(document.getElementById('sessao-meta-umidade').value) : null,
+    pressao: document.getElementById('sessao-meta-pressao')?.value ? parseFloat(document.getElementById('sessao-meta-pressao').value) : null,
   };
 
   // Use the captured timestamps or fallback to current time
@@ -2701,12 +2704,26 @@ async function loadAndDisplayAllSessions() {
       // Metadados do motor
       const meta = session.metadadosMotor || {};
       const hasMeta = meta.diameter || meta.length || meta.manufacturer || meta.propweight || meta.totalweight;
-      const metadadosDisplay = hasMeta ? `
+      const hasConditions = meta.temperatura !== null && meta.temperatura !== undefined ||
+                           meta.umidade !== null && meta.umidade !== undefined ||
+                           meta.pressao !== null && meta.pressao !== undefined;
+
+      const motorInfo = hasMeta ? `
         <p style="font-size: 0.75rem; color: var(--cor-texto-secundario); margin-top: 5px;">
           🚀 Motor: ${escapeHtml(meta.description) || escapeHtml(meta.manufacturer) || 'N/D'} • ⌀${meta.diameter || 'N/D'}mm • L${meta.length || 'N/D'}mm •
           Prop: ${meta.propweight || 'N/D'}kg • Total: ${meta.totalweight || 'N/D'}kg
-        </p> 
+        </p>
       ` : '';
+
+      const conditionsInfo = hasConditions ? `
+        <p style="font-size: 0.75rem; color: var(--cor-texto-secundario); margin-top: 3px;">
+          ${meta.temperatura !== null && meta.temperatura !== undefined ? `🌡️ ${meta.temperatura}°C` : ''}
+          ${meta.umidade !== null && meta.umidade !== undefined ? `• 💧 ${meta.umidade}%` : ''}
+          ${meta.pressao !== null && meta.pressao !== undefined ? `• 🔵 ${meta.pressao} hPa` : ''}
+        </p>
+      ` : '';
+
+      const metadadosDisplay = motorInfo + conditionsInfo;
 
       // Indicador de conflito
       const conflictIndicator = session.hasConflict ? `
@@ -2855,6 +2872,18 @@ async function editarMetadadosMotor(sessionId) {
             <label style="display: block; margin-bottom: 5px; font-weight: 600;">💬 Observações</label>
             <textarea id="meta-observations" placeholder="Observações adicionais sobre o teste..." style="width: 100%; padding: 8px; border: 1px solid var(--cor-borda); border-radius: 4px; min-height: 80px; resize: vertical; font-family: inherit;">${meta.observations || ''}</textarea>
           </div>
+          <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">🌡️ Temperatura (°C)</label>
+            <input type="number" id="meta-temperatura" value="${meta.temperatura !== undefined && meta.temperatura !== null ? meta.temperatura : ''}" step="0.1" placeholder="Ex: 25.5" style="width: 100%; padding: 8px; border: 1px solid var(--cor-borda); border-radius: 4px;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">💧 Umidade (%)</label>
+            <input type="number" id="meta-umidade" value="${meta.umidade !== undefined && meta.umidade !== null ? meta.umidade : ''}" min="0" max="100" step="0.1" placeholder="Ex: 65" style="width: 100%; padding: 8px; border: 1px solid var(--cor-borda); border-radius: 4px;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">🔵 Pressão (hPa)</label>
+            <input type="number" id="meta-pressao" value="${meta.pressao !== undefined && meta.pressao !== null ? meta.pressao : ''}" step="0.01" placeholder="Ex: 1013.25" style="width: 100%; padding: 8px; border: 1px solid var(--cor-borda); border-radius: 4px;">
+          </div>
         </div>
         <div style="display: flex; gap: 10px; justify-content: flex-end;">
           <button onclick="fecharModalMetadados()" class="btn btn-secundario">Cancelar</button>
@@ -2886,7 +2915,10 @@ async function salvarMetadadosMotor(sessionId) {
     propweight: parseFloat(document.getElementById('meta-propweight').value) || 0.1,
     totalweight: parseFloat(document.getElementById('meta-totalweight').value) || 0.25,
     description: document.getElementById('meta-description').value.trim(),
-    observations: document.getElementById('meta-observations').value.trim()
+    observations: document.getElementById('meta-observations').value.trim(),
+    temperatura: document.getElementById('meta-temperatura').value ? parseFloat(document.getElementById('meta-temperatura').value) : null,
+    umidade: document.getElementById('meta-umidade').value ? parseFloat(document.getElementById('meta-umidade').value) : null,
+    pressao: document.getElementById('meta-pressao').value ? parseFloat(document.getElementById('meta-pressao').value) : null
   };
 
   let sessionToUpdate = null;

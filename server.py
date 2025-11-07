@@ -233,6 +233,9 @@ def init_mysql_db():
                     ('motor_manufacturer', 'VARCHAR(255)'),
                     ('motor_description', 'TEXT'),
                     ('motor_observations', 'TEXT'),
+                    ('motor_temperatura', 'FLOAT'),
+                    ('motor_umidade', 'FLOAT'),
+                    ('motor_pressao', 'FLOAT'),
                     ('impulso_total', 'FLOAT'),
                     ('motor_class', 'VARCHAR(50)'),
                     ('class_color', 'VARCHAR(20)'),
@@ -427,8 +430,9 @@ async def save_session_to_mysql_db(session_data: Dict[str, Any]):
             sql_sessoes = """
             INSERT INTO sessoes (id, nome, data_inicio, data_fim, motor_name, motor_diameter,
                                 motor_length, motor_delay, motor_propweight, motor_totalweight, motor_manufacturer,
-                                motor_description, motor_observations, impulso_total, motor_class, class_color)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                motor_description, motor_observations, motor_temperatura, motor_umidade, motor_pressao,
+                                impulso_total, motor_class, class_color)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 nome = VALUES(nome),
                 data_inicio = VALUES(data_inicio),
@@ -442,15 +446,23 @@ async def save_session_to_mysql_db(session_data: Dict[str, Any]):
                 motor_manufacturer = VALUES(motor_manufacturer),
                 motor_description = VALUES(motor_description),
                 motor_observations = VALUES(motor_observations),
+                motor_temperatura = VALUES(motor_temperatura),
+                motor_umidade = VALUES(motor_umidade),
+                motor_pressao = VALUES(motor_pressao),
                 impulso_total = VALUES(impulso_total),
                 motor_class = VALUES(motor_class),
                 class_color = VALUES(class_color)
             """
             try:
+                motor_temperatura = metadados.get('temperatura') if metadados else None
+                motor_umidade = metadados.get('umidade') if metadados else None
+                motor_pressao = metadados.get('pressao') if metadados else None
+                
                 cursor.execute(sql_sessoes, (session_data['id'], session_data['nome'], data_inicio, data_fim,
                                             motor_name, motor_diameter, motor_length, motor_delay,
                                             motor_propweight, motor_totalweight, motor_manufacturer,
-                                            motor_description, motor_observations, impulso_total, motor_class, class_color))
+                                            motor_description, motor_observations, motor_temperatura, motor_umidade, motor_pressao,
+                                            impulso_total, motor_class, class_color))
                 logging.info(f"Sessão inserida/atualizada: {session_data['nome']}")
             except pymysql.Error as e:
                 logging.error(f"Erro ao inserir sessão: {type(e).__name__}: {e}")
@@ -612,7 +624,7 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
                     SELECT id, nome, data_inicio, data_fim, data_modificacao,
                            motor_name, motor_diameter, motor_length, motor_delay,
                            motor_propweight, motor_totalweight, motor_manufacturer,
-                           motor_description, motor_observations,
+                           motor_description, motor_observations, motor_temperatura, motor_umidade, motor_pressao,
                            impulso_total, motor_class, class_color
                     FROM sessoes ORDER BY data_inicio DESC
                 """)
@@ -634,7 +646,10 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
                         'totalweight': sessao.pop('motor_totalweight', None),
                         'manufacturer': sessao.pop('motor_manufacturer', None),
                         'description': sessao.pop('motor_description', None),
-                        'observations': sessao.pop('motor_observations', None)
+                        'observations': sessao.pop('motor_observations', None),
+                        'temperatura': sessao.pop('motor_temperatura', None),
+                        'umidade': sessao.pop('motor_umidade', None),
+                        'pressao': sessao.pop('motor_pressao', None)
                     }
                 self.send_json_response(200, sessoes)
         except pymysql.Error as e:
@@ -676,7 +691,7 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
                         SELECT id, nome, data_inicio, data_fim, data_modificacao,
                                motor_name, motor_diameter, motor_length, motor_delay,
                                motor_propweight, motor_totalweight, motor_manufacturer,
-                               motor_description, motor_observations,
+                               motor_description, motor_observations, motor_temperatura, motor_umidade, motor_pressao,
                                burn_start_time, burn_end_time
                         FROM sessoes WHERE id = %s
                     """, (sessao_id,))
@@ -692,7 +707,10 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
                             'totalweight': sessao.pop('motor_totalweight', None),
                             'manufacturer': sessao.pop('motor_manufacturer', None),
                             'description': sessao.pop('motor_description', None),
-                            'observations': sessao.pop('motor_observations', None)
+                            'observations': sessao.pop('motor_observations', None),
+                            'temperatura': sessao.pop('motor_temperatura', None),
+                            'umidade': sessao.pop('motor_umidade', None),
+                            'pressao': sessao.pop('motor_pressao', None)
                         }
                         # Add burn metadata
                         sessao['burnMetadata'] = {

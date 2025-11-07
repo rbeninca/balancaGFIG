@@ -815,6 +815,14 @@ function gerarHTMLRelatorioCompleto(sessao, dados, impulsoData, metricasPropulsa
       ${sessao.metadadosMotor.totalweight ? `<div><strong>Massa Total:</strong> ${sessao.metadadosMotor.totalweight} g</div>` : '<div><strong>Massa Total:</strong> ---</div>'}
       ${sessao.metadadosMotor.propweight && sessao.metadadosMotor.totalweight ? `<div><strong>Fração Propelente:</strong> ${((sessao.metadadosMotor.propweight / sessao.metadadosMotor.totalweight) * 100).toFixed(1)}%</div>` : '<div><strong>Fração Propelente:</strong> ---</div>'}
     </div>
+    
+    <h3 style="margin-top: 4px; margin-bottom: 3px; color: #2980b9; font-size: 9px;">🌡️ Condições Ambientais</h3>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; font-size: 8px;">
+      ${sessao.metadadosMotor.temperatura !== undefined && sessao.metadadosMotor.temperatura !== null ? `<div><strong>Temperatura:</strong> ${sessao.metadadosMotor.temperatura.toFixed(1)}°C</div>` : '<div><strong>Temperatura:</strong> ---</div>'}
+      ${sessao.metadadosMotor.umidade !== undefined && sessao.metadadosMotor.umidade !== null ? `<div><strong>Umidade:</strong> ${sessao.metadadosMotor.umidade.toFixed(1)}%</div>` : '<div><strong>Umidade:</strong> ---</div>'}
+      ${sessao.metadadosMotor.pressao !== undefined && sessao.metadadosMotor.pressao !== null ? `<div><strong>Pressão:</strong> ${sessao.metadadosMotor.pressao.toFixed(2)} hPa</div>` : '<div><strong>Pressão:</strong> ---</div>'}
+    </div>
+    
     ${sessao.metadadosMotor.description ? `<div style="margin-top: 4px; font-size: 8px;"><strong>Descrição:</strong> ${sessao.metadadosMotor.description}</div>` : ''}
     ${sessao.metadadosMotor.observations ? `<div style="margin-top: 3px; font-size: 8px;"><strong>Observações:</strong> ${sessao.metadadosMotor.observations}</div>` : ''}
   </div>

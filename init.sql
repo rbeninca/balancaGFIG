@@ -15,7 +15,10 @@ CREATE TABLE IF NOT EXISTS sessoes (
     motor_totalweight FLOAT,
     motor_manufacturer VARCHAR(255),
     motor_description TEXT,
-    motor_observations TEXT
+    motor_observations TEXT,
+    motor_temperatura FLOAT,
+    motor_umidade FLOAT,
+    motor_pressao FLOAT
 );
 
 CREATE TABLE IF NOT EXISTS leituras (
