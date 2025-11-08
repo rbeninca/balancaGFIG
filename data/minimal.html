@@ -98,15 +98,185 @@
 
     /* Gráfico */
     .chart-container {
-      width: 100%;
-      height: 200px;
+      width: 100vw;
+      height: 45vh;
       position: relative;
-      margin-top: 2rem;
+      margin-top: 1.5rem;
+      margin-left: calc(-50vw + 50%);
+      display: flex;
     }
 
     #minimalChart {
-      width: 100%;
+      flex: 1;
       height: 100%;
+    }
+
+    /* Barra de Range Vertical */
+    .range-control {
+      width: 80px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 0;
+      background: rgba(255, 255, 255, 0.5);
+      border-left: 1px solid #f0f0f0;
+    }
+
+    .range-toggle {
+      font-size: 0.7rem;
+      color: #666;
+      margin-bottom: 8px;
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.2s;
+      text-align: center;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    .range-toggle:hover {
+      color: #000;
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .range-toggle.active {
+      color: #0066ff;
+      font-weight: 500;
+    }
+
+    .range-scale {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 0 10px;
+      position: relative;
+    }
+
+    .range-tick {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      position: relative;
+    }
+
+    .range-tick-line {
+      width: 8px;
+      height: 1px;
+      background: #ccc;
+      margin-left: 4px;
+    }
+
+    .range-tick-value {
+      font-size: 0.65rem;
+      color: #666;
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .range-bar {
+      position: absolute;
+      right: 18px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #f0f0f0;
+    }
+
+    .range-indicator {
+      position: absolute;
+      right: 16px;
+      width: 6px;
+      height: 6px;
+      background: #0066ff;
+      border-radius: 50%;
+      transform: translateY(-50%);
+      transition: top 0.2s ease-out, width 0.3s, height 0.3s, right 0.3s;
+    }
+
+    .range-indicator.auto-mode {
+      width: 10px;
+      height: 10px;
+      right: 14px;
+      box-shadow: 0 0 8px rgba(0, 102, 255, 0.5);
+    }
+
+    .range-slider {
+      position: absolute;
+      right: 10px;
+      top: 0;
+      bottom: 0;
+      width: 30px;
+      cursor: pointer;
+    }
+
+    .range-handle {
+      position: absolute;
+      right: 8px;
+      width: 24px;
+      height: 24px;
+      background: #ffffff;
+      border: 2px solid #0066ff;
+      border-radius: 4px;
+      cursor: ns-resize;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      transform: translateY(-50%);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .range-handle:hover {
+      border-width: 3px;
+      box-shadow: 0 3px 8px rgba(0, 102, 255, 0.3);
+      transform: translateY(-50%) scale(1.1);
+    }
+
+    .range-handle:active {
+      background: #f0f8ff;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      transform: translateY(-50%) scale(1.05);
+    }
+
+    .range-handle::before {
+      content: '';
+      width: 12px;
+      height: 2px;
+      background: #0066ff;
+      position: absolute;
+    }
+
+    .range-handle::after {
+      content: '';
+      width: 12px;
+      height: 2px;
+      background: #0066ff;
+      position: absolute;
+      margin-top: 4px;
+    }
+
+    .range-track {
+      position: absolute;
+      right: 18px;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: linear-gradient(to bottom, #0066ff 0%, #e0e0e0 100%);
+      border-radius: 2px;
+      pointer-events: none;
+    }
+
+    .range-fill {
+      position: absolute;
+      right: 18px;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(to top, #0066ff, #0066ff40);
+      transition: height 0.2s ease-out;
+      pointer-events: none;
     }
 
     /* Botões de Ação */
@@ -285,6 +455,29 @@
     <!-- Gráfico -->
     <div class="chart-container">
       <canvas id="minimalChart"></canvas>
+
+      <!-- Barra de Range Vertical -->
+      <div class="range-control">
+        <div class="range-toggle" id="rangeToggle" onclick="toggleAutoRange()" title="Clique para alternar entre Auto e Manual">
+          AUTO
+        </div>
+        <div class="range-scale" id="rangeScale">
+          <!-- Barra de fundo -->
+          <div class="range-bar"></div>
+          <!-- Barra de preenchimento (até o valor atual) -->
+          <div class="range-fill" id="rangeFill"></div>
+          <!-- Indicador de valor atual -->
+          <div class="range-indicator" id="rangeIndicator"></div>
+          <!-- Área de arrasto para modo manual -->
+          <div class="range-slider" id="rangeSlider">
+            <!-- Track do slider -->
+            <div class="range-track"></div>
+            <!-- Handle arrastável -->
+            <div class="range-handle" id="rangeHandle"></div>
+          </div>
+          <!-- Ticks serão inseridos dinamicamente -->
+        </div>
+      </div>
     </div>
 
     <!-- Botões de Ação -->
@@ -336,6 +529,13 @@
       'g': '#00cc66'    // Verde para gramas
     };
 
+    // Controle de Range
+    let autoRange = true;
+    let manualRangeMax = 100; // Valor máximo manual em N
+    let capacidadeMaxN = 500; // Capacidade da célula em N (será atualizada)
+    let erroMinN = 1; // Erro mínimo da célula em N (será atualizado pela acurácia)
+    let isDragging = false;
+
     // ============================================================================
     // INICIALIZAÇÃO
     // ============================================================================
@@ -343,6 +543,11 @@
     window.addEventListener('DOMContentLoaded', () => {
       console.log('[Minimal] 🚀 Página carregada');
       inicializarGrafico();
+
+      // Inicializa controle de range
+      document.getElementById('rangeToggle').classList.add('active');
+      document.getElementById('rangeIndicator').classList.add('auto-mode');
+      inicializarRangeSlider();
 
       // Conecta ao WebSocket automaticamente
       conectarWebSocket();
@@ -390,20 +595,47 @@
         return;
       }
 
-      // Calcula min/max
+      // Calcula min/max baseado no modo de range
       const valores = chartData.map(d => d.valor);
-      const minVal = Math.min(...valores);
-      const maxVal = Math.max(...valores);
-      const range = maxVal - minVal || 1;
+      let minVal, maxVal;
 
-      // Margem
+      if (autoRange) {
+        // Modo AUTO: usa valores reais dos dados
+        minVal = Math.min(...valores, 0);
+        maxVal = Math.max(...valores);
+        maxVal = Math.max(maxVal * 1.2, 10); // 20% margem, mínimo 10N
+      } else {
+        // Modo MANUAL: usa o range definido pelo usuário
+        minVal = 0;
+        maxVal = manualRangeMax;
+      }
+
+      const range = maxVal - minVal || 1;
       const margin = 20;
       const plotWidth = width - margin * 2;
       const plotHeight = height - margin * 2;
 
-      // Desenha linha
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 1.5;
+      // Cor baseada na unidade atual
+      const cor = coresUnidades[unidadeAtual];
+
+      // === 1. GRID SUTIL ===
+      ctx.strokeStyle = '#d0d0d0';
+      ctx.lineWidth = 1;
+
+      // Linhas horizontais
+      for (let i = 0; i <= 4; i++) {
+        const y = margin + (plotHeight / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(margin, y);
+        ctx.lineTo(width - margin, y);
+        ctx.stroke();
+      }
+
+      // === 2. DESENHA LINHA PRINCIPAL ===
+      ctx.strokeStyle = cor;
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = cor;
+      ctx.shadowBlur = 4;
       ctx.beginPath();
 
       chartData.forEach((d, i) => {
@@ -418,12 +650,32 @@
       });
 
       ctx.stroke();
+      ctx.shadowBlur = 0;
 
-      // Linha de zero (se visível)
+      // === 3. PONTO ATUAL (último valor) ===
+      if (chartData.length > 0) {
+        const last = chartData[chartData.length - 1];
+        const lastX = margin + ((chartData.length - 1) / (MAX_CHART_POINTS - 1)) * plotWidth;
+        const lastY = margin + plotHeight - ((last.valor - minVal) / range) * plotHeight;
+
+        // Círculo externo (halo)
+        ctx.beginPath();
+        ctx.arc(lastX, lastY, 6, 0, Math.PI * 2);
+        ctx.fillStyle = cor + '40';
+        ctx.fill();
+
+        // Círculo interno
+        ctx.beginPath();
+        ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+        ctx.fillStyle = cor;
+        ctx.fill();
+      }
+
+      // === 4. LINHA DE ZERO (se visível) ===
       if (minVal < 0 && maxVal > 0) {
         const zeroY = margin + plotHeight - ((0 - minVal) / range) * plotHeight;
         ctx.strokeStyle = '#cccccc';
-        ctx.lineWidth = 0.5;
+        ctx.lineWidth = 1;
         ctx.setLineDash([5, 5]);
         ctx.beginPath();
         ctx.moveTo(margin, zeroY);
@@ -431,6 +683,9 @@
         ctx.stroke();
         ctx.setLineDash([]);
       }
+
+      // Atualiza escala de range
+      atualizarRangeScale();
     }
 
     // ============================================================================
@@ -515,6 +770,16 @@
             status: d.status || 0
           });
         });
+      } else if (dados.type === 'config') {
+        // Configurações da célula de carga
+        if (dados.capacidadeMaximaGramas) {
+          capacidadeMaxN = (dados.capacidadeMaximaGramas / 1000) * 9.80665; // g → kg → N
+        }
+        if (dados.percentualAcuracia) {
+          // Calcula erro mínimo baseado na acurácia
+          erroMinN = capacidadeMaxN * dados.percentualAcuracia;
+        }
+        console.log(`[Minimal] Config atualizada: Cap=${capacidadeMaxN.toFixed(1)}N, Erro=${erroMinN.toFixed(3)}N`);
       }
     }
 
@@ -636,6 +901,218 @@
       setTimeout(() => {
         readingValue.style.opacity = '1';
       }, 150);
+
+      // Atualiza escala de range com nova unidade
+      atualizarRangeScale();
+    }
+
+    // ============================================================================
+    // CONTROLE DE RANGE
+    // ============================================================================
+
+    function toggleAutoRange() {
+      autoRange = !autoRange;
+      const toggle = document.getElementById('rangeToggle');
+      const indicator = document.getElementById('rangeIndicator');
+      const slider = document.getElementById('rangeSlider');
+
+      if (autoRange) {
+        toggle.textContent = 'AUTO';
+        toggle.classList.add('active');
+        indicator.classList.add('auto-mode');
+        slider.style.display = 'none';
+        toggle.title = 'Clique para alternar para Manual';
+      } else {
+        toggle.textContent = 'MANUAL';
+        toggle.classList.remove('active');
+        indicator.classList.remove('auto-mode');
+        slider.style.display = 'block';
+        // Inicializa range manual com o valor atual do auto
+        if (chartData.length > 0) {
+          const valores = chartData.map(d => d.valor);
+          manualRangeMax = Math.max(...valores, 10) * 1.2;
+        }
+
+        // Posiciona handle inicialmente no meio (50% da capacidade)
+        const scaleEl = document.getElementById('rangeScale');
+        const handle = document.getElementById('rangeHandle');
+        if (scaleEl && handle) {
+          const percent = (manualRangeMax - erroMinN) / (capacidadeMaxN - erroMinN);
+          const y = scaleEl.offsetHeight * (1 - percent);
+          handle.style.top = `${y}px`;
+        }
+
+        const erroKg = (erroMinN / 9.80665).toFixed(3);
+        const capKg = (capacidadeMaxN / 9.80665).toFixed(1);
+        toggle.title = `Arraste verticalmente: ${erroKg}kg - ${capKg}kg`;
+      }
+
+      renderizarGrafico();
+    }
+
+    function inicializarRangeSlider() {
+      const slider = document.getElementById('rangeSlider');
+      const handle = document.getElementById('rangeHandle');
+      const scaleEl = document.getElementById('rangeScale');
+
+      slider.style.display = 'none'; // Oculto inicialmente (modo AUTO)
+
+      // Mouse events no handle
+      handle.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        if (!autoRange) {
+          isDragging = true;
+          document.body.style.cursor = 'ns-resize';
+        }
+      });
+
+      // Mouse events no slider (clique direto na track)
+      slider.addEventListener('mousedown', (e) => {
+        if (!autoRange && e.target !== handle) {
+          isDragging = true;
+          handleRangeDrag(e, scaleEl);
+          document.body.style.cursor = 'ns-resize';
+        }
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (isDragging && !autoRange) {
+          handleRangeDrag(e, scaleEl);
+        }
+      });
+
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+        document.body.style.cursor = '';
+      });
+
+      // Touch events para mobile
+      handle.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        if (!autoRange) {
+          isDragging = true;
+        }
+      });
+
+      slider.addEventListener('touchstart', (e) => {
+        if (!autoRange && e.target !== handle) {
+          isDragging = true;
+          handleRangeDrag(e.touches[0], scaleEl);
+        }
+      });
+
+      document.addEventListener('touchmove', (e) => {
+        if (isDragging && !autoRange) {
+          e.preventDefault();
+          handleRangeDrag(e.touches[0], scaleEl);
+        }
+      }, { passive: false });
+
+      document.addEventListener('touchend', () => {
+        isDragging = false;
+      });
+    }
+
+    function handleRangeDrag(e, scaleEl) {
+      const rect = scaleEl.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const percent = 1 - (y / rect.height); // Inverte para bottom-up
+      const clampedPercent = Math.max(0, Math.min(1, percent)); // 0% a 100%
+
+      // Interpola entre erro mínimo e capacidade máxima
+      // 0% = erroMinN, 100% = capacidadeMaxN
+      manualRangeMax = erroMinN + (capacidadeMaxN - erroMinN) * clampedPercent;
+
+      // Atualiza posição do handle
+      const handle = document.getElementById('rangeHandle');
+      if (handle) {
+        handle.style.top = `${y}px`;
+      }
+
+      // Força atualização imediata do gráfico e escala
+      renderizarGrafico();
+    }
+
+    function atualizarRangeScale() {
+      const scaleEl = document.getElementById('rangeScale');
+      if (!scaleEl) return; // Ainda não inicializado
+
+      const indicatorEl = document.getElementById('rangeIndicator');
+
+      // Determina o range máximo
+      let maxVal;
+      if (autoRange) {
+        if (chartData.length > 0) {
+          const valores = chartData.map(d => d.valor);
+          maxVal = Math.max(...valores, 10); // Mínimo de 10N para escala visível
+          maxVal = maxVal * 1.2; // 20% margem
+        } else {
+          maxVal = capacidadeMaxN;
+        }
+      } else {
+        // Modo manual - usa o valor ajustado pelo usuário
+        maxVal = manualRangeMax;
+      }
+
+      // Cria 5 ticks (0, 25%, 50%, 75%, 100%)
+      const numTicks = 5;
+      let ticksHTML = '';
+
+      for (let i = 0; i < numTicks; i++) {
+        const percent = (numTicks - 1 - i) / (numTicks - 1); // Inverte para começar do topo
+        const valorN = maxVal * percent;
+
+        // Converte para unidade atual
+        let valorDisplay, unidade;
+        switch (unidadeAtual) {
+          case 'kg':
+            valorDisplay = (valorN / 9.80665).toFixed(1);
+            unidade = 'kg';
+            break;
+          case 'g':
+            valorDisplay = (valorN / 9.80665 * 1000).toFixed(0);
+            unidade = 'g';
+            break;
+          case 'N':
+          default:
+            valorDisplay = valorN.toFixed(0);
+            unidade = 'N';
+            break;
+        }
+
+        ticksHTML += `
+          <div class="range-tick">
+            <span class="range-tick-value">${valorDisplay}</span>
+            <div class="range-tick-line"></div>
+          </div>
+        `;
+      }
+
+      // Preserva barra, preenchimento, indicador e slider
+      const bar = scaleEl.querySelector('.range-bar');
+      const fill = scaleEl.querySelector('.range-fill');
+      const indicator = scaleEl.querySelector('.range-indicator');
+      const slider = scaleEl.querySelector('.range-slider');
+      scaleEl.innerHTML = ticksHTML;
+      scaleEl.appendChild(bar);
+      scaleEl.appendChild(fill);
+      scaleEl.appendChild(indicator);
+      scaleEl.appendChild(slider);
+
+      // Atualiza posição do indicador e barra de preenchimento com o valor atual
+      if (chartData.length > 0) {
+        const valorAtual = chartData[chartData.length - 1].valor;
+        const percent = Math.min(Math.max(valorAtual / maxVal, 0), 1);
+        const scaleHeight = scaleEl.offsetHeight;
+        const topPos = scaleHeight * (1 - percent); // Inverte para bottom-up
+
+        indicator.style.top = `${topPos}px`;
+        indicator.style.background = coresUnidades[unidadeAtual];
+
+        // Atualiza barra de preenchimento
+        fill.style.height = `${percent * 100}%`;
+        fill.style.background = `linear-gradient(to top, ${coresUnidades[unidadeAtual]}, ${coresUnidades[unidadeAtual]}40)`;
+      }
     }
 
     function atualizarStatusConexao(conectado) {
