@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Balança GFIG - Modo Minimalista</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      background: #ffffff;
+      color: #000000;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Container Principal */
+    .container {
+      width: 100%;
+      max-width: 900px;
+      padding: 2rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3rem;
+    }
+
+    /* Logo/Título */
+    .header {
+      opacity: 0.6;
+      transition: opacity 0.3s;
+    }
+
+    .header:hover {
+      opacity: 1;
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 300;
+      letter-spacing: 0.5px;
+    }
+
+    /* Leitura Principal */
+    .reading-container {
+      position: relative;
+    }
+
+    .reading {
+      font-size: 8rem;
+      font-weight: 200;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      color: #000000;
+    }
+
+    .reading.positive {
+      color: #000000;
+    }
+
+    .reading.negative {
+      color: #888888;
+    }
+
+    .unit {
+      font-size: 3rem;
+      font-weight: 300;
+      margin-left: 0.5rem;
+      opacity: 0.5;
+    }
+
+    /* Gráfico */
+    .chart-container {
+      width: 100%;
+      height: 200px;
+      position: relative;
+      margin-top: 2rem;
+    }
+
+    #minimalChart {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Botões de Ação */
+    .actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    .btn {
+      padding: 1rem 2rem;
+      font-size: 1rem;
+      font-weight: 400;
+      border: 1px solid #000000;
+      background: transparent;
+      color: #000000;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .btn:hover {
+      background: #000000;
+      color: #ffffff;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: #000000;
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: #333333;
+    }
+
+    /* Footer com Status */
+    .footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 1rem;
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      opacity: 0.4;
+      transition: opacity 0.3s;
+      font-size: 0.85rem;
+    }
+
+    .footer:hover {
+      opacity: 1;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #cccccc;
+      transition: background 0.3s;
+    }
+
+    .status-indicator.active {
+      background: #000000;
+      animation: pulse 2s infinite;
+    }
+
+    .status-indicator.connected {
+      background: #00cc00;
+    }
+
+    .status-indicator.error {
+      background: #ff0000;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Link para interface completa */
+    .switch-interface {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      opacity: 0.3;
+      transition: opacity 0.3s;
+      font-size: 0.9rem;
+    }
+
+    .switch-interface:hover {
+      opacity: 1;
+    }
+
+    .switch-interface a {
+      color: #000000;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border: 1px solid #000000;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .switch-interface a:hover {
+      background: #000000;
+      color: #ffffff;
+    }
+
+    /* Responsivo */
+    @media (max-width: 768px) {
+      .reading {
+        font-size: 5rem;
+      }
+
+      .unit {
+        font-size: 2rem;
+      }
+
+      .actions {
+        flex-direction: column;
+        width: 100%;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+
+    /* Loading inicial */
+    .loading {
+      font-size: 1rem;
+      opacity: 0.5;
+      animation: fadeInOut 2s infinite;
+    }
+
+    @keyframes fadeInOut {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.7; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Link para interface completa -->
+  <div class="switch-interface">
+    <a href="index.html">Interface Completa</a>
+  </div>
+
+  <!-- Container Principal -->
+  <div class="container">
+
+    <!-- Header -->
+    <div class="header">
+      <h1>BALANÇA GFIG</h1>
+    </div>
+
+    <!-- Leitura Principal -->
+    <div class="reading-container">
+      <div class="reading" id="mainReading">
+        <span id="readingValue" class="loading">---</span>
+        <span class="unit">N</span>
+      </div>
+    </div>
+
+    <!-- Gráfico -->
+    <div class="chart-container">
+      <canvas id="minimalChart"></canvas>
+    </div>
+
+    <!-- Botões de Ação -->
+    <div class="actions">
+      <button class="btn btn-primary" onclick="iniciarNovaSessao()">Iniciar Nova Sessão</button>
+      <button class="btn" onclick="abrirWizardCalibracao()">Calibração</button>
+    </div>
+
+  </div>
+
+  <!-- Footer com Status -->
+  <div class="footer">
+    <div class="status-item">
+      <div class="status-indicator" id="statusConexao"></div>
+      <span id="statusConexaoText">Desconectado</span>
+    </div>
+    <div class="status-item">
+      <div class="status-indicator" id="statusBalanca"></div>
+      <span id="statusBalancaText">Aguardando</span>
+    </div>
+    <div class="status-item">
+      <span id="statusFreq">0 Hz</span>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    // ============================================================================
+    // CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
+    // ============================================================================
+
+    let chart = null;
+    let chartData = [];
+    const MAX_CHART_POINTS = 100;
+    let lastUpdateTime = 0;
+    let updateCount = 0;
+    let frequencyHz = 0;
+
+    // Conexão WebSocket e dados
+    let ws = null;
+    let wsReconnectInterval = null;
+    let isConnected = false;
+
+    // ============================================================================
+    // INICIALIZAÇÃO
+    // ============================================================================
+
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('[Minimal] 🚀 Página carregada');
+      inicializarGrafico();
+
+      // Conecta ao WebSocket automaticamente
+      conectarWebSocket();
+    });
+
+    // ============================================================================
+    // GRÁFICO MINIMALISTA
+    // ============================================================================
+
+    function inicializarGrafico() {
+      const canvas = document.getElementById('minimalChart');
+      const ctx = canvas.getContext('2d');
+
+      // Configura tamanho do canvas
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * window.devicePixelRatio;
+      canvas.height = rect.height * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+      chart = {
+        canvas,
+        ctx,
+        width: rect.width,
+        height: rect.height
+      };
+
+      // Renderiza gráfico vazio
+      renderizarGrafico();
+    }
+
+    function renderizarGrafico() {
+      if (!chart) return;
+
+      const { ctx, width, height } = chart;
+
+      // Limpa canvas
+      ctx.clearRect(0, 0, width, height);
+
+      if (chartData.length === 0) {
+        // Mensagem de aguardando dados
+        ctx.fillStyle = '#cccccc';
+        ctx.font = '14px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Aguardando dados...', width / 2, height / 2);
+        return;
+      }
+
+      // Calcula min/max
+      const valores = chartData.map(d => d.valor);
+      const minVal = Math.min(...valores);
+      const maxVal = Math.max(...valores);
+      const range = maxVal - minVal || 1;
+
+      // Margem
+      const margin = 20;
+      const plotWidth = width - margin * 2;
+      const plotHeight = height - margin * 2;
+
+      // Desenha linha
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+
+      chartData.forEach((d, i) => {
+        const x = margin + (i / (MAX_CHART_POINTS - 1)) * plotWidth;
+        const y = margin + plotHeight - ((d.valor - minVal) / range) * plotHeight;
+
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+
+      ctx.stroke();
+
+      // Linha de zero (se visível)
+      if (minVal < 0 && maxVal > 0) {
+        const zeroY = margin + plotHeight - ((0 - minVal) / range) * plotHeight;
+        ctx.strokeStyle = '#cccccc';
+        ctx.lineWidth = 0.5;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(margin, zeroY);
+        ctx.lineTo(width - margin, zeroY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    // ============================================================================
+    // CONEXÃO WEBSOCKET E LEITURA DE DADOS
+    // ============================================================================
+
+    function conectarWebSocket() {
+      try {
+        console.log('[Minimal] 🔌 Conectando ao WebSocket...');
+
+        // Constrói URL do WebSocket (porta 81, como a interface principal)
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const hostname = window.location.hostname;
+
+        // Usa porta 81 (servidor Python WebSocket)
+        const wsUrl = `${protocol}//${hostname}:81`;
+
+        console.log('[Minimal] 📡 URL do WebSocket:', wsUrl);
+
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          console.log('[Minimal] ✅ WebSocket conectado!');
+          isConnected = true;
+          atualizarStatusConexao(true);
+
+          // Limpa tentativas de reconexão
+          if (wsReconnectInterval) {
+            clearInterval(wsReconnectInterval);
+            wsReconnectInterval = null;
+          }
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const dados = JSON.parse(event.data);
+            processarMensagemWS(dados);
+          } catch (e) {
+            console.warn('[Minimal] Erro ao parsear mensagem WS:', e);
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error('[Minimal] ❌ Erro no WebSocket:', error);
+        };
+
+        ws.onclose = () => {
+          console.log('[Minimal] ⚠️ WebSocket desconectado');
+          isConnected = false;
+          atualizarStatusConexao(false);
+
+          // Tenta reconectar a cada 3 segundos
+          if (!wsReconnectInterval) {
+            wsReconnectInterval = setInterval(() => {
+              console.log('[Minimal] 🔄 Tentando reconectar...');
+              conectarWebSocket();
+            }, 3000);
+          }
+        };
+
+      } catch (error) {
+        console.error('[Minimal] ❌ Erro ao criar WebSocket:', error);
+        atualizarStatusConexao(false);
+      }
+    }
+
+    function processarMensagemWS(dados) {
+      // Mensagem pode conter um ou mais pacotes de dados
+      if (dados.type === 'data') {
+        // Dados em tempo real
+        processarDado({
+          forca: dados.forca || 0,
+          timestamp: dados.timestamp || Date.now(),
+          status: dados.status || 0
+        });
+      } else if (dados.type === 'batch' && Array.isArray(dados.data)) {
+        // Batch de dados (vários pacotes de uma vez)
+        dados.data.forEach(d => {
+          processarDado({
+            forca: d.forca || 0,
+            timestamp: d.timestamp || Date.now(),
+            status: d.status || 0
+          });
+        });
+      }
+    }
+
+    function processarDado(dado) {
+      // Atualiza leitura principal
+      atualizarLeituraPrincipal(dado.forca);
+
+      // Adiciona ao gráfico
+      chartData.push({
+        valor: dado.forca,
+        timestamp: Date.now()
+      });
+
+      // Limita tamanho do array
+      if (chartData.length > MAX_CHART_POINTS) {
+        chartData.shift();
+      }
+
+      // Renderiza gráfico
+      renderizarGrafico();
+
+      // Calcula frequência
+      updateCount++;
+      const now = Date.now();
+      if (now - lastUpdateTime >= 1000) {
+        frequencyHz = updateCount;
+        document.getElementById('statusFreq').textContent = `${frequencyHz} Hz`;
+        updateCount = 0;
+        lastUpdateTime = now;
+      }
+
+      // Mapeia código de status para string
+      const statusMap = {
+        0: 'Pesando',
+        1: 'Tarar',
+        2: 'Calibrar',
+        3: 'Pronta'
+      };
+
+      const statusTexto = statusMap[dado.status] || 'Pesando';
+      atualizarStatusBalanca(statusTexto);
+    }
+
+    function atualizarLeituraPrincipal(valor) {
+      const readingEl = document.getElementById('readingValue');
+      const mainReadingEl = document.getElementById('mainReading');
+
+      // Formata valor
+      const valorFormatado = Math.abs(valor).toFixed(2);
+
+      // Atualiza texto
+      readingEl.textContent = valorFormatado;
+      readingEl.classList.remove('loading');
+
+      // Atualiza cor baseado no sinal
+      if (valor >= 0) {
+        mainReadingEl.classList.add('positive');
+        mainReadingEl.classList.remove('negative');
+      } else {
+        mainReadingEl.classList.add('negative');
+        mainReadingEl.classList.remove('positive');
+      }
+    }
+
+    function atualizarStatusConexao(conectado) {
+      const indicator = document.getElementById('statusConexao');
+      const text = document.getElementById('statusConexaoText');
+
+      if (conectado) {
+        indicator.classList.add('connected');
+        indicator.classList.remove('error');
+        text.textContent = 'Conectado';
+      } else {
+        indicator.classList.remove('connected');
+        indicator.classList.add('error');
+        text.textContent = 'Desconectado';
+      }
+    }
+
+    function atualizarStatusBalanca(status) {
+      const indicator = document.getElementById('statusBalanca');
+      const text = document.getElementById('statusBalancaText');
+
+      text.textContent = status;
+
+      if (status === 'Pesando') {
+        indicator.classList.add('active');
+      } else {
+        indicator.classList.remove('active');
+      }
+    }
+
+    // ============================================================================
+    // AÇÕES DOS BOTÕES
+    // ============================================================================
+
+    function iniciarNovaSessao() {
+      // Redireciona para interface completa com sessão
+      window.location.href = 'index.html?action=nova_sessao';
+    }
+
+    function abrirWizardCalibracao() {
+      // Redireciona para interface completa com wizard
+      window.location.href = 'index.html?action=wizard';
+    }
+
+    // Função auxiliar para enviar comandos via WebSocket
+    function enviarComando(cmd, param) {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        console.warn('[Minimal] WebSocket não conectado');
+        return;
+      }
+
+      try {
+        const comando = {
+          type: 'command',
+          cmd: cmd,
+          ...param
+        };
+
+        ws.send(JSON.stringify(comando));
+        console.log('[Minimal] Comando enviado:', comando);
+
+      } catch (error) {
+        console.error('[Minimal] Erro ao enviar comando:', error);
+      }
+    }
+
+    // ============================================================================
+    // REDIMENSIONAMENTO
+    // ============================================================================
+
+    window.addEventListener('resize', () => {
+      if (chart) {
+        inicializarGrafico();
+      }
+    });
+
+  </script>
+
+</body>
+</html>
