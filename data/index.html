@@ -603,8 +603,10 @@ sudo chmod 666 /dev/ttyUSB0</pre>
 
             <div id="wizard-analise-status" style="display: none; background: var(--cor-sucesso-light); padding: 1rem; border-radius: 0.5rem; border-left: 4px solid var(--cor-sucesso); margin-top: 1rem;">
               <p><strong>✅ Análise Concluída!</strong></p>
-              <p style="margin-top: 0.5rem;">Ruído medido: <strong id="wizard-ruido-medido">---</strong> g</p>
-              <p>Tolerância calculada: <strong id="wizard-tolerancia-calculada">---</strong> g</p>
+              <p style="margin-top: 0.5rem;">Ruído medido (σ): <strong id="wizard-ruido-medido">---</strong></p>
+              <small style="color: var(--cor-texto-secundario); display: block; margin-top: 0.5rem;">
+                A tolerância será calculada no Passo 3 após a calibração
+              </small>
             </div>
 
             <p style="margin-top: 1.5rem; font-size: 0.9rem; color: var(--cor-texto-secundario);">
@@ -634,10 +636,10 @@ sudo chmod 666 /dev/ttyUSB0</pre>
             </div>
           </div>
 
-          <!-- PASSO 1.2: Calibração com Peso Conhecido -->
+          <!-- PASSO 2: Coletar Pontos de Calibração -->
           <div class="wizard-step" id="wizard-step-2" style="display: none;">
-            <h3>🎯 Passo 2: Calibração</h3>
-            <p style="font-size: 1.1rem; margin-bottom: 1.5rem;">Coloque um <strong>peso conhecido</strong> sobre a célula:</p>
+            <h3>🎯 Passo 2: Calibração Multiponto</h3>
+            <p style="font-size: 1.1rem; margin-bottom: 1.5rem;">Adicione vários pontos de calibração para melhor precisão:</p>
 
             <div style="background: var(--cor-info-light); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border-left: 4px solid var(--cor-info);">
               <strong>📊 Leitura Atual:</strong>
@@ -646,36 +648,86 @@ sudo chmod 666 /dev/ttyUSB0</pre>
 
             <div style="margin-bottom: 1.5rem;">
               <label for="wizard-peso-conhecido" style="font-size: 1.1rem; font-weight: 600;">Peso do objeto (em gramas):</label>
-              <input type="number" id="wizard-peso-conhecido" placeholder="Ex: 1000" step="0.1" style="font-size: 1.2rem; padding: 0.75rem;">
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="number" id="wizard-peso-conhecido" placeholder="Ex: 0, 500, 1000, 2000" step="0.1" style="flex: 1; font-size: 1.2rem; padding: 0.75rem;">
+                <button onclick="wizardAdicionarPonto()" class="btn btn-primario" style="padding: 0.75rem 1.5rem; font-size: 1rem;">➕ Adicionar Ponto</button>
+              </div>
               <small style="display: block; margin-top: 0.5rem; color: var(--cor-texto-secundario);">
-                Use pesos de 500g a 2000g para melhor resultado
+                💡 Recomendação: Use pelo menos 3 pontos, incluindo 0g (sem peso)
               </small>
             </div>
 
-            <div id="wizard-grafico-calibracao" style="width: 100%; height: 300px; margin-top: 1rem; display: none;"></div>
+            <div id="wizard-lista-pontos" style="margin-top: 1rem;">
+              <p style="color: var(--cor-texto-secundario);">Nenhum ponto coletado ainda</p>
+            </div>
 
-            <div id="wizard-calibracao-resultado" style="display: none; background: var(--cor-sucesso-light); padding: 1rem; border-radius: 0.5rem; border-left: 4px solid var(--cor-sucesso); margin-top: 1rem;">
-              <p><strong>✅ Calibração Concluída!</strong></p>
-              <p style="margin-top: 0.5rem;">Fator de conversão: <strong id="wizard-fator-conversao">---</strong></p>
+            <div style="background: var(--cor-aviso-light); padding: 1rem; border-radius: 0.5rem; margin-top: 1.5rem; border-left: 4px solid var(--cor-aviso);">
+              <p style="margin: 0;"><strong>💡 Dica:</strong> Quanto mais pontos, melhor a calibração. Adicione pelo menos 2 pontos antes de avançar.</p>
             </div>
           </div>
 
-          <!-- PASSO 3: Tara Final -->
+          <!-- PASSO 3: Cálculo da Regressão Linear -->
           <div class="wizard-step" id="wizard-step-3" style="display: none;">
-            <h3>✨ Passo 3: Finalização</h3>
-            <p style="font-size: 1.1rem; margin-bottom: 1.5rem;"><strong>Retire o peso</strong> da célula de carga.</p>
+            <h3>📐 Passo 3: Cálculo da Calibração</h3>
+            <p style="font-size: 1.1rem; margin-bottom: 1.5rem;">Calculando coeficientes da regressão linear...</p>
 
             <div style="background: var(--cor-info-light); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border-left: 4px solid var(--cor-info);">
-              <strong>📊 Leitura Atual:</strong>
-              <div style="font-size: 2rem; font-weight: bold; color: var(--cor-primaria); margin-top: 0.5rem;" id="wizard-leitura-passo3">--- N</div>
+              <h4 style="margin-top: 0;">📚 Modelo Matemático</h4>
+              <p style="font-size: 1.1rem; font-family: monospace; background: white; padding: 0.5rem; border-radius: 0.25rem; text-align: center;">
+                <strong>m = α·N + β</strong>
+              </p>
+              <small style="color: var(--cor-texto-secundario);">
+                onde: m = massa (kg), N = leitura (N), α = ganho (kg/N), β = offset (kg)
+              </small>
             </div>
 
-            <div id="wizard-tara-final-status" style="display: none; background: var(--cor-sucesso-light); padding: 1rem; border-radius: 0.5rem; border-left: 4px solid var(--cor-sucesso); margin-top: 1rem;">
-              <p><strong>✅ Tara Final Concluída!</strong></p>
+            <div id="wizard-resultado-regressao" style="display: none;">
+              <div style="background: var(--cor-sucesso-light); padding: 1.5rem; border-radius: 0.5rem; border-left: 4px solid var(--cor-sucesso);">
+                <h4 style="margin-top: 0;">✅ Regressão Concluída!</h4>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                  <div style="background: white; padding: 1rem; border-radius: 0.5rem;">
+                    <strong style="color: var(--cor-texto-secundario); font-size: 0.9rem;">Coeficiente α (ganho):</strong>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: var(--cor-primaria); font-family: monospace;" id="wizard-alpha-valor">---</div>
+                    <small style="color: var(--cor-texto-secundario);">kg/N</small>
+                  </div>
+
+                  <div style="background: white; padding: 1rem; border-radius: 0.5rem;">
+                    <strong style="color: var(--cor-texto-secundario); font-size: 0.9rem;">Coeficiente β (offset):</strong>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: var(--cor-primaria); font-family: monospace;" id="wizard-beta-valor">---</div>
+                    <small style="color: var(--cor-texto-secundario);">kg</small>
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                  <div style="background: white; padding: 1rem; border-radius: 0.5rem;">
+                    <strong style="color: var(--cor-texto-secundario); font-size: 0.9rem;">Coeficiente R²:</strong>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: var(--cor-primaria);" id="wizard-r2-valor">---</div>
+                    <small style="color: var(--cor-texto-secundario);">Qualidade do ajuste (ideal: ≥ 0.999)</small>
+                  </div>
+
+                  <div style="background: white; padding: 1rem; border-radius: 0.5rem;">
+                    <strong style="color: var(--cor-texto-secundario); font-size: 0.9rem;">Erro Máximo:</strong>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: var(--cor-primaria);" id="wizard-erro-max-valor">---</div>
+                    <small style="color: var(--cor-texto-secundario);">g</small>
+                  </div>
+                </div>
+
+                <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(52, 152, 219, 0.1); border-radius: 0.5rem; border-left: 4px solid var(--cor-primaria);">
+                  <h4 style="margin-top: 0; font-size: 0.95rem;">📏 Tolerância de Estabilização Calculada</h4>
+                  <p style="margin: 0.5rem 0; font-size: 0.85rem;">
+                    <strong>Fórmula:</strong> tolerância = max(3·σ, erro_desejado/α)
+                  </p>
+                  <div style="font-size: 1.3rem; font-weight: bold; color: var(--cor-primaria); margin-top: 0.5rem;" id="wizard-tolerancia-final">---</div>
+                  <small style="color: var(--cor-texto-secundario); display: block; margin-top: 0.25rem;">
+                    Este valor será usado para detectar quando a balança está estável
+                  </small>
+                </div>
+              </div>
             </div>
 
             <p style="margin-top: 1.5rem; font-size: 0.9rem; color: var(--cor-texto-secundario);">
-              Ao clicar em "Avançar", faremos a tara final automaticamente.
+              Ao clicar em "Avançar", os coeficientes serão calculados automaticamente usando regressão linear por mínimos quadrados.
             </p>
           </div>
 
@@ -686,13 +738,23 @@ sudo chmod 666 /dev/ttyUSB0</pre>
 
             <div style="background: var(--cor-sucesso-light); padding: 1.5rem; border-radius: 0.5rem; border-left: 4px solid var(--cor-sucesso);">
               <h4 style="margin-top: 0;">📋 Resumo da Configuração:</h4>
-              <p><strong>Capacidade:</strong> <span id="wizard-resumo-capacidade">---</span> kg</p>
-              <p><strong>Tolerância:</strong> ±<span id="wizard-resumo-tolerancia">---</span> g</p>
-              <p><strong>Fator de Conversão:</strong> <span id="wizard-resumo-fator">---</span></p>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                <p><strong>Capacidade:</strong> <span id="wizard-resumo-capacidade">---</span> kg</p>
+                <p><strong>Tolerância:</strong> ±<span id="wizard-resumo-tolerancia">---</span> g</p>
+                <p><strong>Coeficiente α:</strong> <span id="wizard-resumo-alpha" style="font-family: monospace;">---</span></p>
+                <p><strong>Coeficiente β:</strong> <span id="wizard-resumo-beta" style="font-family: monospace;">---</span></p>
+              </div>
+            </div>
+
+            <div style="background: var(--cor-info-light); padding: 1rem; border-radius: 0.5rem; margin-top: 1.5rem; border-left: 4px solid var(--cor-info);">
+              <h4 style="margin-top: 0;">📐 Modelo de Calibração</h4>
+              <p style="font-size: 1.1rem; font-family: monospace; background: white; padding: 0.5rem; border-radius: 0.25rem; text-align: center; margin: 0;">
+                <strong>massa (kg) = α × leitura (N) + β</strong>
+              </p>
             </div>
 
             <div style="background: var(--cor-aviso-light); padding: 1rem; border-radius: 0.5rem; margin-top: 1.5rem; border-left: 4px solid var(--cor-aviso);">
-              <p><strong>💡 Lembre-se:</strong> Faça uma nova tara (<kbd>Shift</kbd>+<kbd>T</kbd>) sempre que mover a célula de carga.</p>
+              <p style="margin: 0;"><strong>💡 Lembre-se:</strong> Faça uma nova tara (<kbd>Shift</kbd>+<kbd>T</kbd>) sempre que mover a célula de carga.</p>
             </div>
           </div>
 
