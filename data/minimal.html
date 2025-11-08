@@ -77,7 +77,23 @@
       font-size: 3rem;
       font-weight: 300;
       margin-left: 0.5rem;
-      opacity: 0.5;
+      opacity: 0.7;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+    }
+
+    .unit:hover {
+      opacity: 1;
+      transform: scale(1.05);
+    }
+
+    .unit:active {
+      transform: scale(0.95);
+    }
+
+    /* Transições suaves para mudança de cor */
+    #readingValue {
+      transition: color 0.4s ease-in-out;
     }
 
     /* Gráfico */
@@ -262,7 +278,7 @@
     <div class="reading-container">
       <div class="reading" id="mainReading">
         <span id="readingValue" class="loading">---</span>
-        <span class="unit">N</span>
+        <span class="unit" id="unitLabel" onclick="alternarUnidade()" style="cursor: pointer;" title="Clique para alternar entre N, kg e g">N</span>
       </div>
     </div>
 
@@ -311,6 +327,14 @@
     let ws = null;
     let wsReconnectInterval = null;
     let isConnected = false;
+
+    // Unidade de medida
+    let unidadeAtual = 'N'; // 'N' (Newtons), 'kg', 'g'
+    const coresUnidades = {
+      'N': '#0066ff',   // Azul para Newtons
+      'kg': '#000000',  // Preto para kg
+      'g': '#00cc66'    // Verde para gramas
+    };
 
     // ============================================================================
     // INICIALIZAÇÃO
@@ -534,25 +558,84 @@
       atualizarStatusBalanca(statusTexto);
     }
 
-    function atualizarLeituraPrincipal(valor) {
+    function atualizarLeituraPrincipal(valorN) {
       const readingEl = document.getElementById('readingValue');
       const mainReadingEl = document.getElementById('mainReading');
 
+      // Converte para unidade selecionada
+      let valorConvertido, precisao;
+
+      switch (unidadeAtual) {
+        case 'kg':
+          valorConvertido = valorN / 9.80665;  // N → kg
+          precisao = 3;
+          break;
+        case 'g':
+          valorConvertido = (valorN / 9.80665) * 1000;  // N → kg → g
+          precisao = 1;
+          break;
+        case 'N':
+        default:
+          valorConvertido = valorN;
+          precisao = 2;
+          break;
+      }
+
       // Formata valor
-      const valorFormatado = Math.abs(valor).toFixed(2);
+      const valorFormatado = Math.abs(valorConvertido).toFixed(precisao);
 
       // Atualiza texto
       readingEl.textContent = valorFormatado;
       readingEl.classList.remove('loading');
 
-      // Atualiza cor baseado no sinal
-      if (valor >= 0) {
+      // Atualiza cor baseado na unidade
+      const cor = coresUnidades[unidadeAtual];
+      readingEl.style.color = cor;
+      document.getElementById('unitLabel').style.color = cor;
+
+      // Mantém cor de sinal (opcional, pode remover se quiser só cor de unidade)
+      if (valorConvertido >= 0) {
         mainReadingEl.classList.add('positive');
         mainReadingEl.classList.remove('negative');
       } else {
         mainReadingEl.classList.add('negative');
         mainReadingEl.classList.remove('positive');
       }
+    }
+
+    function alternarUnidade() {
+      // Ciclo: N → kg → g → N
+      const unidades = ['N', 'kg', 'g'];
+      const indexAtual = unidades.indexOf(unidadeAtual);
+      const proximoIndex = (indexAtual + 1) % unidades.length;
+
+      unidadeAtual = unidades[proximoIndex];
+
+      // Atualiza label
+      document.getElementById('unitLabel').textContent = unidadeAtual;
+
+      // Atualiza cor
+      const cor = coresUnidades[unidadeAtual];
+      document.getElementById('readingValue').style.color = cor;
+      document.getElementById('unitLabel').style.color = cor;
+
+      console.log(`[Minimal] Unidade alterada para: ${unidadeAtual}`);
+
+      // Efeito visual de feedback (pulso)
+      const unitLabel = document.getElementById('unitLabel');
+      const readingValue = document.getElementById('readingValue');
+
+      // Pulso na unidade
+      unitLabel.style.transform = 'scale(1.3)';
+      setTimeout(() => {
+        unitLabel.style.transform = 'scale(1)';
+      }, 200);
+
+      // Flash sutil no valor
+      readingValue.style.opacity = '0.7';
+      setTimeout(() => {
+        readingValue.style.opacity = '1';
+      }, 150);
     }
 
     function atualizarStatusConexao(conectado) {
