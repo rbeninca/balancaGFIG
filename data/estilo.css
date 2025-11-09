@@ -896,6 +896,17 @@ label {
   margin-bottom: 2rem;
 }
 
+@media (max-width: 768px) {
+  .tabela-container {
+    overflow-x: auto; /* Allows horizontal scrolling */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  }
+
+  .tabela-container table {
+    white-space: nowrap; /* Prevents text from wrapping inside cells */
+  }
+}
+
 table { 
   width: 100%; 
   border-collapse: collapse;
@@ -2061,10 +2072,33 @@ details.collapsible-section[open] summary::before {
   padding: 20px;
   border: 1px solid var(--cor-borda);
   width: 90%;
-  max-width: 600px;
+  max-width: 900px; /* Ajustado para monitores HD */
   border-radius: 0.75rem;
   box-shadow: var(--sombra-xl);
   animation: fadeIn 0.5s;
+}
+
+@media (max-width: 1024px) {
+  .wizard-content {
+    max-width: 800px;
+  }
+}
+
+@media (max-width: 768px) {
+  .wizard-content {
+    max-width: 95%;
+    width: 95%;
+    padding: 1rem; /* Ajusta padding para telas menores */
+  }
+}
+
+@media (max-width: 480px) {
+  .wizard-content {
+    max-width: 100%;
+    width: 100%;
+    padding: 0.5rem; /* Menos padding em telas muito pequenas */
+    border-radius: 0; /* Sem border-radius em mobile full-width */
+  }
 }
 
 .wizard-header {
@@ -2102,7 +2136,15 @@ details.collapsible-section[open] summary::before {
 /* ===== AJUSTES DE RESPONSIVIDADE GERAL ===== */
 /* ========================================== */
 
+.wizard-grid-2-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
 @media (max-width: 768px) {
+  .wizard-grid-2-col {
+    grid-template-columns: 1fr; /* Stacks columns on small screens */
+  }
   /* --- Layouts Gerais --- */
   .grid-container {
     /* Força uma única coluna em telas menores para todos os grids de parâmetros */

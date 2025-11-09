@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Balança GFIG - Modo Minimalista</title>
+  <link rel="stylesheet" href="estilo.css">
+  <script src="wizard_simplificado.js" defer></script>
   <style>
     * {
       margin: 0;
@@ -483,7 +485,7 @@
     <!-- Botões de Ação -->
     <div class="actions">
       <button class="btn btn-primary" onclick="iniciarNovaSessao()">Iniciar Nova Sessão</button>
-      <button class="btn" onclick="abrirWizardCalibracao()">Calibração</button>
+      <button class="btn" onclick="openWizardSimplificado()">Calibração</button>
     </div>
 
   </div>
@@ -505,6 +507,100 @@
 
   <!-- Scripts -->
   <script>
+    // ============================================================================
+    // WIZARD DE CALIBRAÇÃO - CAMADA DE COMPATIBILIDADE
+    // ============================================================================
+
+    // Simula a interface do dataWorker que o wizard_simplificado.js espera.
+    const dataWorker = {
+      postMessage: (message) => {
+        const { type, payload } = message;
+        if (type === 'sendCommand') {
+          const { cmd, value } = payload;
+          const commandToSend = {};
+
+          if (cmd === 't' || cmd === 'get_config') {
+            commandToSend.cmd = cmd;
+          } else if (cmd === 'c') { // Calibrate
+            const mass = parseFloat(value);
+            if (!isNaN(mass) && mass > 0) {
+              commandToSend.cmd = 'c';
+              commandToSend.massa_g = mass;
+            }
+          } else if (cmd === 'set') { // Set parameter
+            if (value && value.param && value.value !== undefined) {
+              commandToSend.cmd = 'set';
+              commandToSend.param = value.param;
+              commandToSend.value = value.value;
+            }
+          }
+          
+          if (commandToSend.cmd) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify(commandToSend));
+            } else {
+              console.error('[Bridge] WebSocket não conectado. Comando não enviado:', commandToSend);
+            }
+          }
+        } else if (type === 'get_config') {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({cmd: 'get_config'}));
+            }
+        }
+      },
+      addEventListener: (type, listener) => {
+        if (type === 'message') {
+          window.wizardListener = listener;
+        }
+      },
+      removeEventListener: (type, listener) => {
+        if (type === 'message' && window.wizardListener === listener) {
+          window.wizardListener = null;
+        }
+      }
+    };
+
+    // Função global que o wizard usa.
+    function sendCommandToWorker(command, value = null) {
+      const messagePayload = { cmd: command };
+      if (value !== null) {
+        messagePayload.value = value;
+      }
+      dataWorker.postMessage({ type: 'sendCommand', payload: messagePayload });
+    }
+
+    // Função de notificação que o wizard precisa.
+    function showNotification(type, message, duration = 5000) {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            font-family: sans-serif;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.5s, transform 0.5s;
+            transform: translateX(100%);
+        `;
+        notification.style.backgroundColor = type === 'error' ? '#e74c3c' : (type === 'success' ? '#2ecc71' : '#3498db');
+        notification.innerHTML = message;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.style.opacity = '1';
+            notification.style.transform = 'translateX(0)';
+        }, 10);
+
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => notification.remove(), 500);
+        }, duration);
+    }
+
     // ============================================================================
     // CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
     // ============================================================================
@@ -753,13 +849,29 @@
     }
 
     function processarMensagemWS(dados) {
+      // --- BRIDGE PARA O WIZARD ---
+      if (window.wizardListener) {
+        let wizardPayload;
+        if (dados.type === 'data') {
+          // O wizard espera um array de dados
+          wizardPayload = { type: 'dadosDisponiveis', payload: [dados] };
+        } else if (dados.type === 'config') {
+          wizardPayload = { type: 'config', payload: dados };
+        }
+        if (wizardPayload) {
+          window.wizardListener({ data: wizardPayload });
+        }
+      }
+      // --- FIM DA BRIDGE ---
+
       // Mensagem pode conter um ou mais pacotes de dados
       if (dados.type === 'data') {
         // Dados em tempo real
         processarDado({
           forca: dados.forca || 0,
           timestamp: dados.timestamp || Date.now(),
-          status: dados.status || 0
+          status: dados.status || 0,
+          raw: dados.raw || 0
         });
       } else if (dados.type === 'batch' && Array.isArray(dados.data)) {
         // Batch de dados (vários pacotes de uma vez)
@@ -767,7 +879,8 @@
           processarDado({
             forca: d.forca || 0,
             timestamp: d.timestamp || Date.now(),
-            status: d.status || 0
+            status: d.status || 0,
+            raw: d.raw || 0
           });
         });
       } else if (dados.type === 'config') {
@@ -1152,33 +1265,6 @@
       window.location.href = 'index.html?action=nova_sessao';
     }
 
-    function abrirWizardCalibracao() {
-      // Redireciona para interface completa com wizard
-      window.location.href = 'index.html?action=wizard';
-    }
-
-    // Função auxiliar para enviar comandos via WebSocket
-    function enviarComando(cmd, param) {
-      if (!ws || ws.readyState !== WebSocket.OPEN) {
-        console.warn('[Minimal] WebSocket não conectado');
-        return;
-      }
-
-      try {
-        const comando = {
-          type: 'command',
-          cmd: cmd,
-          ...param
-        };
-
-        ws.send(JSON.stringify(comando));
-        console.log('[Minimal] Comando enviado:', comando);
-
-      } catch (error) {
-        console.error('[Minimal] Erro ao enviar comando:', error);
-      }
-    }
-
     // ============================================================================
     // REDIMENSIONAMENTO
     // ============================================================================
@@ -1190,6 +1276,8 @@
     });
 
   </script>
+</body>
+</html>
 
 </body>
 </html>

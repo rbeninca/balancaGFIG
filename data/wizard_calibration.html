@@ -1,0 +1,151 @@
+<!-- WIZARD DE CALIBRAÇÃO SIMPLIFICADO -->
+<div id="wizard-modal" class="wizard-modal" style="display: none;">
+  <div class="wizard-content" style="max-width: 800px;">
+    <div class="wizard-header">
+      <h2>🧙‍♂️ Assistente de Calibração da Balança</h2>
+      <button class="wizard-close" onclick="closeWizard()">&times;</button>
+    </div>
+
+    <div class="wizard-progress">
+      <div class="wizard-progress-bar"></div>
+    </div>
+
+    <div class="wizard-body">
+      <!-- PASSO 0: Análise de Ruído -->
+      <div id="wizard-step-0" class="wizard-step">
+        <h3>Passo 1/7: Análise de Ruído (Balança Vazia)</h3>
+        <p>Neste passo, vamos medir o ruído eletrônico do sistema. Certifique-se de que a balança esteja <strong>completamente vazia e estável</strong>.</p>
+        <div class="wizard-realtime-box">
+          <h4>Leitura em Tempo Real</h4>
+          <div id="wizard-leitura-passo0">--</div>
+        </div>
+        <div id="wizard-analise-status" style="display: none; margin-top: 1rem; padding: 1rem; background: var(--cor-info-light); border-radius: 8px;">
+          <h4>Análise Concluída</h4>
+          <p>Ruído medido (desvio padrão): <strong id="wizard-ruido-medido">---</strong></p>
+          <p class="wizard-info-text">Este valor representa a instabilidade natural do sensor. Quanto menor, melhor.</p>
+        </div>
+      </div>
+
+      <!-- PASSO 1: Especificações da Célula -->
+      <div id="wizard-step-1" class="wizard-step">
+        <h3>Passo 2/7: Especificações da Célula de Carga</h3>
+        <p>Informe os dados do fabricante da sua célula de carga. Estes valores são encontrados no datasheet do componente.</p>
+        <div class="wizard-form-grid">
+          <div>
+            <label for="wizard-capacity-input">Capacidade Máxima (kg)</label>
+            <input type="number" id="wizard-capacity-input" step="any" placeholder="Ex: 5" oninput="calculateStabilityParameters()">
+            <small class="wizard-info-text">Capacidade nominal da célula. Ex: 5 para uma célula de 5kg.</small>
+          </div>
+          <div>
+            <label for="wizard-accuracy-input">Classe de Acurácia (%)</label>
+            <input type="number" id="wizard-accuracy-input" step="any" placeholder="Ex: 0.03" oninput="calculateStabilityParameters()">
+            <small class="wizard-info-text">Classe de precisão. Ex: 0.03 para C3, 0.1 para D1.</small>
+          </div>
+        </div>
+        <div id="wizard-tolerancia-calculada" style="display: none; margin-top: 1rem; padding: 1rem; background: var(--cor-fundo-secundario); border-radius: 8px;">
+            <h4>Parâmetros Derivados</h4>
+            <p>Erro máximo esperado (fabricante): <strong id="wizard-erro-maximo-valor">---</strong> g</p>
+            <p>Tolerância de estabilização: <strong id="wizard-tolerancia-valor">---</strong></p>
+        </div>
+      </div>
+
+      <!-- PASSO 2: Coletar Ponto Zero -->
+      <div id="wizard-step-2" class="wizard-step">
+        <h3>Passo 3/7: Coletar Ponto Zero</h3>
+        <p>A balança precisa saber qual é a leitura correspondente a <strong>zero quilos</strong>. Mantenha a balança vazia e clique em "Avançar" para registrar o ponto zero.</p>
+        <div class="wizard-realtime-box">
+          <h4>Leitura em Tempo Real</h4>
+          <div id="wizard-leitura-passo2">--</div>
+        </div>
+      </div>
+
+      <!-- PASSO 3: Pontos de Calibração -->
+      <div id="wizard-step-3" class="wizard-step">
+        <h3>Passo 4/7: Adicionar Massas Conhecidas</h3>
+        <p>Coloque um peso de massa conhecida sobre a balança, digite o valor em gramas e clique em "Adicionar Ponto". Adicione pelo menos 1 ou 2 pontos para uma boa calibração.</p>
+        <div class="wizard-form-grid">
+          <input type="number" id="wizard-peso-conhecido" placeholder="Massa em gramas (ex: 1000)">
+          <button onclick="wizardAdicionarPonto()" class="btn btn-info">➕ Adicionar Ponto</button>
+        </div>
+        <div class="wizard-realtime-box" style="margin-top: 1rem;">
+            <h4>Leitura em Tempo Real</h4>
+            <div id="wizard-leitura-passo3">--</div>
+        </div>
+        <h4 style="margin-top: 1.5rem;">Pontos Coletados</h4>
+        <div id="wizard-lista-pontos" class="wizard-point-list"></div>
+      </div>
+
+      <!-- PASSO 4: Resultados da Regressão -->
+      <div id="wizard-step-4" class="wizard-step">
+        <h3>Passo 5/7: Resultados da Calibração</h3>
+        <p>Com base nos pontos coletados, calculamos a equação da reta (m = α·N + β) que converte a leitura bruta (ADC) em massa (kg).</p>
+        <div id="wizard-resultado-regressao" class="wizard-results-grid">
+            <div>
+                <h4>Ganho (α)</h4>
+                <p id="wizard-alpha-valor">---</p>
+                <small>kg / Leitura ADC</small>
+            </div>
+            <div>
+                <h4>Offset (β)</h4>
+                <p id="wizard-beta-valor">---</p>
+                <small>kg</small>
+            </div>
+            <div>
+                <h4>Qualidade (R²)</h4>
+                <p id="wizard-r2-valor">---</p>
+                <small>Próximo de 1.0 = perfeito</small>
+            </div>
+            <div>
+                <h4>Erro Máximo Medido</h4>
+                <p><span id="wizard-erro-max-valor">---</span> g</p>
+                <small>Maior diferença entre o peso real e o medido</small>
+            </div>
+        </div>
+        <div style="margin-top: 1rem; padding: 1rem; background: var(--cor-fundo-secundario); border-radius: 8px;">
+            <h4>Tolerância de Estabilização Calculada</h4>
+            <p id="wizard-tolerancia-final" style="white-space: pre-wrap;">---</p>
+            <small>Este valor será usado para determinar se a leitura da balança está estável. É baseado no ruído medido e na precisão da célula.</small>
+        </div>
+      </div>
+
+      <!-- PASSO 5: Gráfico da Regressão -->
+      <div id="wizard-step-5" class="wizard-step">
+        <h3>Passo 6/7: Gráfico da Regressão</h3>
+        <p>O gráfico mostra os pontos que você coletou (em verde) e a linha de regressão calculada (em azul). Pontos bem alinhados indicam uma boa calibração.</p>
+        <div style="text-align: center; margin-bottom: 1rem;">
+            <canvas id="wizard-grafico-canvas" width="700" height="400" style="border: 1px solid var(--cor-borda); border-radius: 8px;"></canvas>
+            <p>Ângulo da Regressão: <strong id="regression-angle">---</strong></p>
+        </div>
+      </div>
+
+      <!-- PASSO 6: Resumo e Salvar -->
+      <div id="wizard-step-6" class="wizard-step">
+        <h3>Passo 7/7: Resumo e Salvar Configurações</h3>
+        <p>Revise os parâmetros calculados e escolha quais deseja salvar permanentemente na memória do ESP32.</p>
+        <div class="wizard-summary">
+            <h4>Parâmetros Finais</h4>
+            <p><strong>Capacidade:</strong> <span id="wizard-resumo-capacidade">---</span> kg</p>
+            <p><strong>Ganho (α):</strong> <span id="wizard-resumo-alpha">---</span></p>
+            <p><strong>Offset (β):</strong> <span id="wizard-resumo-beta">---</span></p>
+            <p><strong>Tolerância de Estabilização:</strong> <span id="wizard-resumo-tolerancia">---</span></p>
+            <p><strong>Erro Máximo (Fabricante):</strong> <span id="wizard-resumo-erro-maximo">---</span> g</p>
+        </div>
+        <div class="wizard-save-options">
+            <h4>Opções de Salvamento</h4>
+            <label><input type="checkbox" id="wizard-salvar-fator" checked> Salvar Fator de Conversão e Offset de Tara</label>
+            <label><input type="checkbox" id="wizard-salvar-capacidade"> Salvar Capacidade e Acurácia da Célula</for></label>
+            <label><input type="checkbox" id="wizard-salvar-tolerancia"> Salvar Tolerância de Estabilização</label>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="wizard-footer">
+      <button id="wizard-btn-prev" onclick="wizardGoToStepSimple(-1)" class="btn btn-secundario">Voltar</button>
+      <button id="wizard-btn-next" onclick="wizardGoToStepSimple(1)" class="btn btn-primario">Avançar</button>
+      <button id="wizard-btn-finish" onclick="wizardPasso6_Finalizar()" class="btn btn-sucesso" style="display: none;">💾 Finalizar e Salvar</button>
+    </div>
+  </div>
+</div>
+
+

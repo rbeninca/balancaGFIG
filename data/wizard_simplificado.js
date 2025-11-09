@@ -1,3 +1,14 @@
+function closeWizard() {
+  const modal = document.getElementById('wizard-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  // Para a leitura em tempo real se o wizard for fechado
+  if (typeof wizardStopRealtimeReading === 'function') {
+    wizardStopRealtimeReading();
+  }
+}
+
 /**
  * WIZARD DE CALIBRAÇÃO - MODELO MATEMÁTICO CLÁSSICO
  *
@@ -45,7 +56,7 @@ let wizardStateSimple = {
 };
 
 let wizardCurrentStepSimple = 0;
-const WIZARD_TOTAL_STEPS_SIMPLE = 5;  // Agora são 6 passos (0-5)
+const WIZARD_TOTAL_STEPS_SIMPLE = 6;  // Agora são 7 passos (0-6)
 let wizardRealtimeInterval = null;
 
 /**
@@ -483,7 +494,10 @@ async function wizardGoToStepSimple(direction) {
         sucesso = await wizardPasso3_Avancar();
         break;
       case 4:
-        sucesso = await wizardPasso4_Avancar();
+        sucesso = await wizardPasso4_Avancar(); // This step now only validates, graph is in next step
+        break;
+      case 5: // New graph step, no advance logic needed here
+        sucesso = true;
         break;
     }
 
@@ -517,9 +531,17 @@ function wizardGoToStepDisplay(stepNumber) {
     wizardStopRealtimeReading();
   }
 
-  // Exibe resumo ao entrar no Passo 5
-  if (stepNumber === 5) {
-    wizardPasso5_ExibirResumo();
+  // Exibe resumo ao entrar no Passo 6
+  if (stepNumber === 6) {
+    wizardPasso6_ExibirResumo(); // Renamed function
+  } else if (stepNumber === 5) { // New graph step
+    // Ensure graph is drawn when entering this step
+    const pontos = wizardStateSimple.passo3.pontosCalibr;
+    const alpha = wizardStateSimple.passo4.alpha;
+    const beta = wizardStateSimple.passo4.beta;
+    if (pontos.length > 0 && alpha !== 0) { // Only draw if data exists
+      desenharGraficoRegressao(pontos, alpha, beta);
+    }
   }
 }
 
@@ -570,10 +592,10 @@ function wizardStopRealtimeReading() {
 }
 
 /**
- * PASSO 5: Exibe resumo ao entrar no passo
+ * PASSO 6: Exibe resumo ao entrar no passo
  * Mostra todos os dados calculados para o usuário revisar antes de salvar
  */
-function wizardPasso5_ExibirResumo() {
+function wizardPasso6_ExibirResumo() {
   const alpha = wizardStateSimple.passo4.alpha;
   const beta = wizardStateSimple.passo4.beta;
   const toleranciaADC = wizardStateSimple.passo5.toleranciaN; // Calculado no passo 4
@@ -606,10 +628,10 @@ function wizardPasso5_ExibirResumo() {
 }
 
 /**
- * PASSO 5: Salvar parâmetros no ESP32
+ * PASSO 6: Salvar parâmetros no ESP32
  * Permite escolher quais parâmetros salvar via checkboxes
  */
-async function wizardPasso5_Finalizar() {
+async function wizardPasso6_Finalizar() {
   // Coleta os valores calculados e informados
   const alpha = wizardStateSimple.passo4.alpha;
   const nZero = wizardStateSimple.passo2.nZero;
@@ -680,22 +702,17 @@ async function wizardPasso5_Finalizar() {
 
 /**
  * Desenha gráfico da regressão linear
+ * @param {Array<Object>} pontos - Array de pontos {m_kg, N_leitura}
+ * @param {number} alpha - Coeficiente alpha da regressão
+ * @param {number} beta - Coeficiente beta da regressão
+ * @param {string} canvasId - ID do elemento canvas onde o gráfico será desenhado
+ * @param {string} angleDisplayId - ID do elemento onde o ângulo da regressão será exibido
  */
-function desenharGraficoRegressao(pontos, alpha, beta) {
-  // Cria canvas se não existir
-  let canvas = document.getElementById('wizard-grafico-canvas');
+function desenharGraficoRegressao(pontos, alpha, beta, canvasId = 'wizard-grafico-canvas', angleDisplayId = 'regression-angle') {
+  let canvas = document.getElementById(canvasId);
   if (!canvas) {
-    const container = document.querySelector('#wizard-resultado-regressao .min-height-200px');
-    if (!container) return;
-
-    container.innerHTML = '';
-    canvas = document.createElement('canvas');
-    canvas.id = 'wizard-grafico-canvas';
-    canvas.width = 600;
-    canvas.height = 400;
-    canvas.style.width = '100%';
-    canvas.style.height = 'auto';
-    container.appendChild(canvas);
+    console.error(`[Wizard] Canvas com ID '${canvasId}' não encontrado.`);
+    return;
   }
 
   const ctx = canvas.getContext('2d');
@@ -705,22 +722,60 @@ function desenharGraficoRegressao(pontos, alpha, beta) {
 
   // Limpa canvas
   ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = '#f8fafc'; // Cor de fundo do canvas
   ctx.fillRect(0, 0, width, height);
 
   // Encontra min/max para escala
   const N_values = pontos.map(p => p.N_leitura);
   const m_values = pontos.map(p => p.m_kg);
-  const N_min = Math.min(...N_values) * 0.9;
-  const N_max = Math.max(...N_values) * 1.1;
-  const m_min = Math.min(...m_values) * 0.9;
-  const m_max = Math.max(...m_values) * 1.1;
+  const N_min_data = Math.min(...N_values);
+  const N_max_data = Math.max(...N_values);
+  const m_min_data = Math.min(...m_values);
+  const m_max_data = Math.max(...m_values);
+
+  // Adiciona uma margem aos min/max para que os pontos não fiquem na borda
+  const N_range = N_max_data - N_min_data;
+  const m_range = m_max_data - m_min_data;
+  const N_min = N_min_data - N_range * 0.1;
+  const N_max = N_max_data + N_range * 0.1;
+  const m_min = m_min_data - m_range * 0.1;
+  const m_max = m_max_data + m_range * 0.1;
 
   // Funções de escala
   const scaleX = (N) => padding + ((N - N_min) / (N_max - N_min)) * (width - 2 * padding);
   const scaleY = (m) => height - padding - ((m - m_min) / (m_max - m_min)) * (height - 2 * padding);
 
-  // Desenha eixos
+  // Desenha grade (linhas finas)
+  ctx.strokeStyle = '#e2e8f0'; // Cor da grade
+  ctx.lineWidth = 1;
+  ctx.font = '10px Arial';
+  ctx.fillStyle = '#64748b'; // Cor dos labels da grade
+
+  // Eixo X (Leitura ADC)
+  const numXTicks = 5;
+  for (let i = 0; i <= numXTicks; i++) {
+    const N_val = N_min + (N_max - N_min) * (i / numXTicks);
+    const x = scaleX(N_val);
+    ctx.beginPath();
+    ctx.moveTo(x, padding);
+    ctx.lineTo(x, height - padding + 5); // Pequeno traço para fora
+    ctx.stroke();
+    ctx.fillText(N_val.toFixed(0), x, height - padding + 20);
+  }
+
+  // Eixo Y (Massa kg)
+  const numYTicks = 5;
+  for (let i = 0; i <= numYTicks; i++) {
+    const m_val = m_min + (m_max - m_min) * (i / numYTicks);
+    const y = scaleY(m_val);
+    ctx.beginPath();
+    ctx.moveTo(padding - 5, y); // Pequeno traço para fora
+    ctx.lineTo(width - padding, y);
+    ctx.stroke();
+    ctx.fillText(m_val.toFixed(3), padding - 40, y + 3);
+  }
+
+  // Desenha eixos principais
   ctx.strokeStyle = '#000000';
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -745,13 +800,21 @@ function desenharGraficoRegressao(pontos, alpha, beta) {
   ctx.strokeStyle = '#3498db';
   ctx.lineWidth = 3;
   ctx.beginPath();
-  const N_start = N_min;
-  const N_end = N_max;
-  const m_start = alpha * N_start + beta;
-  const m_end = alpha * N_end + beta;
-  ctx.moveTo(scaleX(N_start), scaleY(m_start));
-  ctx.lineTo(scaleX(N_end), scaleY(m_end));
+  const N_start_reg = N_min;
+  const N_end_reg = N_max;
+  const m_start_reg = alpha * N_start_reg + beta;
+  const m_end_reg = alpha * N_end_reg + beta;
+  ctx.moveTo(scaleX(N_start_reg), scaleY(m_start_reg));
+  ctx.lineTo(scaleX(N_end_reg), scaleY(m_end_reg));
   ctx.stroke();
+
+  // Calcula e exibe o ângulo da reta de regressão
+  const angleRad = Math.atan(alpha * ( (width - 2 * padding) / (N_max - N_min) ) / ( (height - 2 * padding) / (m_max - m_min) ) ); // Ajusta para a escala do gráfico
+  const angleDeg = (angleRad * 180 / Math.PI).toFixed(2);
+  const angleEl = document.getElementById(angleDisplayId);
+  if (angleEl) {
+    angleEl.textContent = `${angleDeg}°`;
+  }
 
   // Desenha pontos medidos
   pontos.forEach((p, i) => {
@@ -869,7 +932,23 @@ function sleep(ms) {
 
 // Abertura do wizard
 window.openWizardSimplificado = async function() {
-  const modal = document.getElementById('wizard-modal');
+  // Carrega o HTML do wizard dinamicamente se ainda não estiver no DOM
+  if (!document.getElementById('wizard-modal')) {
+    await loadWizardHtml();
+  }
+
+  let modal = document.getElementById('wizard-modal');
+  if (!modal) { // Re-check in case it was just loaded
+    await loadWizardHtml(); // Ensure it's loaded if somehow missed
+    modal = document.getElementById('wizard-modal'); // Get it again after loading
+  }
+
+  if (!modal) { // If still null, something is seriously wrong
+    console.error('[Wizard] Erro: Modal do wizard não encontrado após carregamento.');
+    showNotification('error', 'Erro interno: Assistente de configuração não pode ser iniciado.');
+    return;
+  }
+
   modal.style.display = 'block';
   wizardCurrentStepSimple = 0;
 
@@ -926,6 +1005,35 @@ window.openWizardSimplificado = async function() {
   };
   dataWorker.addEventListener('message', configListener);
 };
+
+// Função para carregar o HTML do wizard dinamicamente
+async function loadWizardHtml() {
+  try {
+    console.log('[Wizard] Tentando carregar wizard_calibration.html...');
+    const response = await fetch('wizard_calibration.html');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const html = await response.text();
+    console.log('[Wizard] HTML de wizard_calibration.html recebido. Tamanho:', html.length);
+    // console.log('[Wizard] Conteúdo HTML recebido:', html); // Uncomment for full HTML debug
+
+    document.body.insertAdjacentHTML('beforeend', html); // Insere no final do body
+    console.log('[Wizard] HTML do wizard inserido no DOM.');
+
+    // Verify insertion immediately
+    const insertedModal = document.getElementById('wizard-modal');
+    if (insertedModal) {
+      console.log('[Wizard] Modal do wizard encontrado no DOM após inserção.');
+    } else {
+      console.error('[Wizard] ERRO CRÍTICO: Modal do wizard NÃO encontrado no DOM após inserção.');
+    }
+
+  } catch (error) {
+    console.error('[Wizard] Erro ao carregar HTML do wizard:', error);
+    showNotification('error', 'Erro ao carregar o assistente de configuração: ' + error.message);
+  }
+}
 
 // Função auxiliar para aplicar configurações iniciais seguras
 async function applySafeInitialConfig() {
