@@ -617,22 +617,35 @@ sudo chmod 666 /dev/ttyUSB0</pre>
             </p>
           </div>
 
-          <!-- PASSO 1.1: Capacidade da Célula -->
+          <!-- PASSO 1: Capacidade e Acurácia -->
           <div class="wizard-step" id="wizard-step-1" style="display: none;">
-            <h3>⚖️ Passo 1: Capacidade da Célula</h3>
-            <p style="font-size: 1.1rem; margin-bottom: 1.5rem;">Informe a <strong>capacidade máxima</strong> da sua célula de carga:</p>
+            <h3>⚖️ Passo 1: Especificações da Célula</h3>
+            <p style="font-size: 1.1rem; margin-bottom: 1.5rem;">Informe os parâmetros nominais da sua célula de carga.</p>
 
-            <div style="margin-bottom: 1.5rem;">
-              <label for="wizard-capacidade-kg" style="font-size: 1.1rem; font-weight: 600;">Capacidade em kg:</label>
-              <input type="number" id="wizard-capacidade-kg" placeholder="Ex: 5" step="0.001" style="font-size: 1.2rem; padding: 0.75rem;" oninput="wizardCalcularAcuracia()">
-              <small style="display: block; margin-top: 0.5rem; color: var(--cor-texto-secundario);">
-                Exemplo: Para uma célula de 5kg, digite <strong>5</strong>
-              </small>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+              <div>
+                <label for="wizard-capacity-input" style="font-size: 1.1rem; font-weight: 600;">Capacidade Máxima (kg):</label>
+                <input type="number" id="wizard-capacity-input" placeholder="Ex: 20" step="any" style="font-size: 1.2rem; padding: 0.75rem;" oninput="calculateStabilityParameters()">
+                <small style="display: block; margin-top: 0.5rem; color: var(--cor-texto-secundario);">
+                  Ex: Para uma célula de 20kg, digite <strong>20</strong>.
+                </small>
+              </div>
+              <div>
+                <label for="wizard-accuracy-input" style="font-size: 1.1rem; font-weight: 600;">Acurácia Desejada (%):</label>
+                <input type="number" id="wizard-accuracy-input" value="0.02" step="0.001" style="font-size: 1.2rem; padding: 0.75rem;" oninput="calculateStabilityParameters()">
+                <small style="display: block; margin-top: 0.5rem; color: var(--cor-texto-secundario);">
+                  Sugestão: <strong>0.02%</strong> (classe C3) ou <strong>0.03%</strong>.
+                </small>
+              </div>
             </div>
 
-            <div id="wizard-acuracia-calculada" style="display: none; background: var(--cor-info-light); padding: 1rem; border-radius: 0.5rem; border-left: 4px solid var(--cor-info);">
-              <p><strong>Acurácia estimada:</strong> <span id="wizard-acuracia-valor">0.02%</span></p>
-              <p><strong>Erro máximo:</strong> ±<span id="wizard-erro-maximo-valor">---</span> g</p>
+            <div id="wizard-tolerancia-calculada" style="display: none; background: var(--cor-info-light); padding: 1rem; border-radius: 0.5rem; border-left: 4px solid var(--cor-info);">
+              <h4 style="margin-top: 0; font-size: 0.95rem;">📊 Parâmetros de Estabilização Calculados</h4>
+              <p><strong>Tolerância de estabilização:</strong> <span id="wizard-tolerancia-valor" style="font-weight: bold;">---</span></p>
+              <p style="margin-top: 0.5rem;"><strong>Erro máximo aceitável:</strong> <span id="wizard-erro-maximo-valor" style="font-weight: bold;">---</span> g</p>
+              <small style="display: block; margin-top: 0.5rem; color: var(--cor-texto-secundario);">
+                Estes valores serão usados para detectar quando a balança está estável durante a calibração.
+              </small>
             </div>
           </div>
 
@@ -886,7 +899,7 @@ sudo chmod 666 /dev/ttyUSB0</pre>
                     <td style="padding: 0.3rem 0.4rem; font-family: monospace; font-size: 0.7rem;" id="burn-test-start-time-absolute">---</td>
                     <td style="padding: 0.3rem 0.4rem; font-family: monospace; font-weight: bold; color: var(--cor-primaria); text-align: right; font-size: 0.7rem;">00:00.000s</td>
                   </tr>
-                  <tr style="background: rgba(52, 152, 219, 0.05);">
+                  <tr style="background: rgba(52, 152,219, 0.05);">
                     <td style="padding: 0.3rem 0.4rem; font-family: monospace; font-size: 0.7rem;" id="burn-test-end-time-absolute">---</td>
                     <td style="padding: 0.3rem 0.4rem; font-family: monospace; font-weight: bold; color: var(--cor-primaria); text-align: right; font-size: 0.7rem;" id="burn-test-end-time-relative">---</td>
                   </tr>

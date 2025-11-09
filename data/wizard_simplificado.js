@@ -75,6 +75,10 @@ async function wizardPasso0_Avancar() {
     wizardStateSimple.passo0.nZero = nZero;
     wizardStateSimple.passo0.ruidoStd = ruidoStd;
     wizardStateSimple.passo0.amostrasColetadas = amostras.length;
+    
+    // Define um alpha preliminar para o cálculo da tolerância no passo 1
+    // Este valor é uma estimativa grosseira, mas suficiente para começar
+    wizardStateSimple.passo3.alpha = 0.10197; // Aproximadamente 1/g
 
     // Exibe apenas o ruído medido (em N, não convertido)
     document.getElementById('wizard-ruido-medido').textContent = `${ruidoStd.toFixed(6)} N (σ)`;
@@ -96,33 +100,60 @@ async function wizardPasso0_Avancar() {
 }
 
 /**
- * PASSO 1: Definir capacidade e erro desejado
+ * PASSO 1: Definir capacidade e acurácia para calcular a tolerância
  */
-function wizardCalcularAcuracia() {
-  const capacidadeKg = parseFloat(document.getElementById('wizard-capacidade-kg').value) || 0;
+function calculateStabilityParameters() {
+    const capacityKg = parseFloat(document.getElementById('wizard-capacity-input').value);
+    const accuracyPercent = parseFloat(document.getElementById('wizard-accuracy-input').value);
+    const alpha = wizardStateSimple.passo3.alpha; // Usamos o alpha preliminar ou final
 
-  if (capacidadeKg > 0) {
-    const acuraciaPercent = 0.03; // Classe C3
-    const erroMaximoKg = (capacidadeKg * acuraciaPercent) / 100;
+    if (!capacityKg || !accuracyPercent || !alpha) {
+        document.getElementById('wizard-tolerancia-calculada').style.display = 'none';
+        return;
+    }
 
-    wizardStateSimple.passo1.capacidadeKg = capacidadeKg;
-    wizardStateSimple.passo1.acuraciaPercent = acuraciaPercent;
-    wizardStateSimple.passo1.erroMaximoKg = erroMaximoKg;
+    // 1. Calcular o erro máximo aceitável em gramas
+    const maxErrorGrams = (capacityKg * 1000) * (accuracyPercent / 100);
 
-    document.getElementById('wizard-acuracia-valor').textContent = acuraciaPercent + '%';
-    document.getElementById('wizard-erro-maximo-valor').textContent = (erroMaximoKg * 1000).toFixed(2);
-    document.getElementById('wizard-acuracia-calculada').style.display = 'block';
+    // 2. Converter o erro em gramas para a unidade de força (Newtons)
+    const maxErrorNewtons = maxErrorGrams / 1000 * 9.80665;
 
-    console.log(`[Wizard] Capacidade=${capacidadeKg}kg, Erro máx=±${(erroMaximoKg*1000).toFixed(2)}g`);
-  } else {
-    document.getElementById('wizard-acuracia-calculada').style.display = 'none';
-  }
+    // 3. Usar o coeficiente alpha (kg/N) para converter o erro em Newtons para a unidade de contagem do ADC
+    // A tolerância será o erro máximo permitido, convertido para a escala do ADC.
+    // O fator de conversão (contagens/g) é aproximadamente 1 / (alpha * g)
+    // Portanto, a tolerância em contagens é (erro em gramas) * (fator de conversão)
+    const conversionFactor = 1 / (alpha * 9.80665 / 1000); // contagens/g
+    let stabilityThreshold = maxErrorGrams * conversionFactor;
+
+    // Garantir uma tolerância mínima para evitar instabilidade com ruído baixo
+    const minThreshold = 200; // Valor empírico, ~200-500 contagens
+    if (stabilityThreshold < minThreshold) {
+        stabilityThreshold = minThreshold;
+        console.warn(`Tolerância calculada (${stabilityThreshold.toFixed(0)}) abaixo do mínimo. Usando ${minThreshold}.`);
+    }
+    
+    // Salva os valores calculados no estado do wizard
+    wizardStateSimple.passo1.capacidadeKg = capacityKg;
+    wizardStateSimple.passo1.acuraciaPercent = accuracyPercent;
+    wizardStateSimple.passo1.erroMaximoKg = maxErrorGrams / 1000;
+    wizardStateSimple.passo3.toleranciaN = stabilityThreshold; // Armazenando como contagens ADC
+
+    // Exibe os resultados para o usuário
+    document.getElementById('wizard-tolerancia-valor').textContent = `${stabilityThreshold.toFixed(0)} contagens ADC`;
+    document.getElementById('wizard-erro-maximo-valor').textContent = `${maxErrorGrams.toFixed(2)}`;
+    document.getElementById('wizard-tolerancia-calculada').style.display = 'block';
+
+    console.log(`[Wizard] Parâmetros de estabilidade: Capacidade=${capacityKg}kg, Acurácia=${accuracyPercent}%`);
+    console.log(`[Wizard] Erro Máximo Aceitável: ${maxErrorGrams.toFixed(2)}g`);
+    console.log(`[Wizard] Tolerância de Estabilização: ${stabilityThreshold.toFixed(0)} contagens`);
 }
 
+
 function wizardPasso1_Validar() {
-  const capacidadeKg = parseFloat(document.getElementById('wizard-capacidade-kg').value) || 0;
-  if (capacidadeKg <= 0) {
-    showNotification('error', 'Informe a capacidade da célula');
+  const capacidadeKg = parseFloat(document.getElementById('wizard-capacity-input').value) || 0;
+  const acuracia = parseFloat(document.getElementById('wizard-accuracy-input').value) || 0;
+  if (capacidadeKg <= 0 || acuracia <= 0) {
+    showNotification('error', 'Informe a capacidade e a acurácia da célula.');
     return false;
   }
   return true;
@@ -288,28 +319,22 @@ async function wizardPasso3_Avancar() {
   console.log(`  R²=${r2.toFixed(6)}, Erro máx=${(erroMax*1000).toFixed(2)}g`);
 
   // 5. Calcula tolerância para estabilização
-  // tolerância = max(3·σ, ΔN_erro_desejado)
-  // onde ΔN_erro_desejado = erro_desejado / α
+  // A tolerância agora é lida do estado, que foi calculado no Passo 1
+  const toleranciaADC = wizardStateSimple.passo3.toleranciaN; // Este valor já está em contagens ADC
+  const alphaCalculado = alpha; // kg/N
+  const conversionFactorCalculado = 1 / (alphaCalculado * 9.80665 / 1000); // contagens/g
+  const toleranciaEmGramas = toleranciaADC / conversionFactorCalculado;
+  const toleranciaEmNewtons = (toleranciaEmGramas / 1000) * 9.80665;
 
-  const ruidoStd = wizardStateSimple.passo0.ruidoStd;  // σ em N
-  const erroDesejadomKg = wizardStateSimple.passo1.erroMaximoKg;
-
-  const toleranciaRuido = 3 * ruidoStd;  // 3σ em N
-  const toleranciaErro = erroDesejadomKg / alpha;  // Converte erro de kg para N
-
-  // Usa o maior valor para garantir estabilidade
-  const toleranciaN = Math.max(toleranciaRuido, toleranciaErro);
-
-  console.log(`  Tolerância ruído (3σ)=${toleranciaRuido.toFixed(6)}N`);
-  console.log(`  Tolerância erro desejado=${toleranciaErro.toFixed(6)}N`);
-  console.log(`  Tolerância final=max(${toleranciaRuido.toFixed(6)}, ${toleranciaErro.toFixed(6)})=${toleranciaN.toFixed(6)}N`);
+  console.log(`[Wizard] Usando tolerância pré-calculada: ${toleranciaADC.toFixed(0)} contagens (≈ ${toleranciaEmGramas.toFixed(2)}g)`);
 
   // Salva
   wizardStateSimple.passo3.alpha = alpha;
   wizardStateSimple.passo3.beta = beta;
   wizardStateSimple.passo3.erroMaximoMedido = erroMax;
   wizardStateSimple.passo3.r2 = r2;
-  wizardStateSimple.passo3.toleranciaN = toleranciaN;
+  // A tolerância (toleranciaN) já está no estado, mas atualizamos para garantir consistência
+  wizardStateSimple.passo3.toleranciaN = toleranciaADC;
 
   // Exibe resultados
   document.getElementById('wizard-alpha-valor').textContent = alpha.toFixed(8);
@@ -318,13 +343,8 @@ async function wizardPasso3_Avancar() {
   document.getElementById('wizard-erro-max-valor').textContent = (Math.abs(erroMax) * 1000).toFixed(2);
 
   // Exibe tolerância calculada
-  const toleranciaKgCalc = toleranciaN / 9.80665;      // N → kg
-  const toleranciaG = toleranciaKgCalc * 1000;         // kg → g
-  const conversionFactorCalc = 1000 / (alpha * 9.80665);  // contagens/g (ESP32 usa g, não kg!)
-  const toleranciaADC_display = toleranciaG * conversionFactorCalc;  // g → contagens HX711
-
   document.getElementById('wizard-tolerancia-final').textContent =
-    `${toleranciaN.toFixed(6)} N (≈${toleranciaG.toFixed(2)} g) = ${toleranciaADC_display.toFixed(0)} contagens`;
+    `${toleranciaEmNewtons.toFixed(4)} N (≈${toleranciaEmGramas.toFixed(2)} g) = ${toleranciaADC.toFixed(0)} contagens`;
 
   document.getElementById('wizard-resultado-regressao').style.display = 'block';
 
@@ -446,62 +466,25 @@ function wizardStopRealtimeReading() {
 async function wizardFinishSimple() {
   const alpha = wizardStateSimple.passo3.alpha;
   const beta = wizardStateSimple.passo3.beta;
-  const toleranciaN = wizardStateSimple.passo3.toleranciaN;
+  const toleranciaADC = wizardStateSimple.passo3.toleranciaN; // Já está em contagens ADC
   const capacidadeKg = wizardStateSimple.passo1.capacidadeKg;
-  const acuracia = wizardStateSimple.passo1.acuraciaPercent / 100;
+  const acuracia = wizardStateSimple.passo1.acuraciaPercent;
 
-  // Converte tolerância de N para contagens brutas do HX711
-  //
-  // Modelo do wizard: m = α·N + β, onde:
-  //   - m está em kg
-  //   - N está em Newtons (força medida)
-  //   - α está em kg/N
-  //
-  // ESP32 usa: conversionFactor em contagens/grama
-  //   - loadcell.get_units() = contagens_brutas / conversionFactor
-  //   - Portanto: contagens = gramas × conversionFactor
-  //
-  // Conversão:
-  //   1. toleranciaN (N) → toleranciaKg (kg): dividir por g = 9.80665
-  //   2. toleranciaKg (kg) → toleranciaG (g): multiplicar por 1000
-  //   3. toleranciaG (g) → contagens HX711: multiplicar por conversionFactor
-  //
-  // Cálculo do conversionFactor a partir de α:
-  //   - α = kg/N, então α·g = kg/(kg·g/kg) = 1/g em kg/N
-  //   - Para 1 grama: força = 0.001 kg × g = 0.00981 N
-  //   - ΔN para 1g = 0.00981 N
-  //   - Δcontagens = 1g × conversionFactor
-  //   - α relaciona kg com N: m(kg) = α × F(N)
-  //   - Para obter conversionFactor: 1g causa ΔN = g/1000 × 1/α
-  //   - conversionFactor = Δcontagens / Δgramas
-  //   - Simplificando: conversionFactor ≈ 1 / (α × g × 1000)
-
-  const toleranciaKg = toleranciaN / 9.80665;      // N → kg
-  const toleranciaG = toleranciaKg * 1000;         // kg → g
-  const conversionFactor = 1000 / (alpha * 9.80665);  // contagens/g (corrigido!)
-  let toleranciaADC = toleranciaG * conversionFactor;  // g → contagens HX711
-
-  // SEGURANÇA: Garante valor mínimo de 50 contagens
-  if (toleranciaADC < 50) {
-    console.warn(`[Wizard] Tolerância muito baixa (${toleranciaADC.toFixed(1)}), usando mínimo de 50 contagens`);
-    toleranciaADC = 50;
-  }
-
-  // Arredonda para inteiro
-  toleranciaADC = Math.round(toleranciaADC);
+  // O conversionFactor é calculado a partir do alpha final
+  const conversionFactor = 1 / (alpha * 9.80665 / 1000); // contagens/g
 
   // Atualiza resumo no Passo 4
+  const toleranciaEmGramas = toleranciaADC / conversionFactor;
   document.getElementById('wizard-resumo-capacidade').textContent = capacidadeKg.toFixed(2);
   document.getElementById('wizard-resumo-alpha').textContent = alpha.toFixed(8);
   document.getElementById('wizard-resumo-beta').textContent = beta.toFixed(8);
   document.getElementById('wizard-resumo-tolerancia').textContent =
-    `${(toleranciaN * 1000 / 9.80665).toFixed(2)} g (${toleranciaADC.toFixed(0)} contagens)`;
+    `${toleranciaEmGramas.toFixed(2)} g (${toleranciaADC.toFixed(0)} contagens)`;
 
   console.log('[Wizard] Salvando no ESP32...');
   console.log(`  α=${alpha.toFixed(8)} kg/N, β=${beta.toFixed(8)} kg`);
   console.log(`  conversionFactor=${conversionFactor.toFixed(2)} contagens/g`);
-  console.log(`  Tolerância=${toleranciaN.toFixed(6)}N = ${toleranciaG.toFixed(2)}g`);
-  console.log(`  Tolerância ADC=${toleranciaADC} contagens HX711 (mín: 50)`);
+  console.log(`  Tolerância ADC=${toleranciaADC} contagens HX711`);
 
   // Valida valores antes de enviar
   if (!isFinite(toleranciaADC) || toleranciaADC < 0) {
@@ -516,9 +499,9 @@ async function wizardFinishSimple() {
     // Salva configurações no ESP32
     await enviarComandoPromise('set', { param: 'capacidadeMaximaGramas', value: capacidadeKg * 1000 });
     await sleep(100);
-    await enviarComandoPromise('set', { param: 'percentualAcuracia', value: acuracia });
+    await enviarComandoPromise('set', { param: 'percentualAcuracia', value: acuracia }); // Salva o percentual direto
     await sleep(100);
-    await enviarComandoPromise('set', { param: 'toleranciaEstabilidade', value: toleranciaADC });
+    await enviarComandoPromise('set', { param: 'toleranciaEstabilidade', value: Math.round(toleranciaADC) });
     await sleep(100);
     await enviarComandoPromise('set', { param: 'conversionFactor', value: conversionFactor });
     await sleep(100);
@@ -609,7 +592,7 @@ window.openWizardSimplificado = async function() {
   // Reseta estado
   wizardStateSimple = {
     passo0: { nZero: 0, ruidoStd: 0, amostrasColetadas: 0 },
-    passo1: { capacidadeKg: 0, acuraciaPercent: 0.03, erroMaximoKg: 0 },
+    passo1: { capacidadeKg: 0, acuraciaPercent: 0.02, erroMaximoKg: 0 },
     passo2: { pontosCalibr: [], pesoAtualKg: 0, calibracaoCompleta: false },
     passo3: { alpha: 0, beta: 0, erroMaximoMedido: 0, r2: 0, toleranciaN: 0 }
   };
