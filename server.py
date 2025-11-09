@@ -96,7 +96,7 @@ MYSQL_ROOT_PASSWORD = os.environ.get("MYSQL_ROOT_PASSWORD", "Hilquias")
 
 # Binary Protocol Constants
 MAGIC = 0xA1B2
-VERSION = 0x01
+VERSION = 0x02
 
 # Packet Types
 TYPE_DATA        = 0x01
@@ -108,7 +108,7 @@ CMD_GET_CONFIG   = 0x12
 CMD_SET_PARAM    = 0x13
 
 # Packet sizes
-SIZE_DATA       = 16
+SIZE_DATA       = 20
 SIZE_CONFIG     = 64
 SIZE_STATUS     = 14
 SIZE_CMD_TARA   = 8
@@ -1148,40 +1148,94 @@ def crc16_ccitt(data: bytes) -> int:
             crc = ((crc << 1) ^ 0x1021) if crc & 0x8000 else (crc << 1)
     return crc & 0xFFFF
 
-def parse_data_packet(data: bytes) -> Optional[Dict[str, Any]]:
-    if len(data) != SIZE_DATA: return None
+def parse_data_packet_v1(data: bytes) -> Optional[Dict[str, Any]]:
+    """Parses the original 16-byte data packet."""
+    if len(data) != 16: return None
     try:
         magic, ver, pkt_type, t_ms, forca_N, status, crc_rx = struct.unpack("<HBBIfBxH", data)
-        if magic != MAGIC or ver != VERSION or pkt_type != TYPE_DATA: return None
+        if magic != MAGIC or pkt_type != TYPE_DATA: return None
         if crc16_ccitt(data[:-2]) != crc_rx:
-            logging.warning("CRC mismatch in DATA packet")
+            logging.warning("[V1 Parser] CRC mismatch in DATA packet")
             return None
-        return {"type": "data", "tempo": t_ms / 1000.0, "forca": float(forca_N), "status": status}
-    except struct.error: return None
+        return {"type": "data", "tempo": t_ms / 1000.0, "forca": float(forca_N), "raw": None, "status": status}
+    except struct.error:
+        return None
+
+def parse_data_packet_v2(data: bytes) -> Optional[Dict[str, Any]]:
+    """Parses the new 20-byte data packet with raw value."""
+    if len(data) != 20: return None
+    try:
+        magic, ver, pkt_type, t_ms, forca_N, raw_value, status, _, crc_rx = struct.unpack("<HBBIfiBBH", data)
+        if magic != MAGIC or pkt_type != TYPE_DATA: return None
+        if crc16_ccitt(data[:-2]) != crc_rx:
+            logging.warning("[V2 Parser] CRC mismatch in DATA packet")
+            return None
+        return {
+            "type": "data",
+            "tempo": t_ms / 1000.0,
+            "forca": float(forca_N),
+            "raw": raw_value,
+            "status": status
+        }
+    except struct.error:
+        return None
+
+def parse_data_packet(data: bytes, version: int) -> Optional[Dict[str, Any]]:
+    if version == 0x01:
+        return parse_data_packet_v1(data)
+    elif version == 0x02:
+        return parse_data_packet_v2(data)
+    else:
+        logging.warning(f"Unsupported packet version: {version}")
+        return None
 
 def parse_config_packet(data: bytes) -> Optional[Dict[str, Any]]:
     if len(data) != SIZE_CONFIG: return None
     try:
         magic, ver, pkt_type = struct.unpack_from("<HBB", data, 0)
-        if magic != MAGIC or ver != VERSION or pkt_type != TYPE_CONFIG: return None
-        if crc16_ccitt(data[:-2]) != struct.unpack_from("<H", data, SIZE_CONFIG - 2)[0]:
-            logging.debug("CRC mismatch in CONFIG packet - descartando pacote")
+        if magic != MAGIC or pkt_type != TYPE_CONFIG: return None
+        
+        crc_rx = struct.unpack_from("<H", data, SIZE_CONFIG - 2)[0]
+        calculated_crc = crc16_ccitt(data[:-2])
+
+        if calculated_crc != crc_rx:
+            logging.warning("[CRC DEBUG] CRC mismatch in CONFIG packet!")
+            logging.warning(f"[CRC DEBUG]   - Bytes Received (hex): {data.hex()}")
+            logging.warning(f"[CRC DEBUG]   - CRC Received: {crc_rx:04x}")
+            logging.warning(f"[CRC DEBUG]   - CRC Calculated: {calculated_crc:04x}")
             return None
-        fields = struct.unpack_from("<ffHfHHBBHiffB23x", data, 4)
+
+        offset = 4  # Pular cabeçalho
+        
+        conversionFactor = struct.unpack_from("<f", data, offset)[0]; offset += 4
+        gravity = struct.unpack_from("<f", data, offset)[0]; offset += 4
+        leiturasEstaveis = struct.unpack_from("<H", data, offset)[0]; offset += 2
+        toleranciaEstabilidade = struct.unpack_from("<f", data, offset)[0]; offset += 4
+        numAmostrasMedia = struct.unpack_from("<H", data, offset)[0]; offset += 2
+        numAmostrasCalibracao = struct.unpack_from("<H", data, offset)[0]; offset += 2
+        usarMediaMovel = struct.unpack_from("<B", data, offset)[0]; offset += 1
+        usarEMA = struct.unpack_from("<B", data, offset)[0]; offset += 1
+        timeoutCalibracao = struct.unpack_from("<H", data, offset)[0]; offset += 2
+        tareOffset = struct.unpack_from("<i", data, offset)[0]; offset += 4
+        capacidadeMaximaGramas = struct.unpack_from("<f", data, offset)[0]; offset += 4
+        percentualAcuracia = struct.unpack_from("<f", data, offset)[0]; offset += 4
+        mode = struct.unpack_from("<B", data, offset)[0]; offset += 1
+
         config = {
-            "type": "config", "conversionFactor": fields[0], "gravity": fields[1],
-            "leiturasEstaveis": fields[2], "toleranciaEstabilidade": fields[3],
-            "numAmostrasMedia": fields[4], "numAmostrasCalibracao": fields[5],
-            "usarMediaMovel": fields[6], "usarEMA": fields[7], "timeoutCalibracao": fields[8],
-            "tareOffset": fields[9], "capacidadeMaximaGramas": fields[10],
-            "percentualAcuracia": fields[11], "mode": fields[12]
+            "type": "config", "conversionFactor": conversionFactor, "gravity": gravity,
+            "leiturasEstaveis": leiturasEstaveis, "toleranciaEstabilidade": toleranciaEstabilidade,
+            "numAmostrasMedia": numAmostrasMedia, "numAmostrasCalibracao": numAmostrasCalibracao,
+            "usarMediaMovel": usarMediaMovel, "usarEMA": usarEMA, "timeoutCalibracao": timeoutCalibracao,
+            "tareOffset": tareOffset, "capacidadeMaximaGramas": capacidadeMaximaGramas,
+            "percentualAcuracia": percentualAcuracia, "mode": mode
         }
-        # Sanitize NaN/Infinity to None for valid JSON
+        
         sanitized = sanitize_for_json(config)
-        # Log dos valores recebidos para debug
-        logging.info(f"[CONFIG_PACKET] capacidadeMaximaGramas={sanitized.get('capacidadeMaximaGramas')}, percentualAcuracia={sanitized.get('percentualAcuracia')}")
+        logging.info(f"[CONFIG_PACKET] Config parsed successfully.")
         return sanitized
-    except struct.error: return None
+    except struct.error as e:
+        logging.error(f"Erro ao decodificar pacote de config: {e}")
+        return None
 
 def parse_status_packet(data: bytes) -> Optional[Dict[str, Any]]:
     if len(data) != SIZE_STATUS: return None
@@ -1320,41 +1374,48 @@ def serial_reader(loop: asyncio.AbstractEventLoop):
                             pass
                         del buf[:magic_idx]
                     
-                    if len(buf) < 4:
+                    if len(buf) < 4: # Need at least magic, version, type
                         break
                     
+                    pkt_ver = buf[2]
                     pkt_type = buf[3]
-                    size_map = {TYPE_DATA: SIZE_DATA, TYPE_CONFIG: SIZE_CONFIG, TYPE_STATUS: SIZE_STATUS}
-                    expected_size = size_map.get(pkt_type)
+
+                    size_map = {
+                        0x01: {TYPE_DATA: 16, TYPE_CONFIG: 64, TYPE_STATUS: 14},
+                        0x02: {TYPE_DATA: 20, TYPE_CONFIG: 64, TYPE_STATUS: 14}
+                    }
                     
+                    expected_size = size_map.get(pkt_ver, {}).get(pkt_type)
+
                     if not expected_size:
-                        # Tipo de pacote desconhecido, descarta este byte e continua
                         del buf[0]
-                        invalid_packet_count += 1
-                        if invalid_packet_count > max_invalid_packets:
-                            logging.warning(f"Muitos pacotes inválidos detectados. Resincronizando buffer.")
-                            buf.clear()
-                            invalid_packet_count = 0
                         continue
                     
                     if len(buf) < expected_size:
-                        break  # Aguarda mais dados
+                        break
                     
                     packet = bytes(buf[:expected_size])
                     del buf[:expected_size]
                     
-                    # Tenta parsear o pacote
-                    parsers = {TYPE_DATA: parse_data_packet, TYPE_CONFIG: parse_config_packet, TYPE_STATUS: parse_status_packet}
-                    json_obj = parsers.get(pkt_type)(packet) if pkt_type in parsers else None
-                    
+                    json_obj = None
+                    try:
+                        if pkt_type == TYPE_DATA:
+                            json_obj = parse_data_packet(packet, pkt_ver)
+                        elif pkt_type == TYPE_CONFIG:
+                            json_obj = parse_config_packet(packet)
+                        elif pkt_type == TYPE_STATUS:
+                            json_obj = parse_status_packet(packet)
+                    except Exception as e:
+                        logging.error(f"Erro ao decodificar pacote (tipo={pkt_type}, ver={pkt_ver}): {e}")
+                        json_obj = None
+
                     if json_obj:
-                        invalid_packet_count = 0  # Reset contador se pacote válido
+                        invalid_packet_count = 0
                         asyncio.run_coroutine_threadsafe(broadcast_json(json_obj), loop)
                     else:
-                        # Pacote inválido (CRC falhou, etc), descarta silenciosamente
                         invalid_packet_count += 1
                         if invalid_packet_count > max_invalid_packets:
-                            logging.warning(f"Muitos pacotes inválidos ({invalid_packet_count}). Possível problema de sincronização.")
+                            logging.warning(f"Muitos pacotes inválidos ({invalid_packet_count}). Resincronizando.")
                             buf.clear()
                             invalid_packet_count = 0
                             

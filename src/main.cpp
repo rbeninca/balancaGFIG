@@ -13,7 +13,7 @@
 
 // ======== CONSTANTES DO PROTOCOLO ========
 static const uint16_t MAGIC_BIN_PROTO = 0xA1B2;
-static const uint8_t  PROTO_VERSION   = 0x01;
+static const uint8_t  PROTO_VERSION   = 0x02;
 
 // Tipos de Pacotes (ESP→Host)
 static const uint8_t TYPE_DATA   = 0x01;  // Leitura de força
@@ -58,13 +58,14 @@ static const uint8_t PARAM_ACURACIA    = 0x0B;
 
 #pragma pack(push,1)
 
-// Pacote DATA (16 bytes)
+// Pacote DATA (20 bytes)
 struct PacketData {
   uint16_t magic;   // 0xA1B2
   uint8_t  ver;     // 1
   uint8_t  type;    // TYPE_DATA (0x01)
   uint32_t t_ms;    // millis()
   float    forca_N; // Newtons
+  int32_t  raw_value; // Leitura bruta do ADC
   uint8_t  status;  // 0=Pesando,1=Tarar,2=Calibrar,3=Pronta
   uint8_t  reserved; // Padding
   uint16_t crc;     // CRC16-CCITT
@@ -174,19 +175,7 @@ static inline uint8_t status_code_from_str(const char* s) {
 
 // ======== FUNÇÕES DE ENVIO ========
 
-static inline void sendBinaryFrame(uint8_t status_code, float forca_N) {
-  PacketData p;
-  p.magic   = MAGIC_BIN_PROTO;
-  p.ver     = PROTO_VERSION;
-  p.type    = TYPE_DATA;
-  p.t_ms    = millis();
-  p.forca_N = forca_N;
-  p.status  = status_code;
-  p.reserved = 0;
-  p.crc     = 0;
-  p.crc     = crc16_ccitt((const uint8_t*)&p, sizeof(PacketData) - sizeof(uint16_t));
-  Serial.write((const uint8_t*)&p, sizeof(PacketData));
-}
+
 
 // Forward declaration da struct Config
 struct Config;
@@ -279,9 +268,7 @@ void sendBinaryConfig(const Config& cfg) {
   
   p.crc = crc16_ccitt((const uint8_t*)&p, sizeof(PacketConfig) - sizeof(uint16_t));
   Serial.write((const uint8_t*)&p, sizeof(PacketConfig));
-  Serial.flush();
-  
-  
+  // Serial.flush(); // MANTIDO REMOVIDO
 }
 
 void sendBinaryStatus(uint8_t status_type, uint8_t code, uint16_t value) {
@@ -421,7 +408,6 @@ bool processBinaryCommand() {
     }
     
     case CMD_GET_CONFIG: {
-      
       sendBinaryConfig(config);
       processed = true;
       break;
@@ -530,7 +516,7 @@ void setup() {
 
   Serial.println("\n\n===========================================");
   Serial.println("   Balanca GFIG - Modo Gateway Serial");
-  Serial.println("   Versao: ESTAVEL V16 (Binary Protocol)");
+  Serial.printf("   Versao: ESTAVEL V16 (Binary Protocol v%d)\n", PROTO_VERSION);
   Serial.println("===========================================\n");
 
   Wire.begin(OLED_SDA, OLED_SCL);
@@ -592,15 +578,28 @@ void loop() {
       strcpy(balancaStatusBuffer, "Pesando");
       ESP.wdtFeed();
 
-      pesoAtual_g = loadcell.get_units(config.numAmostrasMedia);
+      long rawValue = loadcell.read_average(config.numAmostrasMedia);
+      pesoAtual_g = (rawValue - config.tareOffset) / config.conversionFactor;
+      
       if (config.conversionFactor < 0) {
         pesoAtual_g *= -1;
       }
 
       // Envia leitura como pacote binário
       float forcaN = (pesoAtual_g / 1000.0f) * config.gravity;
-      uint8_t st = status_code_from_str(balancaStatusBuffer);
-      sendBinaryFrame(st, forcaN);
+      
+      PacketData p;
+      p.magic     = MAGIC_BIN_PROTO;
+      p.ver       = PROTO_VERSION;
+      p.type      = TYPE_DATA;
+      p.t_ms      = millis();
+      p.forca_N   = forcaN;
+      p.raw_value = rawValue;
+      p.status    = status_code_from_str(balancaStatusBuffer);
+      p.reserved  = 0;
+      p.crc       = crc16_ccitt((const uint8_t*)&p, sizeof(PacketData) - sizeof(uint16_t));
+      
+      Serial.write((const uint8_t*)&p, sizeof(PacketData));
       yield();
     }
   }

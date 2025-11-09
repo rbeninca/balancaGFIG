@@ -327,6 +327,7 @@ function processDataPoint(data) {
     dataBuffer.push({
         tempo: data.tempo,
         forca: forceN,
+        raw: data.raw, // <-- ADICIONADO
         ema: ema,
         maxForce: maxForce,
         massaKg: massaKg

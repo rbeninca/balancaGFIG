@@ -1397,7 +1397,17 @@ function updateConfigForm(config) {
   document.getElementById("param-gravidade").value = getValue(config.gravity);
   document.getElementById("param-offset").value = getValue(config.tareOffset);
   document.getElementById("param-leituras-estaveis").value = getValue(config.leiturasEstaveis);
-  document.getElementById("param-tolerancia").value = getValue(config.toleranciaEstabilidade);
+  
+  // A tolerância vem em contagens ADC do ESP. Converte para gramas para exibição.
+  const toleranciaEmADC = getValue(config.toleranciaEstabilidade);
+  const fatorConversao = getValue(config.conversionFactor);
+  if (toleranciaEmADC && fatorConversao) {
+    const toleranciaEmGramas = toleranciaEmADC / fatorConversao;
+    document.getElementById("param-tolerancia").value = toleranciaEmGramas.toFixed(2);
+  } else {
+    document.getElementById("param-tolerancia").value = '';
+  }
+
   document.getElementById("param-num-amostras").value = getValue(config.numAmostrasMedia);
   document.getElementById("param-timeout").value = getValue(config.timeoutCalibracao);
   document.getElementById("param-capacidade-maxima").value = getValue(config.capacidadeMaximaGramas);
@@ -1415,7 +1425,7 @@ function updateConfigForm(config) {
   console.log('[updateConfigForm] Valores recebidos do ESP:');
   console.log('  Capacidade:', config.capacidadeMaximaGramas, '→', capacidadeMaximaGramas);
   console.log('  Acurácia:', config.percentualAcuracia, '→', percentualAcuracia);
-  console.log('  Tolerância:', config.toleranciaEstabilidade, '→', novaTol.toFixed(2));
+  console.log('  Tolerância (ADC):', config.toleranciaEstabilidade, '→', novaTol.toFixed(0));
   console.log('  Timeout (ms):', config.timeoutCalibracao, '→', novoTimeout.toFixed(0));
   console.log('  Erro Absoluto calculado:', (capacidadeMaximaGramas * percentualAcuracia).toFixed(2), 'g');
 
@@ -1453,21 +1463,28 @@ async function salvarParametros() {
   const params = {
     conversionFactor: "param-conversao", gravity: "param-gravidade",
     tareOffset: "param-offset", leiturasEstaveis: "param-leituras-estaveis",
-    toleranciaEstabilidade: "param-tolerancia", numAmostrasMedia: "param-num-amostras",
+    numAmostrasMedia: "param-num-amostras",
     timeoutCalibracao: "param-timeout", capacidadeMaximaGramas: "param-capacidade-maxima",
     percentualAcuracia: "param-acuracia",
   };
 
   showNotification('info', 'Enviando parâmetros para o dispositivo...');
 
+  // Trata a tolerância separadamente
+  const toleranciaEmGramas = parseFloat(document.getElementById("param-tolerancia").value.replace(',', '.'));
+  const fatorConversao = parseFloat(document.getElementById("param-conversao").value.replace(',', '.'));
+  if (!isNaN(toleranciaEmGramas) && !isNaN(fatorConversao) && fatorConversao !== 0) {
+    const toleranciaEmADC = toleranciaEmGramas * fatorConversao;
+    await new Promise(resolve => setTimeout(resolve, 100));
+    sendCommandToWorker('set', { param: 'toleranciaEstabilidade', value: toleranciaEmADC });
+  }
+
   for (const [key, id] of Object.entries(params)) {
     const valueStr = document.getElementById(id).value.trim();
     if (valueStr !== '') {
       const valueNum = parseFloat(valueStr.replace(',', '.'));
       if (!isNaN(valueNum)) {
-        // Envia um comando de cada vez com um pequeno atraso
         await new Promise(resolve => setTimeout(resolve, 100));
-        // Usa o protocolo padronizado do worker: cmd 'set' com objeto {param, value}
         sendCommandToWorker('set', { param: key, value: valueNum });
       }
     }
@@ -1477,7 +1494,7 @@ async function salvarParametros() {
   setTimeout(() => {
     showNotification('success', 'Parâmetros salvos! Atualizando valores...');
     sendCommandToWorker('get_config');
-  }, 1000); // Espera 1 segundo
+  }, 1200); // Aumentado para dar tempo a todos os comandos
 }
 
 function salvarWsUrl() {
@@ -2058,7 +2075,7 @@ function atualizarBarraEsforcoDisplay(percentual, forcaAtualN) {
   barraFill.style.width = Math.min(percentual, 100) + '%';
   
   // Atualiza texto dentro da barra (valor | percentual)
-  barraTexto.textContent = `${valorDisplay.toFixed(2)} ${displayUnit} | ${percentual.toFixed(1)}%`;
+  barraTexto.textContent = `${valorDisplay.toFixed(3)} ${displayUnit} | ${percentual.toFixed(3)}%`;
   
   // Remove todas as classes anteriores
   barraFill.classList.remove('nivel-50', 'nivel-60', 'nivel-70', 'nivel-80', 'nivel-90', 'nivel-100');

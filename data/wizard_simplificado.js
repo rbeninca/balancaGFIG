@@ -14,38 +14,45 @@
 // Estado do wizard
 let wizardStateSimple = {
   passo0: {
-    nZero: 0,                    // N_zero: leitura sem peso (contagens)
-    ruidoStd: 0,                 // Desvio padrão do ruído
+    ruidoStd: 0,                 // Desvio padrão do ruído (sem carga)
     amostrasColetadas: 0
   },
   passo1: {
-    capacidadeKg: 0,             // Capacidade nominal da célula
-    acuraciaPercent: 0.03,       // Acurácia desejada (0.03% = classe C3)
-    erroMaximoKg: 0              // Erro máximo tolerável
+    capacidadeKg: 0,             // Capacidade nominal da célula (informada)
+    acuraciaPercent: 0.03,       // Acurácia (informada, ex: 0.03% = classe C3)
+    erroMaximoKg: 0              // Erro máximo derivado
   },
   passo2: {
-    pontosCalibr: [],            // Array de {m_kg, N_leitura}
-    pesoAtualKg: 0,
-    calibracaoCompleta: false
+    nZero: 0,                    // N_zero: leitura com balança vazia
+    massaZeroColetada: false
   },
   passo3: {
-    alpha: 0,                    // Ganho calculado (kg/contagem)
+    pontosCalibr: [],            // Array de {m_kg, N_leitura} com massas conhecidas
+    calibracaoCompleta: false
+  },
+  passo4: {
+    alpha: 0,                    // Ganho calculado (kg/N)
     beta: 0,                     // Offset calculado (kg)
-    erroMaximoMedido: 0,        // Maior erro encontrado
-    r2: 0,                       // Coeficiente de determinação
-    toleranciaN: 0              // Tolerância em N para ESP32
+    erroMaximoMedido: 0,         // Maior erro encontrado nos pontos
+    r2: 0,                       // Coeficiente de determinação (qualidade)
+    regressaoCompleta: false
+  },
+  passo5: {
+    toleranciaN: 0,              // Tolerância calculada (contagens ADC)
+    salvarTolerancia: true,      // Checkbox: salvar tolerância
+    salvarErroMaximo: false      // Checkbox: salvar erro máximo
   }
 };
 
 let wizardCurrentStepSimple = 0;
-const WIZARD_TOTAL_STEPS_SIMPLE = 4;
+const WIZARD_TOTAL_STEPS_SIMPLE = 5;  // Agora são 6 passos (0-5)
 let wizardRealtimeInterval = null;
 
 /**
- * PASSO 0: Medir N_zero (sem peso) e ruído
+ * PASSO 0: Medir ruído do sistema (sem carga)
  */
 async function wizardPasso0_Avancar() {
-  console.log('[Wizard] Passo 0: Medindo N_zero e ruído...');
+  console.log('[Wizard] Passo 0: Medindo ruído do sistema (sem carga)...');
 
   const btnNext = document.getElementById('wizard-btn-next');
   const originalText = btnNext.textContent;
@@ -53,38 +60,28 @@ async function wizardPasso0_Avancar() {
   btnNext.textContent = '⏳ Analisando (5s)...';
 
   try {
-
-    // Faz tara inicial
-    await enviarComandoPromise('t');
-    await sleep(1000);
-
-    // Coleta 100 amostras em 5 segundos
-    console.log('[Wizard] Coletando 100 amostras...');
+    // Coleta amostras em 5 segundos para medir ruído
+    console.log('[Wizard] Coletando amostras para análise de ruído...');
     const amostras = await coletarAmostrasRuido(5000);
 
     if (amostras.length < 10) {
       throw new Error('Poucas amostras coletadas. Verifique conexão.');
     }
 
-    // Calcula N_zero (média) e ruído (desvio padrão)
-    const nZero = amostras.reduce((a, b) => a + b, 0) / amostras.length;
-    const variancia = amostras.reduce((sum, val) => sum + Math.pow(val - nZero, 2), 0) / amostras.length;
+    // Calcula ruído (desvio padrão)
+    const media = amostras.reduce((a, b) => a + b, 0) / amostras.length;
+    const variancia = amostras.reduce((sum, val) => sum + Math.pow(val - media, 2), 0) / amostras.length;
     const ruidoStd = Math.sqrt(variancia);
 
     // Salva
-    wizardStateSimple.passo0.nZero = nZero;
     wizardStateSimple.passo0.ruidoStd = ruidoStd;
     wizardStateSimple.passo0.amostrasColetadas = amostras.length;
-    
-    // Define um alpha preliminar para o cálculo da tolerância no passo 1
-    // Este valor é uma estimativa grosseira, mas suficiente para começar
-    wizardStateSimple.passo3.alpha = 0.10197; // Aproximadamente 1/g
 
-    // Exibe apenas o ruído medido (em N, não convertido)
+    // Exibe o ruído medido
     document.getElementById('wizard-ruido-medido').textContent = `${ruidoStd.toFixed(6)} N (σ)`;
     document.getElementById('wizard-analise-status').style.display = 'block';
 
-    console.log(`[Wizard] Passo 0 completo: N_zero=${nZero.toFixed(4)}N, σ=${ruidoStd.toFixed(6)}N (${amostras.length} amostras)`);
+    console.log(`[Wizard] Passo 0 completo: σ=${ruidoStd.toFixed(6)}N (${amostras.length} amostras)`);
 
     btnNext.disabled = false;
     btnNext.textContent = originalText;
@@ -100,52 +97,45 @@ async function wizardPasso0_Avancar() {
 }
 
 /**
- * PASSO 1: Definir capacidade e acurácia para calcular a tolerância
+ * PASSO 1: Definir capacidade e acurácia (especificações do fabricante)
+ * Estes valores são INFORMADOS pelo usuário, não calculados.
+ * Exemplos: 5kg/0.03% (classe C3), 10kg/0.02% (classe C4)
+ * A tolerância será calculada no Passo 3 com base nestes valores + ruído medido
  */
 function calculateStabilityParameters() {
-    const capacityKg = parseFloat(document.getElementById('wizard-capacity-input').value);
-    const accuracyPercent = parseFloat(document.getElementById('wizard-accuracy-input').value);
-    const alpha = wizardStateSimple.passo3.alpha; // Usamos o alpha preliminar ou final
+    const capacityKgInput = document.getElementById('wizard-capacity-input');
+    const accuracyPercentInput = document.getElementById('wizard-accuracy-input');
 
-    if (!capacityKg || !accuracyPercent || !alpha) {
+    const capacityKg = parseFloat(capacityKgInput.value) || 0; // Default to 0 if empty/NaN
+    const accuracyPercent = parseFloat(accuracyPercentInput.value) || 0; // Default to 0 if empty/NaN
+
+    // Se ambos forem 0, não exibe a tolerância calculada ainda
+    if (capacityKg === 0 && accuracyPercent === 0) {
         document.getElementById('wizard-tolerancia-calculada').style.display = 'none';
+        wizardStateSimple.passo1.capacidadeKg = 0;
+        wizardStateSimple.passo1.acuraciaPercent = 0;
+        wizardStateSimple.passo1.erroMaximoKg = 0;
         return;
     }
 
-    // 1. Calcular o erro máximo aceitável em gramas
-    const maxErrorGrams = (capacityKg * 1000) * (accuracyPercent / 100);
-
-    // 2. Converter o erro em gramas para a unidade de força (Newtons)
-    const maxErrorNewtons = maxErrorGrams / 1000 * 9.80665;
-
-    // 3. Usar o coeficiente alpha (kg/N) para converter o erro em Newtons para a unidade de contagem do ADC
-    // A tolerância será o erro máximo permitido, convertido para a escala do ADC.
-    // O fator de conversão (contagens/g) é aproximadamente 1 / (alpha * g)
-    // Portanto, a tolerância em contagens é (erro em gramas) * (fator de conversão)
-    const conversionFactor = 1 / (alpha * 9.80665 / 1000); // contagens/g
-    let stabilityThreshold = maxErrorGrams * conversionFactor;
-
-    // Garantir uma tolerância mínima para evitar instabilidade com ruído baixo
-    const minThreshold = 200; // Valor empírico, ~200-500 contagens
-    if (stabilityThreshold < minThreshold) {
-        stabilityThreshold = minThreshold;
-        console.warn(`Tolerância calculada (${stabilityThreshold.toFixed(0)}) abaixo do mínimo. Usando ${minThreshold}.`);
-    }
-    
-    // Salva os valores calculados no estado do wizard
+    // Salva os valores no estado do wizard
     wizardStateSimple.passo1.capacidadeKg = capacityKg;
     wizardStateSimple.passo1.acuraciaPercent = accuracyPercent;
+    
+    // Deriva o erro máximo aceitável da capacidade e acurácia informadas
+    const maxErrorGrams = (capacityKg * 1000) * (accuracyPercent / 100);
     wizardStateSimple.passo1.erroMaximoKg = maxErrorGrams / 1000;
-    wizardStateSimple.passo3.toleranciaN = stabilityThreshold; // Armazenando como contagens ADC
 
-    // Exibe os resultados para o usuário
-    document.getElementById('wizard-tolerancia-valor').textContent = `${stabilityThreshold.toFixed(0)} contagens ADC`;
+    // Exibe apenas o erro máximo esperado
     document.getElementById('wizard-erro-maximo-valor').textContent = `${maxErrorGrams.toFixed(2)}`;
+    document.getElementById('wizard-tolerancia-valor').textContent = `Será calculada após calibração`;
     document.getElementById('wizard-tolerancia-calculada').style.display = 'block';
 
-    console.log(`[Wizard] Parâmetros de estabilidade: Capacidade=${capacityKg}kg, Acurácia=${accuracyPercent}%`);
-    console.log(`[Wizard] Erro Máximo Aceitável: ${maxErrorGrams.toFixed(2)}g`);
-    console.log(`[Wizard] Tolerância de Estabilização: ${stabilityThreshold.toFixed(0)} contagens`);
+    console.log(`[Wizard] Especificações informadas (fabricante):`);
+    console.log(`  Capacidade: ${capacityKg}kg`);
+    console.log(`  Acurácia: ${accuracyPercent}%`);
+    console.log(`  Erro máximo derivado: ${maxErrorGrams.toFixed(2)}g`);
+    console.log(`[Wizard] A tolerância será calculada no Passo 3 (baseada em: erro + ruído medido)`);
 }
 
 
@@ -160,14 +150,60 @@ function wizardPasso1_Validar() {
 }
 
 /**
- * PASSO 2: Coletar pontos (N, m) para calibração
- * Usuário pode adicionar vários pesos
+ * PASSO 2: Coletar ponto zero (balança vazia)
+ */
+async function wizardPasso2_Avancar() {
+  console.log('[Wizard] Passo 2: Coletando ponto zero (balança vazia)...');
+
+  const btnNext = document.getElementById('wizard-btn-next');
+  const originalText = btnNext.textContent;
+  btnNext.disabled = true;
+  btnNext.textContent = '⏳ Coletando (3s)...';
+
+  try {
+    // Faz tara
+    await enviarComandoPromise('t');
+    await sleep(500);
+
+    // Coleta leitura com balança vazia
+    const amostras = await coletarAmostrasRuido(3000);
+    const nZero = amostras.reduce((a, b) => a + b, 0) / amostras.length;
+
+    // Salva
+    wizardStateSimple.passo2.nZero = nZero;
+    wizardStateSimple.passo2.massaZeroColetada = true;
+
+    // Adiciona automaticamente o ponto zero nos pontos de calibração
+    wizardStateSimple.passo3.pontosCalibr.push({
+      m_kg: 0,
+      N_leitura: nZero
+    });
+
+    console.log(`[Wizard] Passo 2 completo: Leitura ADC zero=${nZero.toFixed(0)}`);
+    showNotification('success', `✅ Ponto zero coletado: ${nZero.toFixed(0)} (ADC)`);
+
+    btnNext.disabled = false;
+    btnNext.textContent = originalText;
+    return true;
+
+  } catch (error) {
+    console.error('[Wizard] Erro no Passo 2:', error);
+    showNotification('error', 'Erro ao coletar ponto zero');
+    btnNext.disabled = false;
+    btnNext.textContent = originalText;
+    return false;
+  }
+}
+
+/**
+ * PASSO 3: Coletar massas conhecidas para calibração
+ * Usuário adiciona vários pesos
  */
 async function wizardAdicionarPonto() {
   const pesoG = parseFloat(document.getElementById('wizard-peso-conhecido').value) || 0;
 
-  if (pesoG < 0) {
-    showNotification('error', 'Peso deve ser ≥ 0');
+  if (pesoG <= 0) {
+    showNotification('error', 'Informe um peso maior que zero');
     return;
   }
 
@@ -179,13 +215,13 @@ async function wizardAdicionarPonto() {
     const nLeitura = amostras.reduce((a, b) => a + b, 0) / amostras.length;
 
     // Adiciona ponto
-    wizardStateSimple.passo2.pontosCalibr.push({
+    wizardStateSimple.passo3.pontosCalibr.push({
       m_kg: pesoKg,
       N_leitura: nLeitura
     });
 
-    console.log(`[Wizard] Ponto adicionado: m=${pesoKg}kg, N=${nLeitura.toFixed(4)}N`);
-    showNotification('success', `✅ Ponto ${wizardStateSimple.passo2.pontosCalibr.length}: ${pesoG}g = ${nLeitura.toFixed(3)}N`);
+    console.log(`[Wizard] Ponto adicionado: m=${pesoKg}kg, Leitura ADC=${nLeitura.toFixed(0)}`);
+    showNotification('success', `✅ Ponto ${wizardStateSimple.passo3.pontosCalibr.length}: ${pesoG}g = ${nLeitura.toFixed(0)} (ADC)`);
 
     // Atualiza lista visual
     atualizarListaPontos();
@@ -203,22 +239,23 @@ function atualizarListaPontos() {
   const listaEl = document.getElementById('wizard-lista-pontos');
   if (!listaEl) return;
 
-  const pontos = wizardStateSimple.passo2.pontosCalibr;
+  const pontos = wizardStateSimple.passo3.pontosCalibr;
 
   if (pontos.length === 0) {
-    listaEl.innerHTML = '<p style="color: var(--cor-texto-secundario);">Nenhum ponto coletado ainda</p>';
+    listaEl.innerHTML = '<p style="color: var(--cor-texto-secundario);">Ponto zero já coletado. Adicione massas conhecidas.</p>';
     return;
   }
 
   let html = '<table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">';
-  html += '<tr><th>#</th><th>Massa (kg)</th><th>Leitura (N)</th><th>Ação</th></tr>';
+  html += '<tr><th>#</th><th>Massa (kg)</th><th>Leitura (ADC)</th><th>Ação</th></tr>';
 
   pontos.forEach((p, i) => {
+    const canDelete = p.m_kg > 0; // Não pode deletar o ponto zero
     html += `<tr>
       <td>${i + 1}</td>
       <td>${p.m_kg.toFixed(3)}</td>
-      <td>${p.N_leitura.toFixed(4)}</td>
-      <td><button onclick="removerPonto(${i})" class="btn btn-secundario" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">🗑️</button></td>
+      <td>${p.N_leitura.toFixed(0)}</td>
+      <td>${canDelete ? `<button onclick="removerPonto(${i})" class="btn btn-secundario" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">🗑️</button>` : '-'}</td>
     </tr>`;
   });
 
@@ -227,33 +264,37 @@ function atualizarListaPontos() {
 }
 
 function removerPonto(index) {
-  wizardStateSimple.passo2.pontosCalibr.splice(index, 1);
+  const ponto = wizardStateSimple.passo3.pontosCalibr[index];
+  if (ponto.m_kg === 0) {
+    showNotification('error', 'Não é possível remover o ponto zero');
+    return;
+  }
+  wizardStateSimple.passo3.pontosCalibr.splice(index, 1);
   atualizarListaPontos();
   showNotification('info', 'Ponto removido');
 }
 
-async function wizardPasso2_Avancar() {
-  const pontos = wizardStateSimple.passo2.pontosCalibr;
+async function wizardPasso3_Avancar() {
+  const pontos = wizardStateSimple.passo3.pontosCalibr;
 
+  // Deve ter pelo menos 2 pontos (zero + 1 massa conhecida)
   if (pontos.length < 2) {
-    showNotification('error', 'Adicione pelo menos 2 pontos (ex: 0kg e um peso conhecido)');
+    showNotification('error', 'Adicione pelo menos um peso conhecido além do zero');
     return false;
   }
 
-  // Verifica se tem ponto zero
-  const temZero = pontos.some(p => p.m_kg === 0);
-  if (!temZero) {
-    const confirma = confirm('⚠️ Recomenda-se ter um ponto com 0kg. Continuar mesmo assim?');
-    if (!confirma) return false;
-  }
+  console.log(`[Wizard] Prosseguindo com ${pontos.length} pontos para regressão`);
+  wizardStateSimple.passo3.calibracaoCompleta = true;
 
-  console.log(`[Wizard] Prosseguindo com ${pontos.length} pontos`);
-  wizardStateSimple.passo2.calibracaoCompleta = true;
+  // Calcula a regressão ANTES de avançar para o Passo 4
+  // Assim o usuário vê os resultados quando chegar no passo
+  await calcularRegressao();
+
   return true;
 }
 
 /**
- * PASSO 3: Calcular α e β por regressão linear
+ * Calcula a regressão linear (chamada do Passo 3)
  *
  * Fórmulas:
  * α = S_Nm / S_NN
@@ -265,8 +306,8 @@ async function wizardPasso2_Avancar() {
  * S_NN = Σ(N_i - N̄)²
  * S_Nm = Σ(N_i - N̄)(m_i - m̄)
  */
-async function wizardPasso3_Avancar() {
-  const pontos = wizardStateSimple.passo2.pontosCalibr;
+async function calcularRegressao() {
+  const pontos = wizardStateSimple.passo3.pontosCalibr;
 
   console.log('[Wizard] Calculando regressão linear...');
 
@@ -275,7 +316,7 @@ async function wizardPasso3_Avancar() {
   const N_mean = pontos.reduce((sum, p) => sum + p.N_leitura, 0) / n;
   const m_mean = pontos.reduce((sum, p) => sum + p.m_kg, 0) / n;
 
-  console.log(`  N̄=${N_mean.toFixed(4)}, m̄=${m_mean.toFixed(4)}`);
+  console.log(`  N̄=${N_mean.toFixed(0)}, m̄=${m_mean.toFixed(4)}`);
 
   // 2. Somas de quadrados
   let S_NN = 0;
@@ -288,13 +329,13 @@ async function wizardPasso3_Avancar() {
     S_Nm += dN * dm;
   });
 
-  console.log(`  S_NN=${S_NN.toFixed(4)}, S_Nm=${S_Nm.toFixed(4)}`);
+  console.log(`  S_NN=${S_NN.toFixed(0)}, S_Nm=${S_Nm.toFixed(4)}`);
 
   // 3. Calcula α e β
-  const alpha = S_Nm / S_NN;  // kg/N
+  const alpha = S_Nm / S_NN;  // kg/unidade_ADC
   const beta = m_mean - alpha * N_mean;  // kg
 
-  console.log(`  α=${alpha.toFixed(6)} kg/N`);
+  console.log(`  α=${alpha.toFixed(8)} kg/ADC`);
   console.log(`  β=${beta.toFixed(6)} kg`);
 
   // 4. Avalia qualidade (R² e erro máximo)
@@ -318,23 +359,57 @@ async function wizardPasso3_Avancar() {
 
   console.log(`  R²=${r2.toFixed(6)}, Erro máx=${(erroMax*1000).toFixed(2)}g`);
 
-  // 5. Calcula tolerância para estabilização
-  // A tolerância agora é lida do estado, que foi calculado no Passo 1
-  const toleranciaADC = wizardStateSimple.passo3.toleranciaN; // Este valor já está em contagens ADC
-  const alphaCalculado = alpha; // kg/N
-  const conversionFactorCalculado = 1 / (alphaCalculado * 9.80665 / 1000); // contagens/g
-  const toleranciaEmGramas = toleranciaADC / conversionFactorCalculado;
-  const toleranciaEmNewtons = (toleranciaEmGramas / 1000) * 9.80665;
+  // 5. Calcula tolerância para estabilização com alpha REAL
+  // Usa: capacidade e acurácia INFORMADAS (Passo 1) + ruído MEDIDO (Passo 0) + alpha CALCULADO (regressão)
+  const capacidadeKg = wizardStateSimple.passo1.capacidadeKg;        // Informado pelo usuário
+  const acuraciaPercent = wizardStateSimple.passo1.acuraciaPercent;  // Informado pelo usuário
+  const ruidoStdN = wizardStateSimple.passo0.ruidoStd;              // Medido no Passo 0 (em N)
 
-  console.log(`[Wizard] Usando tolerância pré-calculada: ${toleranciaADC.toFixed(0)} contagens (≈ ${toleranciaEmGramas.toFixed(2)}g)`);
+  // Fator de conversão real: contagens/grama (calculado com alpha da regressão)
+  const conversionFactorReal = 1 / (alpha * 9.80665 / 1000); // contagens/g
+
+  // === CÁLCULO DA TOLERÂNCIA MÍNIMA ===
+  // A tolerância NUNCA pode ser inferior a: (capacidade × acurácia) + ruído
+  // onde todos os valores são convertidos para a mesma unidade (gramas)
+
+  // 1. Erro da célula (derivado das especificações do fabricante informadas)
+  const erroCelulaGramas = (capacidadeKg * 1000) * (acuraciaPercent / 100);
+
+  // 2. Ruído do sistema (medido no Passo 0, convertido para gramas)
+  const ruidoGramas = (ruidoStdN / 9.80665) * 1000; // N → kgf → g
+
+  // 3. Tolerância mínima = erro da célula + ruído medido
+  // Multiplicamos por 1.5 para dar margem de segurança na estabilização
+  const toleranciaMinGramas = (erroCelulaGramas + ruidoGramas) * 1.5;
+
+  // 4. Converte para contagens ADC
+  let toleranciaADC = toleranciaMinGramas * conversionFactorReal;
+
+  // Garantir um mínimo absoluto (ruído típico do HX711)
+  const minimoAbsoluto = 100; // contagens
+
+  if (toleranciaADC < minimoAbsoluto) {
+    toleranciaADC = minimoAbsoluto;
+    console.warn(`[Wizard] Tolerância ajustada para mínimo absoluto: ${minimoAbsoluto} (ruído do HX711)`);
+  }
+
+  // Valores para exibição
+  const toleranciaEmGramas = toleranciaADC / conversionFactorReal;
+
+  console.log(`[Wizard] Tolerância calculada com alpha real:`);
+  console.log(`  Erro da célula (fabricante): ${erroCelulaGramas.toFixed(2)}g`);
+  console.log(`  Ruído medido: ${ruidoGramas.toFixed(2)}g (σ=${ruidoStdN.toFixed(6)}N)`);
+  console.log(`  Tolerância mínima: (${erroCelulaGramas.toFixed(2)} + ${ruidoGramas.toFixed(2)}) × 1.5 = ${toleranciaMinGramas.toFixed(2)}g`);
+  console.log(`  Fator conversão: ${conversionFactorReal.toFixed(2)} cont/g`);
+  console.log(`  Tolerância final: ${toleranciaADC.toFixed(0)} contagens (≈ ${toleranciaEmGramas.toFixed(2)}g)`);
 
   // Salva
-  wizardStateSimple.passo3.alpha = alpha;
-  wizardStateSimple.passo3.beta = beta;
-  wizardStateSimple.passo3.erroMaximoMedido = erroMax;
-  wizardStateSimple.passo3.r2 = r2;
-  // A tolerância (toleranciaN) já está no estado, mas atualizamos para garantir consistência
-  wizardStateSimple.passo3.toleranciaN = toleranciaADC;
+  wizardStateSimple.passo4.alpha = alpha;
+  wizardStateSimple.passo4.beta = beta;
+  wizardStateSimple.passo4.erroMaximoMedido = erroMax;
+  wizardStateSimple.passo4.r2 = r2;
+  wizardStateSimple.passo4.regressaoCompleta = true;
+  wizardStateSimple.passo5.toleranciaN = toleranciaADC;
 
   // Exibe resultados
   document.getElementById('wizard-alpha-valor').textContent = alpha.toFixed(8);
@@ -342,9 +417,13 @@ async function wizardPasso3_Avancar() {
   document.getElementById('wizard-r2-valor').textContent = r2.toFixed(6);
   document.getElementById('wizard-erro-max-valor').textContent = (Math.abs(erroMax) * 1000).toFixed(2);
 
-  // Exibe tolerância calculada
+  // Exibe tolerância calculada com componentes
   document.getElementById('wizard-tolerancia-final').textContent =
-    `${toleranciaEmNewtons.toFixed(4)} N (≈${toleranciaEmGramas.toFixed(2)} g) = ${toleranciaADC.toFixed(0)} contagens`;
+    `${toleranciaADC.toFixed(0)} contagens (≈${toleranciaEmGramas.toFixed(2)} g)\n` +
+    `Baseado em: Erro célula (${erroCelulaGramas.toFixed(2)}g) + Ruído medido (${ruidoGramas.toFixed(2)}g) × 1.5`;
+
+  // Desenha gráfico da regressão
+  desenharGraficoRegressao(pontos, alpha, beta);
 
   document.getElementById('wizard-resultado-regressao').style.display = 'block';
 
@@ -353,8 +432,12 @@ async function wizardPasso3_Avancar() {
     showNotification('warning', `⚠️ R²=${r2.toFixed(4)} baixo. Verifique linearidade da célula.`);
   }
 
-  if (Math.abs(erroMax) > erroDesejadomKg) {
-    showNotification('warning', `⚠️ Erro máximo (${(Math.abs(erroMax)*1000).toFixed(2)}g) excede meta (${(erroDesejadomKg*1000).toFixed(2)}g)`);
+  // Compara o erro medido da regressão com o erro esperado da célula (informado no Passo 1)
+  const erroEsperadoKg = wizardStateSimple.passo1.erroMaximoKg;
+  if (Math.abs(erroMax) > erroEsperadoKg) {
+    showNotification('warning', `⚠️ Erro da regressão (${(Math.abs(erroMax)*1000).toFixed(2)}g) excede especificação da célula (${(erroEsperadoKg*1000).toFixed(2)}g)`);
+  } else {
+    showNotification('success', `✅ Erro da regressão (${(Math.abs(erroMax)*1000).toFixed(2)}g) está dentro da especificação (${(erroEsperadoKg*1000).toFixed(2)}g)`);
   }
 
   // Faz tara final
@@ -362,6 +445,20 @@ async function wizardPasso3_Avancar() {
   await sleep(500);
 
   console.log('[Wizard] Regressão concluída!');
+}
+
+/**
+ * PASSO 4: Visualizar resultados da regressão
+ * Os cálculos já foram feitos no Passo 3, aqui apenas visualizamos
+ */
+async function wizardPasso4_Avancar() {
+  // Verifica se a regressão foi calculada
+  if (!wizardStateSimple.passo4.regressaoCompleta) {
+    showNotification('error', 'Erro: regressão não foi calculada');
+    return false;
+  }
+
+  console.log('[Wizard] Passo 4: Visualização dos resultados confirmada');
   return true;
 }
 
@@ -384,6 +481,9 @@ async function wizardGoToStepSimple(direction) {
         break;
       case 3:
         sucesso = await wizardPasso3_Avancar();
+        break;
+      case 4:
+        sucesso = await wizardPasso4_Avancar();
         break;
     }
 
@@ -410,10 +510,16 @@ function wizardGoToStepDisplay(stepNumber) {
 
   wizardUpdateUISimple();
 
-  if ([0, 2].includes(stepNumber)) {
+  // Inicia leitura em tempo real nos passos que precisam
+  if ([0, 2, 3].includes(stepNumber)) {
     wizardStartRealtimeReading(stepNumber);
   } else {
     wizardStopRealtimeReading();
+  }
+
+  // Exibe resumo ao entrar no Passo 5
+  if (stepNumber === 5) {
+    wizardPasso5_ExibirResumo();
   }
 }
 
@@ -444,11 +550,14 @@ function wizardStartRealtimeReading(passo) {
 
   wizardRealtimeInterval = setInterval(async () => {
     try {
-      const forcaN = await lerValorAtualBalanca();
-      const kgf = (forcaN / 9.80665).toFixed(3);
-      leituraEl.textContent = `${forcaN.toFixed(4)} N (${kgf} kgf)`;
+      const dataPoint = await lerValorAtualBalanca();
+      const adc = dataPoint.raw.toFixed(0);
+      const forcaN = dataPoint.forca.toFixed(3);
+      const gramas = (dataPoint.massaKg * 1000).toFixed(1);
+      
+      leituraEl.innerHTML = `ADC: ${adc}<br>Força: ${forcaN} N<br>Massa: ${gramas} g`;
     } catch (e) {
-      leituraEl.textContent = '--- N';
+      leituraEl.textContent = '---';
     }
   }, 200);
 }
@@ -461,65 +570,240 @@ function wizardStopRealtimeReading() {
 }
 
 /**
- * Finalização: Salvar α, β e tolerância no ESP32
+ * PASSO 5: Exibe resumo ao entrar no passo
+ * Mostra todos os dados calculados para o usuário revisar antes de salvar
  */
-async function wizardFinishSimple() {
-  const alpha = wizardStateSimple.passo3.alpha;
-  const beta = wizardStateSimple.passo3.beta;
-  const toleranciaADC = wizardStateSimple.passo3.toleranciaN; // Já está em contagens ADC
-  const capacidadeKg = wizardStateSimple.passo1.capacidadeKg;
-  const acuracia = wizardStateSimple.passo1.acuraciaPercent;
+function wizardPasso5_ExibirResumo() {
+  const alpha = wizardStateSimple.passo4.alpha;
+  const beta = wizardStateSimple.passo4.beta;
+  const toleranciaADC = wizardStateSimple.passo5.toleranciaN; // Calculado no passo 4
+  const capacidadeKg = wizardStateSimple.passo1.capacidadeKg; // Carregado do ESP ou informado
+  const acuracia = wizardStateSimple.passo1.acuraciaPercent; // Carregado do ESP ou informado
 
   // O conversionFactor é calculado a partir do alpha final
-  const conversionFactor = 1 / (alpha * 9.80665 / 1000); // contagens/g
-
-  // Atualiza resumo no Passo 4
+  const conversionFactor = 1 / (alpha * 1000); // contagens/kg
   const toleranciaEmGramas = toleranciaADC / conversionFactor;
+  const erroMaximoGramas = (capacidadeKg * 1000) * (acuracia / 100);
+
+  // Atualiza resumo no Passo 5
   document.getElementById('wizard-resumo-capacidade').textContent = capacidadeKg.toFixed(2);
   document.getElementById('wizard-resumo-alpha').textContent = alpha.toFixed(8);
   document.getElementById('wizard-resumo-beta').textContent = beta.toFixed(8);
   document.getElementById('wizard-resumo-tolerancia').textContent =
     `${toleranciaEmGramas.toFixed(2)} g (${toleranciaADC.toFixed(0)} contagens)`;
+  document.getElementById('wizard-resumo-erro-maximo').textContent = erroMaximoGramas.toFixed(2);
 
-  console.log('[Wizard] Salvando no ESP32...');
-  console.log(`  α=${alpha.toFixed(8)} kg/N, β=${beta.toFixed(8)} kg`);
-  console.log(`  conversionFactor=${conversionFactor.toFixed(2)} contagens/g`);
-  console.log(`  Tolerância ADC=${toleranciaADC} contagens HX711`);
+  console.log('[Wizard] Resumo exibido no Passo 5:');
+  console.log(`  α=${alpha.toFixed(8)} kg/ADC, β=${beta.toFixed(8)} kg`);
+  console.log(`  conversionFactor=${conversionFactor.toFixed(2)} contagens/kg`);
+  console.log(`  Tolerância=${toleranciaADC.toFixed(0)} contagens (${toleranciaEmGramas.toFixed(2)}g)`);
+  console.log(`  Erro máximo=${erroMaximoGramas.toFixed(2)}g`);
 
-  // Valida valores antes de enviar
-  if (!isFinite(toleranciaADC) || toleranciaADC < 0) {
-    throw new Error(`Tolerância inválida: ${toleranciaADC}`);
-  }
+  // Inicializa o estado dos checkboxes (padrão)
+  document.getElementById('wizard-salvar-fator').checked = true;
+  document.getElementById('wizard-salvar-capacidade').checked = false;
+  document.getElementById('wizard-salvar-tolerancia').checked = false;
+}
 
-  if (!isFinite(conversionFactor) || conversionFactor <= 0) {
-    throw new Error(`Fator de conversão inválido: ${conversionFactor}`);
-  }
+/**
+ * PASSO 5: Salvar parâmetros no ESP32
+ * Permite escolher quais parâmetros salvar via checkboxes
+ */
+async function wizardPasso5_Finalizar() {
+  // Coleta os valores calculados e informados
+  const alpha = wizardStateSimple.passo4.alpha;
+  const nZero = wizardStateSimple.passo2.nZero;
+  const toleranciaADC = wizardStateSimple.passo5.toleranciaN;
+  const capacidadeKg = wizardStateSimple.passo1.capacidadeKg;
+  const acuracia = wizardStateSimple.passo1.acuraciaPercent;
+
+  // Coleta o estado dos checkboxes
+  const salvarFatorOffset = document.getElementById('wizard-salvar-fator').checked;
+  const salvarCapacidadeAcuracia = document.getElementById('wizard-salvar-capacidade').checked;
+  const salvarTolerancia = document.getElementById('wizard-salvar-tolerancia').checked;
+
+  // Calcula os parâmetros finais para o ESP
+  const novoTareOffset = Math.round(nZero);
+  const novoConversionFactor = 1 / (alpha * 1000);
+
+  console.log('[Wizard] Finalizando... Opções de salvamento:');
+  console.log(`  - Salvar Fator/Offset: ${salvarFatorOffset}`);
+  console.log(`  - Salvar Capacidade/Acurácia: ${salvarCapacidadeAcuracia}`);
+  console.log(`  - Salvar Tolerância: ${salvarTolerancia}`);
 
   try {
-    // Salva configurações no ESP32
-    await enviarComandoPromise('set', { param: 'capacidadeMaximaGramas', value: capacidadeKg * 1000 });
-    await sleep(100);
-    await enviarComandoPromise('set', { param: 'percentualAcuracia', value: acuracia }); // Salva o percentual direto
-    await sleep(100);
-    await enviarComandoPromise('set', { param: 'toleranciaEstabilidade', value: Math.round(toleranciaADC) });
-    await sleep(100);
-    await enviarComandoPromise('set', { param: 'conversionFactor', value: conversionFactor });
-    await sleep(100);
+    // Salva Fator de Conversão e Offset de Tara (padrão)
+    if (salvarFatorOffset) {
+      if (!isFinite(novoConversionFactor) || !isFinite(novoTareOffset)) {
+        showNotification('error', 'Fator de conversão ou Offset inválido. Não foi possível salvar.');
+        return;
+      }
+      console.log(`[Wizard] Salvando Tare Offset: ${novoTareOffset}`);
+      await enviarComandoPromise('set', { param: 'tareOffset', value: novoTareOffset });
+      await sleep(100);
+      
+      console.log(`[Wizard] Salvando Conversion Factor: ${novoConversionFactor}`);
+      await enviarComandoPromise('set', { param: 'conversionFactor', value: novoConversionFactor });
+      await sleep(100);
+    }
 
-    // Se o ESP32 suportar salvar α e β diretamente:
-    // await enviarComandoPromise('set', { param: 'alpha', value: alpha });
-    // await enviarComandoPromise('set', { param: 'beta', value: beta });
+    // Salva Capacidade e Acurácia (opcional)
+    if (salvarCapacidadeAcuracia) {
+      console.log(`[Wizard] Salvando Capacidade: ${capacidadeKg * 1000}g`);
+      await enviarComandoPromise('set', { param: 'capacidadeMaximaGramas', value: capacidadeKg * 1000 });
+      await sleep(100);
 
-    showNotification('success', '✅ Calibração salva no ESP32!');
+      console.log(`[Wizard] Salvando Acurácia: ${acuracia}%`);
+      await enviarComandoPromise('set', { param: 'percentualAcuracia', value: acuracia });
+      await sleep(100);
+    }
+
+    // Salva Tolerância de Estabilização (opcional)
+    if (salvarTolerancia) {
+      console.log(`[Wizard] Salvando Tolerância: ${Math.round(toleranciaADC)} (ADC)`);
+      await enviarComandoPromise('set', { param: 'toleranciaEstabilidade', value: Math.round(toleranciaADC) });
+      await sleep(100);
+    }
+
+    showNotification('success', '✅ Configurações salvas no ESP32!');
 
     setTimeout(() => {
       closeWizard();
-    }, 2000);
+      sendCommandToWorker('get_config'); // Pede a config atualizada
+    }, 1500);
 
   } catch (error) {
     console.error('[Wizard] Erro ao salvar:', error);
-    showNotification('error', 'Erro ao salvar configurações');
+    showNotification('error', 'Erro ao salvar configurações no dispositivo.');
   }
+}
+
+/**
+ * Desenha gráfico da regressão linear
+ */
+function desenharGraficoRegressao(pontos, alpha, beta) {
+  // Cria canvas se não existir
+  let canvas = document.getElementById('wizard-grafico-canvas');
+  if (!canvas) {
+    const container = document.querySelector('#wizard-resultado-regressao .min-height-200px');
+    if (!container) return;
+
+    container.innerHTML = '';
+    canvas = document.createElement('canvas');
+    canvas.id = 'wizard-grafico-canvas';
+    canvas.width = 600;
+    canvas.height = 400;
+    canvas.style.width = '100%';
+    canvas.style.height = 'auto';
+    container.appendChild(canvas);
+  }
+
+  const ctx = canvas.getContext('2d');
+  const width = canvas.width;
+  const height = canvas.height;
+  const padding = 60;
+
+  // Limpa canvas
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+
+  // Encontra min/max para escala
+  const N_values = pontos.map(p => p.N_leitura);
+  const m_values = pontos.map(p => p.m_kg);
+  const N_min = Math.min(...N_values) * 0.9;
+  const N_max = Math.max(...N_values) * 1.1;
+  const m_min = Math.min(...m_values) * 0.9;
+  const m_max = Math.max(...m_values) * 1.1;
+
+  // Funções de escala
+  const scaleX = (N) => padding + ((N - N_min) / (N_max - N_min)) * (width - 2 * padding);
+  const scaleY = (m) => height - padding - ((m - m_min) / (m_max - m_min)) * (height - 2 * padding);
+
+  // Desenha eixos
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(padding, padding);
+  ctx.lineTo(padding, height - padding);
+  ctx.lineTo(width - padding, height - padding);
+  ctx.stroke();
+
+  // Labels dos eixos
+  ctx.fillStyle = '#000000';
+  ctx.font = 'bold 14px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('Leitura (ADC)', width / 2, height - 15);
+
+  ctx.save();
+  ctx.translate(15, height / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Massa (kg)', 0, 0);
+  ctx.restore();
+
+  // Desenha reta da regressão
+  ctx.strokeStyle = '#3498db';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  const N_start = N_min;
+  const N_end = N_max;
+  const m_start = alpha * N_start + beta;
+  const m_end = alpha * N_end + beta;
+  ctx.moveTo(scaleX(N_start), scaleY(m_start));
+  ctx.lineTo(scaleX(N_end), scaleY(m_end));
+  ctx.stroke();
+
+  // Desenha pontos medidos
+  pontos.forEach((p, i) => {
+    const x = scaleX(p.N_leitura);
+    const y = scaleY(p.m_kg);
+
+    // Ponto
+    ctx.fillStyle = p.m_kg === 0 ? '#e74c3c' : '#2ecc71';
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, 2 * Math.PI);
+    ctx.fill();
+
+    // Borda
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Label do ponto
+    ctx.fillStyle = '#000000';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${(p.m_kg * 1000).toFixed(0)}g`, x, y - 12);
+  });
+
+  // Legenda
+  ctx.font = '12px Arial';
+  ctx.textAlign = 'left';
+
+  ctx.fillStyle = '#e74c3c';
+  ctx.beginPath();
+  ctx.arc(width - 150, 30, 6, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.fillStyle = '#000000';
+  ctx.fillText('Ponto zero', width - 135, 35);
+
+  ctx.fillStyle = '#2ecc71';
+  ctx.beginPath();
+  ctx.arc(width - 150, 50, 6, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.fillStyle = '#000000';
+  ctx.fillText('Massas conhecidas', width - 135, 55);
+
+  ctx.strokeStyle = '#3498db';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(width - 156, 70);
+  ctx.lineTo(width - 144, 70);
+  ctx.stroke();
+  ctx.fillStyle = '#000000';
+  ctx.fillText('Regressão linear', width - 135, 75);
+
+  console.log('[Wizard] Gráfico da regressão desenhado');
 }
 
 /**
@@ -532,7 +816,7 @@ async function coletarAmostrasRuido(duracaoMs) {
     const coletar = (event) => {
       const { type, payload } = event.data;
       if (type === 'dadosDisponiveis' && payload && payload[0]) {
-        amostras.push(payload[0].forca);
+        amostras.push(payload[0].raw);
       }
     };
 
@@ -560,7 +844,7 @@ async function lerValorAtualBalanca() {
         if (typeof dataWorker !== 'undefined') {
           dataWorker.removeEventListener('message', ler);
         }
-        resolve(payload[0].forca);
+        resolve(payload[0]); // Retorna o objeto de dados completo
       }
     };
 
@@ -591,52 +875,72 @@ window.openWizardSimplificado = async function() {
 
   // Reseta estado
   wizardStateSimple = {
-    passo0: { nZero: 0, ruidoStd: 0, amostrasColetadas: 0 },
-    passo1: { capacidadeKg: 0, acuraciaPercent: 0.02, erroMaximoKg: 0 },
-    passo2: { pontosCalibr: [], pesoAtualKg: 0, calibracaoCompleta: false },
-    passo3: { alpha: 0, beta: 0, erroMaximoMedido: 0, r2: 0, toleranciaN: 0 }
+    passo0: { ruidoStd: 0, amostrasColetadas: 0 },
+    passo1: { capacidadeKg: 0, acuraciaPercent: 0.03, erroMaximoKg: 0 },
+    passo2: { nZero: 0, massaZeroColetada: false },
+    passo3: { pontosCalibr: [], calibracaoCompleta: false },
+    passo4: { alpha: 0, beta: 0, erroMaximoMedido: 0, r2: 0, regressaoCompleta: false },
+    passo5: { toleranciaN: 0 } // Remove os checkboxes daqui, eles serão lidos do DOM
   };
 
   // Limpa lista de pontos
   const listaEl = document.getElementById('wizard-lista-pontos');
   if (listaEl) {
-    listaEl.innerHTML = '<p style="color: var(--cor-texto-secundario);">Nenhum ponto coletado ainda</p>';
+    listaEl.innerHTML = '<p style="color: var(--cor-texto-secundario);">Ponto zero será coletado automaticamente</p>';
   }
-
-  // CONFIGURAÇÃO INICIAL SEGURA - Previne travamento
-  console.log('[Wizard] Aplicando configuração inicial segura...');
 
   // Mostra mensagem de carregamento
   const loadingMsg = document.createElement('div');
   loadingMsg.id = 'wizard-loading-config';
   loadingMsg.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--cor-fundo-secundario); padding: 2rem; border-radius: 8px; z-index: 10001; text-align: center;';
-  loadingMsg.innerHTML = '<p style="margin: 0; font-size: 1.1rem;">⚙️ Configurando parâmetros seguros...</p><p style="margin-top: 0.5rem; color: var(--cor-texto-secundario); font-size: 0.9rem;">Aguarde...</p>';
+  loadingMsg.innerHTML = '<p style="margin: 0; font-size: 1.1rem;">⚙️ Carregando configurações atuais...</p><p style="margin-top: 0.5rem; color: var(--cor-texto-secundario); font-size: 0.9rem;">Aguarde...</p>';
   modal.appendChild(loadingMsg);
 
+  // Solicita a configuração atual do ESP
+  sendCommandToWorker('get_config');
+
+  // Adiciona um listener temporário para a mensagem de configuração
+  const configListener = (event) => {
+    const { type, payload } = event.data;
+    if (type === 'config') {
+      // Remove o listener após receber a configuração
+      dataWorker.removeEventListener('message', configListener);
+      
+      // Preenche os campos da Etapa 1 com os valores atuais
+      document.getElementById('wizard-capacity-input').value = (payload.capacidadeMaximaGramas / 1000).toFixed(2); // Converte g para kg
+      document.getElementById('wizard-accuracy-input').value = (payload.percentualAcuracia * 100).toFixed(3); // Converte % para decimal
+
+      // Inicializa o estado do wizard com os valores carregados
+      calculateStabilityParameters();
+
+      // Remove mensagem de carregamento
+      if (loadingMsg && loadingMsg.parentNode) {
+        loadingMsg.parentNode.removeChild(loadingMsg);
+      }
+
+      // Aplica configuração inicial segura e avança para o Passo 0
+      applySafeInitialConfig().then(() => {
+        wizardGoToStepDisplay(0);
+      });
+    }
+  };
+  dataWorker.addEventListener('message', configListener);
+};
+
+// Função auxiliar para aplicar configurações iniciais seguras
+async function applySafeInitialConfig() {
+  console.log('[Wizard] Aplicando configuração inicial segura...');
   try {
-    // Aumenta tolerância para valor alto (previne timeout)
     await enviarComandoPromise('set', { param: 'toleranciaEstabilidade', value: 5000 });
     await sleep(50);
-
-    // Reduz leituras estáveis necessárias
     await enviarComandoPromise('set', { param: 'leiturasEstaveis', value: 5 });
     await sleep(50);
-
-    // Aumenta timeout de calibração
     await enviarComandoPromise('set', { param: 'timeoutCalibracao', value: 30000 });
     await sleep(50);
-
     console.log('[Wizard] ✅ Configuração inicial aplicada');
   } catch (error) {
     console.error('[Wizard] ⚠️ Erro ao aplicar config inicial:', error);
-  } finally {
-    // Remove mensagem de carregamento
-    if (loadingMsg && loadingMsg.parentNode) {
-      loadingMsg.parentNode.removeChild(loadingMsg);
-    }
   }
-
-  wizardGoToStepDisplay(0);
-};
+}
 
 console.log('[Wizard Calibração - Modelo m=α·N+β] Carregado');
