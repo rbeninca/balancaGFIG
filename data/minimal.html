@@ -484,7 +484,7 @@
 
     <!-- Botões de Ação -->
     <div class="actions">
-      <button class="btn btn-primary" onclick="iniciarNovaSessao()">Iniciar Nova Sessão</button>
+      <button id="record-btn" class="btn btn-primary" onclick="toggleRecording()">Iniciar Gravação</button>
       <button class="btn" onclick="openWizardSimplificado()">Calibração</button>
     </div>
 
@@ -569,7 +569,7 @@
       dataWorker.postMessage({ type: 'sendCommand', payload: messagePayload });
     }
 
-    // Função de notificação que o wizard precisa.
+    // Função de notificação que o wizard e a gravação precisam.
     function showNotification(type, message, duration = 5000) {
         const notification = document.createElement('div');
         notification.style.cssText = `
@@ -585,7 +585,7 @@
             transition: opacity 0.5s, transform 0.5s;
             transform: translateX(100%);
         `;
-        notification.style.backgroundColor = type === 'error' ? '#e74c3c' : (type === 'success' ? '#2ecc71' : '#3498db');
+        notification.style.backgroundColor = type === 'error' ? '#e74c3c' : (type === 'success' ? '#2ecc71' : (type === 'warning' ? '#f39c12' : '#3498db'));
         notification.innerHTML = message;
         document.body.appendChild(notification);
 
@@ -602,7 +602,110 @@
     }
 
     // ============================================================================
-    // CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
+    // LÓGICA DE GRAVAÇÃO DE SESSÃO
+    // ============================================================================
+    let isRecording = false;
+    let recordedData = [];
+    let recordingStartTime = null;
+    let recordingEndTime = null;
+
+    function toggleRecording() {
+        isRecording = !isRecording;
+        const recordBtn = document.getElementById('record-btn');
+
+        if (isRecording) {
+            // Start recording
+            recordedData = [];
+            chartData = []; // Limpa o gráfico para a nova gravação
+            recordingStartTime = new Date();
+            recordBtn.textContent = 'Parar Gravação';
+            recordBtn.style.backgroundColor = '#e74c3c';
+            recordBtn.style.borderColor = '#e74c3c';
+            recordBtn.style.color = '#ffffff';
+            console.log('[Minimal] Gravação iniciada.');
+            showNotification('info', 'Gravação da sessão iniciada.');
+        } else {
+            // Stop recording
+            recordingEndTime = new Date();
+            recordBtn.textContent = 'Iniciar Gravação';
+            recordBtn.style.backgroundColor = '';
+            recordBtn.style.borderColor = '';
+            recordBtn.style.color = '';
+            console.log('[Minimal] Gravação encerrada.');
+            generateAndSaveSession();
+        }
+    }
+
+    function generateAndSaveSession() {
+        if (recordedData.length === 0) {
+            showNotification('warning', 'Nenhum dado foi gravado na sessão.');
+            return;
+        }
+
+        const formatTwoDigits = (n) => n.toString().padStart(2, '0');
+        const startDate = recordingStartTime;
+        const nomeSessao = `${startDate.getFullYear()}-${formatTwoDigits(startDate.getMonth() + 1)}-${formatTwoDigits(startDate.getDate())}-${formatTwoDigits(startDate.getHours())}-${formatTwoDigits(startDate.getMinutes())}-${formatTwoDigits(startDate.getSeconds())}`;
+
+        const sessionStartTimeForData = recordedData[0].tempo;
+
+        const dadosTabela = recordedData.map(d => {
+            const tempoNormalizado = (d.tempo - sessionStartTimeForData);
+            const forcaN = d.forca;
+            const g_force = forcaN / 9.80665;
+            
+            const agora = new Date(recordingStartTime.getTime() + (tempoNormalizado * 1000));
+            const dd = String(agora.getUTCDate()).padStart(2, '0');
+            const mm = String(agora.getUTCMonth() + 1).padStart(2, '0');
+            const yyyy = agora.getUTCFullYear();
+            const HH = String(agora.getUTCHours()).padStart(2, '0');
+            const MM = String(agora.getUTCMinutes()).padStart(2, '0');
+            const SS = String(agora.getUTCSeconds()).padStart(2, '0');
+            const mmm = String(agora.getUTCMilliseconds()).padStart(3, '0');
+            const timestamp = `${dd}/${mm}/${yyyy} ${HH}:${MM}:${SS}.${mmm}`;
+
+            return {
+                timestamp: timestamp,
+                tempo_esp: tempoNormalizado.toFixed(3),
+                newtons: forcaN.toFixed(6),
+                grama_forca: (g_force * 1000).toFixed(3),
+                quilo_forca: g_force.toFixed(6)
+            };
+        });
+
+        const gravacao = {
+            id: startDate.getTime(),
+            nome: nomeSessao,
+            timestamp: startDate.toISOString(),
+            data_inicio: startDate.toISOString(),
+            data_fim: recordingEndTime.toISOString(),
+            data_modificacao: new Date().toISOString(),
+            dadosTabela: dadosTabela,
+            metadadosMotor: {}, // Metadados vazios como padrão
+            savedToMysql: false
+        };
+
+        try {
+            let gravacoes = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+            gravacoes.push(gravacao);
+            localStorage.setItem('balancaGravacoes', JSON.stringify(gravacoes));
+            showNotification('success', `Sessão "${nomeSessao}" salva localmente!`);
+            console.log('[Minimal] Sessão salva:', gravacao);
+        } catch (e) {
+            showNotification('error', 'Erro ao salvar sessão no LocalStorage.');
+            console.error('[Minimal] Erro ao salvar sessão:', e);
+        }
+
+        // Reseta para a próxima gravação
+        recordedData = [];
+        // Trunca os dados do gráfico de volta ao normal após a gravação
+        if (chartData.length > MAX_CHART_POINTS) {
+            chartData = chartData.slice(chartData.length - MAX_CHART_POINTS);
+        }
+    }
+
+
+    // ============================================================================
+    // CONFIGURAÇÃO E VARIÁVEIS GLOBAIS (Originais)
     // ============================================================================
 
     let chart = null;
@@ -734,8 +837,10 @@
       ctx.shadowBlur = 4;
       ctx.beginPath();
 
+      const x_denominator = isRecording ? (chartData.length > 1 ? chartData.length - 1 : 1) : (MAX_CHART_POINTS - 1);
+
       chartData.forEach((d, i) => {
-        const x = margin + (i / (MAX_CHART_POINTS - 1)) * plotWidth;
+        const x = margin + (i / x_denominator) * plotWidth;
         const y = margin + plotHeight - ((d.valor - minVal) / range) * plotHeight;
 
         if (i === 0) {
@@ -751,7 +856,7 @@
       // === 3. PONTO ATUAL (último valor) ===
       if (chartData.length > 0) {
         const last = chartData[chartData.length - 1];
-        const lastX = margin + ((chartData.length - 1) / (MAX_CHART_POINTS - 1)) * plotWidth;
+        const lastX = margin + ((chartData.length - 1) / x_denominator) * plotWidth;
         const lastY = margin + plotHeight - ((last.valor - minVal) / range) * plotHeight;
 
         // Círculo externo (halo)
@@ -869,7 +974,7 @@
         // Dados em tempo real
         processarDado({
           forca: dados.forca || 0,
-          timestamp: dados.timestamp || Date.now(),
+          tempo: dados.tempo,
           status: dados.status || 0,
           raw: dados.raw || 0
         });
@@ -878,7 +983,7 @@
         dados.data.forEach(d => {
           processarDado({
             forca: d.forca || 0,
-            timestamp: d.timestamp || Date.now(),
+            tempo: d.tempo,
             status: d.status || 0,
             raw: d.raw || 0
           });
@@ -897,17 +1002,22 @@
     }
 
     function processarDado(dado) {
+      if (typeof dado.tempo === 'undefined') return; // Ignora pacotes sem timestamp
+
+      if (isRecording) {
+        recordedData.push(dado);
+      }
       // Atualiza leitura principal
       atualizarLeituraPrincipal(dado.forca);
 
       // Adiciona ao gráfico
       chartData.push({
         valor: dado.forca,
-        timestamp: Date.now()
+        tempo: dado.tempo
       });
 
-      // Limita tamanho do array
-      if (chartData.length > MAX_CHART_POINTS) {
+      // Limita tamanho do array somente se não estiver gravando
+      if (!isRecording && chartData.length > MAX_CHART_POINTS) {
         chartData.shift();
       }
 
@@ -1112,7 +1222,7 @@
           isDragging = true;
           handleRangeDrag(e.touches[0], scaleEl);
         }
-      });
+      }, { passive: false });
 
       document.addEventListener('touchmove', (e) => {
         if (isDragging && !autoRange) {
@@ -1257,7 +1367,7 @@
     }
 
     // ============================================================================
-    // AÇÕES DOS BOTÕES
+    // AÇÕES DOS BOTÕES (originais)
     // ============================================================================
 
     function iniciarNovaSessao() {
@@ -1278,6 +1388,9 @@
   </script>
 </body>
 </html>
+
+
+
 
 </body>
 </html>
