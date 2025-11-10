@@ -1906,7 +1906,7 @@
           erroMinN = capacidadeMaxN * dados.percentualAcuracia;
         }
         console.log(`[Minimal] Config atualizada: Cap=${capacidadeMaxN.toFixed(1)}N, Erro=${erroMinN.toFixed(3)}N`);
-      } else if (dados.type === 'status') {
+      } else if (dados.type === 'serial_status_update') { // Corrected type
         // Handle serial status updates
         if (typeof handleSerialStatusUpdate === 'function') {
           handleSerialStatusUpdate(dados.payload);
