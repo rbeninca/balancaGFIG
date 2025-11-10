@@ -11,6 +11,8 @@ import json
 import logging
 import struct
 import time
+import gzip
+import io
 from typing import Optional, Dict, Any
 import pymysql.cursors
 from datetime import datetime, timedelta
@@ -595,6 +597,40 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
             path = '/minimal.html'
         return super().translate_path(path)
 
+    def send_response_with_gzip(self, status_code, data, content_type='application/json'):
+        """Envia resposta com compressão gzip se o cliente suportar"""
+        # Verifica se o cliente aceita compressão
+        accept_encoding = self.headers.get('Accept-Encoding', '')
+        
+        if isinstance(data, str):
+            data = data.encode('utf-8')
+        
+        # Se dados > 1KB e cliente aceita gzip, comprime
+        if 'gzip' in accept_encoding and len(data) > 1024:
+            buf = io.BytesIO()
+            with gzip.GzipFile(fileobj=buf, mode='wb') as f:
+                f.write(data)
+            compressed = buf.getvalue()
+            
+            self.send_response(status_code)
+            self.send_header('Content-Type', content_type)
+            self.send_header('Content-Encoding', 'gzip')
+            self.send_header('Content-Length', str(len(compressed)))
+            self.send_header('Vary', 'Accept-Encoding')
+            self.end_headers()
+            self.wfile.write(compressed)
+            
+            ratio = int((1 - len(compressed)/len(data)) * 100)
+            logging.debug(f"Comprimido ({content_type}): {len(data)} -> {len(compressed)} bytes ({ratio}% redução)")
+        else:
+            # Sem compressão
+            self.send_response(status_code)
+            self.send_header('Content-Type', content_type)
+            self.send_header('Content-Length', str(len(data)))
+            self.send_header('Vary', 'Accept-Encoding')
+            self.end_headers()
+            self.wfile.write(data)
+
     def do_GET(self):
         start = time.perf_counter()
         try:
@@ -1024,10 +1060,8 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
             })
 
     def send_json_response(self, status_code, data):
-        self.send_response(status_code)
-        self.send_header('Content-type', 'application/json')
-        self.end_headers()
-        self.wfile.write(json.dumps(data, default=str).encode('utf-8'))
+        json_data = json.dumps(data, default=str)
+        self.send_response_with_gzip(status_code, json_data, 'application/json')
 
 class DualStackTCPServer(socketserver.ThreadingMixIn,socketserver.TCPServer):
     address_family = socket.AF_INET # Force IPv4
