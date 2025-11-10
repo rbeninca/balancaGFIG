@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -727,7 +727,10 @@
   <div class="analysis-modal-overlay" id="analysisModalOverlay" style="display: none;">
     <div class="analysis-modal" id="analysisModal">
       <div class="analysis-modal-header">
-        <h2>Análise da Sessão</h2>
+        <div style="flex-grow: 1;">
+            <label for="analysisSessionName" style="font-size: 0.8rem; color: #666;">Nome da Sessão</label>
+            <input type="text" id="analysisSessionName" style="font-size: 1.4rem; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; width: 95%; margin-top: 4px;">
+        </div>
         <button class="modal-close" id="modalCloseBtn" onclick="closeAnalysisModal()">×</button>
       </div>
       
@@ -1098,6 +1101,9 @@
         const overlay = document.getElementById('analysisModalOverlay');
         overlay.style.display = 'flex';
 
+        // Popula o nome da sessão no novo input
+        document.getElementById('analysisSessionName').value = sessionMetadata.nomeSessao;
+
         // Detecta automaticamente início e fim da queima
         const forceValues = sessionData.map(d => d.forca);
         const timeValues = sessionData.map(d => d.tempo);
@@ -1187,7 +1193,7 @@
             ],
             chart: {
                 type: 'line',
-                height: '100%',
+                height: 400,
                 animations: {
                     enabled: false
                 },
@@ -1226,6 +1232,52 @@
                     }
                 }
             },
+            responsive: [
+                {
+                    breakpoint: 768,
+                    options: {
+                        chart: {
+                            height: 350
+                        },
+                        xaxis: {
+                            labels: {
+                                style: {
+                                    fontSize: '11px'
+                                }
+                            }
+                        },
+                        yaxis: {
+                            labels: {
+                                style: {
+                                    fontSize: '11px'
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    breakpoint: 480,
+                    options: {
+                        chart: {
+                            height: 300
+                        },
+                        xaxis: {
+                            labels: {
+                                style: {
+                                    fontSize: '10px'
+                                }
+                            }
+                        },
+                        yaxis: {
+                            labels: {
+                                style: {
+                                    fontSize: '10px'
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
             stroke: {
                 curve: 'smooth',
                 width: [2, 0]
@@ -1360,8 +1412,15 @@
             return;
         }
 
+        // Pega o nome da sessão do input
+        const nomeSessao = document.getElementById('analysisSessionName').value.trim();
+        if (!nomeSessao) {
+            showNotification('error', 'O nome da sessão não pode estar vazio.');
+            return;
+        }
+
         // Extrai dados do metadata
-        const { nomeSessao, startDate, recordingEndTime, recordedData: data } = sessionMetadataForAnalysis;
+        const { startDate, recordingEndTime, recordedData: data } = sessionMetadataForAnalysis;
 
         const formatTwoDigits = (n) => n.toString().padStart(2, '0');
         const sessionStartTimeForData = data[0].tempo;
@@ -1392,7 +1451,7 @@
 
         const gravacao = {
             id: startDate.getTime(),
-            nome: nomeSessao,
+            nome: nomeSessao, // Usa o nome do input
             timestamp: startDate.toISOString(),
             data_inicio: startDate.toISOString(),
             data_fim: recordingEndTime.toISOString(),
@@ -1406,8 +1465,22 @@
             let gravacoes = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
             gravacoes.push(gravacao);
             localStorage.setItem('balancaGravacoes', JSON.stringify(gravacoes));
-            showNotification('success', `Sessão "${nomeSessao}" salva com sucesso!`);
-            console.log('[Minimal] Sessão salva:', gravacao);
+            showNotification('success', `Sessão "${nomeSessao}" salva localmente!`);
+            console.log('[Minimal] Sessão salva localmente:', gravacao);
+
+            // Tenta salvar no banco de dados se o WebSocket estiver conectado
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const command = {
+                    cmd: "save_session_to_mysql",
+                    payload: gravacao
+                };
+                ws.send(JSON.stringify(command));
+                showNotification('info', `Enviando sessão "${nomeSessao}" para o banco de dados...`);
+                console.log('[Minimal] Enviando sessão para o DB via WebSocket.');
+            } else {
+                showNotification('warning', 'Sessão salva localmente. Conexão com o servidor inativa para salvar no DB.');
+            }
+
         } catch (e) {
             showNotification('error', 'Erro ao salvar sessão no LocalStorage.');
             console.error('[Minimal] Erro ao salvar sessão:', e);

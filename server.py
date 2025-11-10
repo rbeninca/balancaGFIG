@@ -678,24 +678,24 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
 
                 for sessao in sessoes:
                     # Use pre-calculated values from database
-                    sessao['impulsoTotal'] = sessao.pop('impulso_total', 0) or 0
-                    sessao['motorClass'] = sessao.pop('motor_class', 'N/A') or 'N/A'
-                    sessao['classColor'] = sessao.pop('class_color', '#95a5a6') or '#95a5a6'
+                    sessao['impulsoTotal'] = sessao.get('impulso_total', 0) or 0
+                    sessao['motorClass'] = sessao.get('motor_class', 'N/A') or 'N/A'
+                    sessao['classColor'] = sessao.get('class_color', '#95a5a6') or '#95a5a6'
 
                     # Transform motor fields into metadadosMotor object
                     sessao['metadadosMotor'] = {
-                        'name': sessao.pop('motor_name', None),
-                        'diameter': sessao.pop('motor_diameter', None),
-                        'length': sessao.pop('motor_length', None),
-                        'delay': sessao.pop('motor_delay', None),
-                        'propweight': sessao.pop('motor_propweight', None),
-                        'totalweight': sessao.pop('motor_totalweight', None),
-                        'manufacturer': sessao.pop('motor_manufacturer', None),
-                        'description': sessao.pop('motor_description', None),
-                        'observations': sessao.pop('motor_observations', None),
-                        'temperatura': sessao.pop('motor_temperatura', None),
-                        'umidade': sessao.pop('motor_umidade', None),
-                        'pressao': sessao.pop('motor_pressao', None)
+                        'name': sessao.get('motor_name', None),
+                        'diameter': sessao.get('motor_diameter', None),
+                        'length': sessao.get('motor_length', None),
+                        'delay': sessao.get('motor_delay', None),
+                        'propweight': sessao.get('motor_propweight', None),
+                        'totalweight': sessao.get('motor_totalweight', None),
+                        'manufacturer': sessao.get('motor_manufacturer', None),
+                        'description': sessao.get('motor_description', None),
+                        'observations': sessao.get('motor_observations', None),
+                        'temperatura': sessao.get('motor_temperatura', None),
+                        'umidade': sessao.get('motor_umidade', None),
+                        'pressao': sessao.get('motor_pressao', None)
                     }
                 self.send_json_response(200, sessoes)
         except pymysql.Error as e:

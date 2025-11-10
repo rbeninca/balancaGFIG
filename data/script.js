@@ -1127,6 +1127,7 @@ function handleWorkerMessage(event) {
     case 'mysql_status_update': // NEW: Handle MySQL status updates
       isMysqlConnected = payload;
       updateMysqlIndicator(isMysqlConnected);
+      updateSessionActionButtons(); // Adicionado para atualizar botões
       break;
     case 'serial_status_update': // NEW: Handle Serial status updates
       handleSerialStatusUpdate(payload);
@@ -1157,6 +1158,19 @@ function updateMysqlIndicator(connected) {
   if (textElement) {
     textElement.textContent = connected ? 'Conectado' : 'Desconectado';
   }
+}
+
+function updateSessionActionButtons() {
+  const saveButtons = document.querySelectorAll('.btn-save-to-db');
+  saveButtons.forEach(button => {
+    if (isMysqlConnected) {
+      button.disabled = false;
+      button.title = "Salvar do LocalStorage para o Banco de Dados";
+    } else {
+      button.disabled = true;
+      button.title = "MySQL desconectado";
+    }
+  });
 }
 
 // NEW: Function to handle serial connection status updates
@@ -2856,8 +2870,8 @@ async function loadAndDisplayAllSessions() {
               <button onclick="exportarCSV(${session.id}, '${session.source}')" title="Exportar Dados em CSV" class="btn btn-sucesso"> CSV</button>
               <button onclick="exportarEng(${session.id}, '${session.source}')" title="Exportar Curva de Empuxo para OpenRocket/RASAero" class="btn btn-aviso"> ENG</button>
               ${session.inLocal && !session.inDb
-          ? `<button class="btn btn-info btn-small"
-                  ${!isMysqlConnected ? 'disabled title="MySQL desconectado"' : 'title="Salvar do LocalStorage para o Banco de Dados"'}
+          ? `<button class="btn btn-info btn-small btn-save-to-db"
+                  title="Salvar do LocalStorage para o Banco de Dados"
                 onclick="salvarNoDB(${session.id})">
                 💾 ➜ ☁️ Salvar no BD
              </button>
@@ -2887,6 +2901,7 @@ async function loadAndDisplayAllSessions() {
       `;
     }
   }).join('');
+  updateSessionActionButtons();
   } catch (error) {
     console.error('[loadAndDisplayAllSessions] Erro ao renderizar sessões:', error);
     listaGravacoesDiv.innerHTML = `<p style="color: #e74c3c;">Erro ao carregar sessões. Verifique o console para mais detalhes.</p>`;
