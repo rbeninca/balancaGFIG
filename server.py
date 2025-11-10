@@ -587,77 +587,107 @@ async def save_session_to_mysql_db(session_data: Dict[str, Any]):
 
 # ================== HTTP Server & API ==================
 class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
+    file_cache = {}  # Class-level cache for static files
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory='/app/data', **kwargs)
 
     def translate_path(self, path):
         """Sobrescreve translate_path para carregar minimal.html como padrão em vez de index.html"""
-        # Se for a raiz (/), redireciona para minimal.html
         if path == '/' or path == '':
             path = '/minimal.html'
         return super().translate_path(path)
 
-    def send_response_with_gzip(self, status_code, data, content_type='application/json'):
-        """Envia resposta com compressão gzip se o cliente suportar"""
-        # Verifica se o cliente aceita compressão
-        accept_encoding = self.headers.get('Accept-Encoding', '')
-        
-        if isinstance(data, str):
-            data = data.encode('utf-8')
-        
-        # Se dados > 1KB e cliente aceita gzip, comprime
-        if 'gzip' in accept_encoding and len(data) > 1024:
-            buf = io.BytesIO()
-            with gzip.GzipFile(fileobj=buf, mode='wb') as f:
-                f.write(data)
-            compressed = buf.getvalue()
-            
-            self.send_response(status_code)
-            self.send_header('Content-Type', content_type)
-            self.send_header('Content-Encoding', 'gzip')
-            self.send_header('Content-Length', str(len(compressed)))
-            self.send_header('Vary', 'Accept-Encoding')
-            self.end_headers()
-            self.wfile.write(compressed)
-            
-            ratio = int((1 - len(compressed)/len(data)) * 100)
-            logging.debug(f"Comprimido ({content_type}): {len(data)} -> {len(compressed)} bytes ({ratio}% redução)")
-        else:
-            # Sem compressão
-            self.send_response(status_code)
-            self.send_header('Content-Type', content_type)
-            self.send_header('Content-Length', str(len(data)))
-            self.send_header('Vary', 'Accept-Encoding')
-            self.end_headers()
-            self.wfile.write(data)
-
     def do_GET(self):
         start = time.perf_counter()
         try:
-            if self.path == '/api/sessoes':
-                self.handle_get_sessoes()
-            elif self.path.startswith('/api/sessoes/') and self.path.endswith('/leituras'):
-                self.handle_get_leituras()
-            elif self.path.startswith('/api/sessoes/'):
-                self.handle_get_sessao_by_id()
-            elif self.path == '/api/time':
-                self.handle_get_time()
-            elif self.path == '/api/info':
-                self.handle_get_info()
+            if self.path.startswith('/api/'):
+                if self.path == '/api/sessoes':
+                    self.handle_get_sessoes()
+                elif self.path.startswith('/api/sessoes/') and self.path.endswith('/leituras'):
+                    self.handle_get_leituras()
+                elif self.path.startswith('/api/sessoes/'):
+                    self.handle_get_sessao_by_id()
+                elif self.path == '/api/time':
+                    self.handle_get_time()
+                elif self.path == '/api/info':
+                    self.handle_get_info()
+                else:
+                    self.send_error(404, "API endpoint not found")
+                return
+
+            # Handle static files with caching
+            path = self.translate_path(self.path)
+            
+            # Check cache first
+            cached_item = self.file_cache.get(path)
+            if cached_item:
+                if self.headers.get('If-Modified-Since') == cached_item['last_modified']:
+                    self.send_response(304)
+                    self.end_headers()
+                    return
+                
+                content = cached_item['content']
+                ctype = cached_item['type']
+                last_modified = cached_item['last_modified']
+                logging.debug(f"Serving static file from cache: {path}")
             else:
-                super().do_GET()
+                # File not in cache, read from disk
+                try:
+                    with open(path, 'rb') as f:
+                        fs = os.fstat(f.fileno())
+                        content = f.read()
+                        ctype = self.guess_type(path)
+                        if os.path.basename(path) == 'apexcharts':
+                            ctype = 'application/javascript'
+                        last_modified = self.date_time_string(fs.st_mtime)
+                        
+                        # Store in cache
+                        self.file_cache[path] = {
+                            'content': content,
+                            'type': ctype,
+                            'last_modified': last_modified
+                        }
+                        logging.info(f"Caching new static file: {path}")
+
+                except FileNotFoundError:
+                    self.send_error(404, "File not found")
+                    return
+            
+            # Compress and send response
+            accept_encoding = self.headers.get('Accept-Encoding', '')
+            compressible_types = ('text/html', 'text/css', 'application/javascript', 'application/json')
+
+            if any(t in ctype for t in compressible_types) and 'gzip' in accept_encoding:
+                buf = io.BytesIO()
+                with gzip.GzipFile(fileobj=buf, mode='wb') as f_gzip:
+                    f_gzip.write(content)
+                compressed_content = buf.getvalue()
+                
+                self.send_response(200)
+                self.send_header("Content-type", ctype)
+                self.send_header("Content-Encoding", "gzip")
+                self.send_header("Content-Length", str(len(compressed_content)))
+                self.send_header("Last-Modified", last_modified)
+                self.send_header("Vary", "Accept-Encoding")
+                self.end_headers()
+                self.wfile.write(compressed_content)
+            else:
+                self.send_response(200)
+                self.send_header("Content-type", ctype)
+                self.send_header("Content-Length", str(len(content)))
+                self.send_header("Last-Modified", last_modified)
+                self.end_headers()
+                self.wfile.write(content)
+
         except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError) as e:
-            logging.debug(
-                f"Cliente desconectou durante requisição GET {self.path}: {type(e).__name__}"
-            )
+            logging.debug(f"Cliente desconectou durante requisição GET {self.path}: {type(e).__name__}")
         except Exception as e:
-            logging.error(
-                f"Erro inesperado ao processar requisição GET {self.path}: {e}",
-                exc_info=True
-            )
+            logging.error(f"Erro inesperado ao processar requisição GET {self.path}: {e}", exc_info=True)
         finally:
             elapsed = (time.perf_counter() - start) * 1000
-            logging.info(f"GET {self.path} levou {elapsed:.1f} ms")
+            if self.path.startswith('/api/'):
+                logging.info(f"GET {self.path} levou {elapsed:.1f} ms")
 
     def do_POST(self):
         try:
@@ -1060,8 +1090,31 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
             })
 
     def send_json_response(self, status_code, data):
-        json_data = json.dumps(data, default=str)
-        self.send_response_with_gzip(status_code, json_data, 'application/json')
+        json_data = json.dumps(data, default=str).encode('utf-8')
+        accept_encoding = self.headers.get('Accept-Encoding', '')
+
+        if 'gzip' in accept_encoding and len(json_data) > 1024:
+            buf = io.BytesIO()
+            with gzip.GzipFile(fileobj=buf, mode='wb') as f:
+                f.write(json_data)
+            compressed_data = buf.getvalue()
+            
+            self.send_response(status_code)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Encoding', 'gzip')
+            self.send_header('Content-Length', str(len(compressed_data)))
+            self.send_header('Vary', 'Accept-Encoding')
+            self.end_headers()
+            self.wfile.write(compressed_data)
+            
+            ratio = int((1 - len(compressed_data) / len(json_data)) * 100) if len(json_data) > 0 else 0
+            logging.info(f"Compressed JSON response: {len(json_data)} -> {len(compressed_data)} bytes ({ratio}% reduction)")
+        else:
+            self.send_response(status_code)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(json_data)))
+            self.end_headers()
+            self.wfile.write(json_data)
 
 class DualStackTCPServer(socketserver.ThreadingMixIn,socketserver.TCPServer):
     address_family = socket.AF_INET # Force IPv4
