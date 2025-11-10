@@ -784,6 +784,7 @@
     <!-- Botões de Ação -->
     <div class="actions">
       <button id="record-btn" class="btn btn-primary" onclick="toggleRecording()">Iniciar Gravação</button>
+      <button class="btn" onclick="executarTara()">Tara</button>
       <button class="btn" onclick="openWizardSimplificado()">Calibração</button>
     </div>
 
@@ -2433,6 +2434,22 @@
     function iniciarNovaSessao() {
       // Redireciona para interface completa com sessão
       window.location.href = 'index.html?action=nova_sessao';
+    }
+
+    function executarTara() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(JSON.stringify({cmd: 't'}));
+          showNotification('info', 'Comando de tara enviado para a balança.');
+          console.log('[Minimal] 🎯 Comando de tara enviado');
+        } catch (e) {
+          showNotification('error', 'Erro ao enviar comando de tara.');
+          console.error('[Minimal] Erro ao enviar tara:', e);
+        }
+      } else {
+        showNotification('error', 'WebSocket não conectado. Conecte à balança primeiro.');
+        console.warn('[Minimal] WebSocket não está conectado');
+      }
     }
 
     // ============================================================================
