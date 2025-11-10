@@ -7,8 +7,10 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="preload" href="estilo.css" as="style">
   <link rel="stylesheet" href="estilo.css">
+  <link rel="stylesheet" href="usb_warning.css">
   <script src="apexcharts" defer></script>
   <script src="wizard_simplificado.js" defer></script>
+  <script src="usb_warning.js" defer></script>
   <style>
     * {
       margin: 0;
@@ -1933,6 +1935,11 @@
           erroMinN = capacidadeMaxN * dados.percentualAcuracia;
         }
         console.log(`[Minimal] Config atualizada: Cap=${capacidadeMaxN.toFixed(1)}N, Erro=${erroMinN.toFixed(3)}N`);
+      } else if (dados.type === 'status') {
+        // Handle serial status updates
+        if (typeof handleSerialStatusUpdate === 'function') {
+          handleSerialStatusUpdate(dados.payload);
+        }
       }
     }
 

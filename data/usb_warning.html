@@ -1,0 +1,42 @@
+<!-- Modal de Alerta de Conexão Serial -->
+<div id="modal-serial-warning" class="wizard-modal" style="display: none;">
+    <div class="wizard-content" style="max-width: 600px;">
+    <div class="wizard-header" style="background: var(--cor-alerta);">
+        <h2 style="color: white; margin: 0;">⚠️ Problema de Conexão com a Balança</h2>
+    </div>
+    <div class="wizard-body">
+        <div style="padding: 1rem; background: rgba(231, 76, 60, 0.1); border-radius: 0.5rem; margin-bottom: 1rem;">
+        <p id="serial-error-message" style="font-size: 1rem; font-weight: 600; color: var(--cor-alerta); margin: 0;"></p>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+        <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">🔍 Possíveis causas:</h3>
+        <ul style="margin-left: 1.5rem; line-height: 1.8;">
+            <li><strong>Dispositivo USB não conectado:</strong> Verifique se o ESP32/NodeMCU está conectado via USB</li>
+            <li><strong>Cabo USB com problema:</strong> Teste com outro cabo USB (deve ser cabo de dados, não apenas de carga)</li>
+            <li><strong>Porta USB com problema:</strong> Tente conectar em outra porta USB do computador</li>
+            <li><strong>Driver CH341 não instalado:</strong> No Linux, o driver geralmente já vem instalado</li>
+            <li><strong>Problemas de permissão:</strong> Adicione seu usuário ao grupo <code>dialout</code></li>
+        </ul>
+        </div>
+
+        <div style="padding: 1rem; background: var(--cor-info-light); border-radius: 0.5rem; border-left: 4px solid var(--cor-info);">
+        <h3 style="font-size: 0.9rem; margin-bottom: 0.5rem;">💡 Como resolver no Linux:</h3>
+        <pre style="background: #2c3e50; color: #ecf0f1; padding: 0.75rem; border-radius: 0.25rem; overflow-x: auto; font-size: 0.85rem; margin: 0;">sudo usermod -a -G dialout $USER
+sudo chmod 666 /dev/ttyUSB0</pre>
+        <small style="color: var(--cor-texto-secundario); display: block; margin-top: 0.5rem;">
+            Após executar, faça logout e login novamente
+        </small>
+        </div>
+
+        <div style="margin-top: 1.5rem; text-align: center;">
+        <p style="font-size: 0.9rem; color: var(--cor-texto-secundario);">
+            <strong id="serial-reconnect-status">Tentando reconectar automaticamente...</strong>
+        </p>
+        </div>
+    </div>
+    <div class="wizard-footer">
+        <button onclick="fecharModalSerial()" class="btn btn-secundario">Fechar e Continuar Tentando</button>
+    </div>
+    </div>
+</div>

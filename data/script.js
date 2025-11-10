@@ -1130,7 +1130,9 @@ function handleWorkerMessage(event) {
       updateSessionActionButtons(); // Adicionado para atualizar botões
       break;
     case 'serial_status_update': // NEW: Handle Serial status updates
-      handleSerialStatusUpdate(payload);
+      if (typeof handleSerialStatusUpdate === 'function') {
+        handleSerialStatusUpdate(payload);
+      }
       break;
     case 'mysql_save_success':
       showNotification('success', `Sessão "${notificationMessage}" salva no MySQL!`); // Use notificationMessage
@@ -1174,56 +1176,8 @@ function updateSessionActionButtons() {
 }
 
 // NEW: Function to handle serial connection status updates
-let serialModalShown = false;
-function handleSerialStatusUpdate(payload) {
-  const { connected, error, port, baudrate } = payload;
 
-  // Update balança status in footer
-  const balancaStatus = document.getElementById('balanca-status');
-  if (balancaStatus) {
-    if (connected) {
-      balancaStatus.textContent = `Conectado (${port || 'USB'})`;
-      balancaStatus.style.color = 'var(--cor-sucesso)';
-    } else {
-      balancaStatus.textContent = 'Desconectado';
-      balancaStatus.style.color = 'var(--cor-alerta)';
-    }
-  }
 
-  // Show/hide modal based on connection status
-  const modal = document.getElementById('modal-serial-warning');
-  const errorMessage = document.getElementById('serial-error-message');
-  const reconnectStatus = document.getElementById('serial-reconnect-status');
-
-  if (!connected && error) {
-    // Show error modal
-    if (errorMessage) {
-      errorMessage.textContent = error;
-    }
-    if (reconnectStatus) {
-      reconnectStatus.textContent = 'Tentando reconectar automaticamente...';
-    }
-    if (modal && !serialModalShown) {
-      modal.style.display = 'block';
-      serialModalShown = true;
-    }
-  } else if (connected) {
-    // Hide modal and show success notification
-    if (modal && serialModalShown) {
-      modal.style.display = 'none';
-      serialModalShown = false;
-      showNotification('success', `✓ Conectado à balança via ${port || 'USB'}`);
-    }
-  }
-}
-
-function fecharModalSerial() {
-  const modal = document.getElementById('modal-serial-warning');
-  if (modal) {
-    modal.style.display = 'none';
-    serialModalShown = false;
-  }
-}
 
 function sendCommandToWorker(command, value = null) {
   if (!dataWorker) {
