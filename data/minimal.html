@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Balança GFIG - Modo Minimalista</title>
   <link rel="stylesheet" href="estilo.css">
+  <script src="apexcharts"></script>
   <script src="wizard_simplificado.js" defer></script>
   <style>
     * {
@@ -118,23 +119,24 @@
 
     /* Gráfico */
     .chart-container {
-      width: 100vw;
+      width: calc(100vw - 20px);
       height: 45vh;
       position: relative;
       margin-top: 1.5rem;
-      margin-left: calc(-50vw + 50%);
+      margin-left: 10px;
+      margin-right: 10px;
       display: flex;
     }
 
     #minimalChart {
       flex: 1;
       height: 100%;
-      
+      max-width: calc(100% - 65px);
     }
 
     /* Barra de Range Vertical */
     .range-control {
-      width: 80px;
+      width: 60px;
       height: 100%;
       display: flex;
       flex-direction: column;
@@ -142,11 +144,10 @@
       padding: 0;
       background: transparent;
       border: none;
-      position: relative;
     }
 
     .range-toggle {
-      font-size: 0.7rem;
+      font-size: 1rem;
       color: #666;
       padding: 4px 8px;
       cursor: pointer;
@@ -177,8 +178,8 @@
       justify-content: space-between;
       padding: 0 10px;
       position: relative;
-      margin-top: 20px;
-      margin-bottom: 20px;
+      margin-top: 40px;
+      margin-bottom: 40px;
     }
 
     .range-tick {
@@ -197,10 +198,11 @@
     }
 
     .range-tick-value {
-      font-size: 0.65rem;
+      font-size: 0.6rem;
       color: #666;
-      min-width: 40px;
+      min-width: 35px;
       text-align: right;
+      display: none;
     }
 
     .range-bar {
@@ -454,6 +456,197 @@
       0%, 100% { opacity: 0.3; }
       50% { opacity: 0.7; }
     }
+
+    /* Modal de Análise de Sessão */
+    .analysis-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .analysis-modal {
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      max-width: 90vw;
+      max-height: 90vh;
+      width: 900px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .analysis-modal-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .analysis-modal-header h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      margin: 0;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 2rem;
+      cursor: pointer;
+      color: #666;
+      transition: color 0.2s;
+      padding: 0;
+      width: 2rem;
+      height: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-close:hover {
+      color: #000;
+    }
+
+    .analysis-modal-content {
+      flex: 1;
+      padding: 1.5rem;
+      display: flex;
+      gap: 1.5rem;
+      overflow-y: auto;
+    }
+
+    .analysis-graph-container {
+      flex: 2;
+      position: relative;
+      background: #f9f9f9;
+      border-radius: 4px;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .analysis-graph-container canvas {
+      width: 100% !important;
+      height: auto !important;
+    }
+
+    .analysis-stats-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      background: #f9f9f9;
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-y: auto;
+      max-height: 100%;
+    }
+
+    .stats-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .stats-group:last-of-type {
+      border-bottom: none;
+    }
+
+    .stats-group h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #333;
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .stat-item label {
+      font-size: 0.875rem;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .stat-item span {
+      font-size: 1.1rem;
+      font-weight: 300;
+      color: #000;
+    }
+
+    .control-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .btn-small {
+      padding: 0.5rem 1rem !important;
+      font-size: 0.875rem !important;
+      flex: 1;
+    }
+
+    .analysis-modal-footer {
+      padding: 1.5rem;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+    }
+
+    .btn-secondary {
+      background: #f0f0f0 !important;
+      color: #000 !important;
+      border: 1px solid #d0d0d0 !important;
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0 !important;
+    }
+
+    @media (max-width: 768px) {
+      .analysis-modal {
+        width: 95vw;
+        max-height: 95vh;
+      }
+
+      .analysis-modal-content {
+        flex-direction: column;
+      }
+
+      .analysis-graph-container {
+        flex: 1;
+      }
+
+      .analysis-stats-panel {
+        flex: 1;
+      }
+
+      .analysis-modal-footer {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
@@ -527,6 +720,79 @@
     </div>
     <div class="status-item">
       <span id="statusFreq">0 Hz</span>
+    </div>
+  </div>
+
+  <!-- Modal de Análise de Sessão -->
+  <div class="analysis-modal-overlay" id="analysisModalOverlay" style="display: none;">
+    <div class="analysis-modal" id="analysisModal">
+      <div class="analysis-modal-header">
+        <h2>Análise da Sessão</h2>
+        <button class="modal-close" id="modalCloseBtn" onclick="closeAnalysisModal()">×</button>
+      </div>
+      
+      <div class="analysis-modal-content">
+        <!-- Gráfico de análise -->
+        <div class="analysis-graph-container">
+          <div id="analysisChart" style="width: 100%; height: 100%;"></div>
+        </div>
+        
+        <!-- Painel de estatísticas -->
+        <div class="analysis-stats-panel">
+          <div class="stats-group">
+            <h3>Leitura Geral</h3>
+            <div class="stat-item">
+              <label>Valor Mínimo</label>
+              <span id="statMin">---</span>
+            </div>
+            <div class="stat-item">
+              <label>Valor Máximo</label>
+              <span id="statMax">---</span>
+            </div>
+            <div class="stat-item">
+              <label>Valor Médio</label>
+              <span id="statAvg">---</span>
+            </div>
+            <div class="stat-item">
+              <label>Duração Total</label>
+              <span id="statDuration">---</span>
+            </div>
+          </div>
+
+          <div class="stats-group">
+            <h3>Análise de Queima</h3>
+            <div class="stat-item">
+              <label>Início Queima</label>
+              <span id="burnStartTime">---</span>
+            </div>
+            <div class="stat-item">
+              <label>Fim Queima</label>
+              <span id="burnEndTime">---</span>
+            </div>
+            <div class="stat-item">
+              <label>Tempo de Queima</label>
+              <span id="burnDuration">---</span>
+            </div>
+            <div class="stat-item">
+              <label>Impulso Total</label>
+              <span id="burnImpulseTotal">---</span>
+            </div>
+            <div class="stat-item">
+              <label>Impulso Médio</label>
+              <span id="burnImpulseAvg">---</span>
+            </div>
+          </div>
+
+          <div class="control-buttons">
+            <button class="btn btn-small" onclick="resetBurnDetection()">Auto-Detectar</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="analysis-modal-footer">
+        <button class="btn btn-secondary" onclick="discardAnalysis()">Descartar</button>
+        <button class="btn btn-primary" onclick="saveAnalysisSession()">Salvar Sessão</button>
+      </div>
     </div>
   </div>
 
@@ -671,14 +937,395 @@
         const startDate = recordingStartTime;
         const nomeSessao = `${startDate.getFullYear()}-${formatTwoDigits(startDate.getMonth() + 1)}-${formatTwoDigits(startDate.getDate())}-${formatTwoDigits(startDate.getHours())}-${formatTwoDigits(startDate.getMinutes())}-${formatTwoDigits(startDate.getSeconds())}`;
 
-        const sessionStartTimeForData = recordedData[0].tempo;
+        // Prepara metadados para o modal de análise
+        const sessionMetadata = {
+            nomeSessao: nomeSessao,
+            startDate: startDate,
+            recordingEndTime: recordingEndTime,
+            recordedData: recordedData
+        };
 
-        const dadosTabela = recordedData.map(d => {
+        // Mostra modal de análise
+        showAnalysisModal(recordedData, sessionMetadata);
+    }
+
+    // ============================================================================
+    // MODAL DE ANÁLISE DE SESSÃO
+    // ============================================================================
+    let sessionDataForAnalysis = null;
+    let sessionMetadataForAnalysis = null;
+    let burnStartTimeAnalysis = null;
+    let burnEndTimeAnalysis = null;
+    let analysisChartInstance = null;
+
+    function detectBurnStart(forceValues, timeValues) {
+        // Detecta o início da queima como o primeiro ponto onde a força > 5% da máxima
+        // Nota: timeValues já estão em segundos (não em milissegundos)
+        const maxForce = Math.max(...forceValues);
+        const threshold = maxForce * 0.05;
+        const minTime = Math.min(...timeValues);
+        
+        console.log('[DEBUG detectBurnStart]:', { maxForce, threshold, minTime, firstTime: timeValues[0], lastTime: timeValues[timeValues.length - 1] });
+
+        for (let i = 0; i < forceValues.length; i++) {
+            if (forceValues[i] > threshold) {
+                const relativeTime = timeValues[i] - minTime; // Já está em segundos, só subtrai o mínimo
+                console.log('[DEBUG detectBurnStart] Encontrado em:', { i, force: forceValues[i], absoluteTime: timeValues[i], relativeTime });
+                return relativeTime;
+            }
+        }
+
+        return 0; // Se não encontrar, retorna 0s
+    }
+
+    function detectBurnEnd(forceValues, timeValues) {
+        // Detecta o fim da queima como o último ponto onde a força > 5% da máxima
+        // Nota: timeValues já estão em segundos (não em milissegundos)
+        const maxForce = Math.max(...forceValues);
+        const threshold = maxForce * 0.05;
+        const minTime = Math.min(...timeValues);
+
+        for (let i = forceValues.length - 1; i >= 0; i--) {
+            if (forceValues[i] > threshold) {
+                const relativeTime = timeValues[i] - minTime; // Já está em segundos, só subtrai o mínimo
+                console.log('[DEBUG detectBurnEnd] Encontrado em:', { i, force: forceValues[i], absoluteTime: timeValues[i], relativeTime });
+                return relativeTime;
+            }
+        }
+
+        const relativeTime = timeValues[timeValues.length - 1] - minTime; // Se não encontrar, retorna último tempo
+        console.log('[DEBUG detectBurnEnd] Usando último ponto:', { relativeTime });
+        return relativeTime;
+    }
+
+    function calculateBurnMetrics(forceValues, timeValues, startTime, endTime) {
+        // startTime e endTime são em segundos (tempo relativo)
+        // timeValues também já estão em segundos
+        const minTime = Math.min(...timeValues);
+        const startTimeAbs = startTime + minTime;
+        const endTimeAbs = endTime + minTime;
+
+        // Calcula impulso total e médio usando regra do trapézio
+        let impulsoTotal = 0;
+        let countPoints = 0;
+
+        for (let i = 0; i < timeValues.length; i++) {
+            if (i > 0) {
+                const tPrev = timeValues[i - 1];
+                const tCur = timeValues[i];
+                
+                if (tCur >= startTimeAbs && tPrev >= startTimeAbs && tCur <= endTimeAbs) {
+                    const dt = tCur - tPrev; // Já está em segundos
+                    const f1 = forceValues[i - 1];
+                    const f2 = forceValues[i];
+                    const areaTrap = dt * (f1 + f2) / 2;
+                    if (areaTrap > 0) {
+                        impulsoTotal += areaTrap;
+                        countPoints++;
+                    }
+                }
+            }
+        }
+
+        const impulsoMedio = countPoints > 0 ? impulsoTotal / (endTime - startTime) : 0;
+        const duracao = endTime - startTime;
+
+        return {
+            impulsoTotal: impulsoTotal,
+            impulsoMedio: impulsoMedio,
+            duracao: duracao
+        };
+    }
+
+    function resetBurnDetection() {
+        if (!sessionDataForAnalysis) return;
+
+        const forceValues = sessionDataForAnalysis.map(d => d.forca);
+        const timeValues = sessionDataForAnalysis.map(d => d.tempo);
+
+        burnStartTimeAnalysis = detectBurnStart(forceValues, timeValues);
+        burnEndTimeAnalysis = detectBurnEnd(forceValues, timeValues);
+
+        renderAnalysisGraph();
+        updateAnalysisStats();
+    }
+
+
+    function showAnalysisModal(sessionData, sessionMetadata) {
+        sessionDataForAnalysis = sessionData;
+        sessionMetadataForAnalysis = sessionMetadata;
+
+        const overlay = document.getElementById('analysisModalOverlay');
+        overlay.style.display = 'flex';
+
+        // Detecta automaticamente início e fim da queima
+        const forceValues = sessionData.map(d => d.forca);
+        const timeValues = sessionData.map(d => d.tempo);
+        
+        console.log('[DEBUG] Dados da sessão:');
+        console.log('  - Total de pontos:', sessionData.length);
+        console.log('  - Tempo do primeiro ponto:', timeValues[0], 'ms');
+        console.log('  - Tempo do último ponto:', timeValues[timeValues.length - 1], 'ms');
+        console.log('  - Diferença:', timeValues[timeValues.length - 1] - timeValues[0], 'ms');
+        
+        burnStartTimeAnalysis = detectBurnStart(forceValues, timeValues);
+        burnEndTimeAnalysis = detectBurnEnd(forceValues, timeValues);
+        
+        console.log('[DEBUG] Tempos detectados:');
+        console.log('  - Início da queima:', burnStartTimeAnalysis, 's');
+        console.log('  - Fim da queima:', burnEndTimeAnalysis, 's');
+
+        // Renderizar gráfico e estatísticas
+        setTimeout(() => {
+            renderAnalysisGraph();
+            updateAnalysisStats();
+        }, 100);
+    }
+
+    function closeAnalysisModal() {
+        const overlay = document.getElementById('analysisModalOverlay');
+        overlay.style.display = 'none';
+        sessionDataForAnalysis = null;
+        sessionMetadataForAnalysis = null;
+        burnStartTimeAnalysis = null;
+        burnEndTimeAnalysis = null;
+        // Limpa dados da gravação anterior
+        recordedData = [];
+        if (chartData.length > MAX_CHART_POINTS) {
+            chartData = chartData.slice(chartData.length - MAX_CHART_POINTS);
+        }
+    }
+
+    function renderAnalysisGraph() {
+        if (!sessionDataForAnalysis || sessionDataForAnalysis.length === 0) {
+            console.warn('Nenhum dado para renderizar no gráfico de análise');
+            return;
+        }
+
+        // Destói gráfico anterior se existir
+        if (analysisChartInstance) {
+            analysisChartInstance.destroy();
+            analysisChartInstance = null;
+        }
+
+        const forceValues = sessionDataForAnalysis.map(d => d.forca);
+        const timeValues = sessionDataForAnalysis.map(d => d.tempo);
+        const minTime = Math.min(...timeValues);
+
+        // Converte tempos para relativo (0 = início da gravação)
+        // Nota: timeValues já estão em segundos, só precisa subtrair o mínimo
+        const relativeTimeValues = timeValues.map(t => t - minTime); // em segundos
+
+        // Prepara dados para ApexCharts
+        const chartData = relativeTimeValues.map((t, i) => ({
+            x: t,
+            y: forceValues[i]
+        }));
+
+        // burnStartTimeAnalysis e burnEndTimeAnalysis já estão em tempo relativo (segundos)
+        const startRelative = burnStartTimeAnalysis;
+        const endRelative = burnEndTimeAnalysis;
+
+        // Cria área de queima
+        const burnAreaData = relativeTimeValues.map((t, i) => ({
+            x: t,
+            y: (t >= startRelative && t <= endRelative) ? forceValues[i] : null
+        }));
+
+        const options = {
+            series: [
+                {
+                    name: 'Força (N)',
+                    type: 'line',
+                    data: chartData
+                },
+                {
+                    name: 'Queima',
+                    type: 'area',
+                    data: burnAreaData
+                }
+            ],
+            chart: {
+                type: 'line',
+                height: '100%',
+                animations: {
+                    enabled: false
+                },
+                toolbar: {
+                    show: true,
+                    tools: {
+                        download: true,
+                        selection: false,
+                        zoom: true,
+                        zoomin: true,
+                        zoomout: true,
+                        pan: true,
+                        reset: true
+                    },
+                    autoSelected: 'pan'
+                },
+                events: {
+                    click: function(event, chartContext, config) {
+                        // Permite clicar no gráfico para ajustar pontos de queima
+                        if (config.dataPointIndex !== undefined && config.dataPointIndex >= 0) {
+                            const clickedTime = chartData[config.dataPointIndex].x; // Tempo relativo em segundos
+
+                            // Determina se está mais próximo do início ou fim
+                            const distStart = Math.abs(clickedTime - burnStartTimeAnalysis);
+                            const distEnd = Math.abs(clickedTime - burnEndTimeAnalysis);
+
+                            if (distStart < distEnd) {
+                                burnStartTimeAnalysis = clickedTime; // Mantém em tempo relativo
+                            } else {
+                                burnEndTimeAnalysis = clickedTime; // Mantém em tempo relativo
+                            }
+
+                            renderAnalysisGraph();
+                            updateAnalysisStats();
+                        }
+                    }
+                }
+            },
+            stroke: {
+                curve: 'smooth',
+                width: [2, 0]
+            },
+            fill: {
+                type: ['solid', 'solid'],
+                opacity: [1, 0.3]
+            },
+            colors: ['#3498db', '#2ecc71'],
+            xaxis: {
+                type: 'numeric',
+                title: {
+                    text: 'Tempo Relativo (s)'
+                },
+                decimalsInFloat: 3
+            },
+            yaxis: {
+                title: {
+                    text: 'Força (N)'
+                },
+                decimalsInFloat: 2
+            },
+            annotations: {
+                xaxis: [
+                    {
+                        x: startRelative,
+                        borderColor: '#00E396',
+                        label: {
+                            borderColor: '#00E396',
+                            style: { color: '#fff', background: '#00E396' },
+                            text: '🔥 Início'
+                        }
+                    },
+                    {
+                        x: endRelative,
+                        borderColor: '#FEB019',
+                        label: {
+                            borderColor: '#FEB019',
+                            style: { color: '#fff', background: '#FEB019' },
+                            text: '🏁 Fim'
+                        }
+                    }
+                ]
+            },
+            grid: {
+                borderColor: '#e7e7e7',
+                row: {
+                    colors: ['#f3f3f3', 'transparent'],
+                    opacity: 0.5
+                }
+            }
+        };
+
+        const chartContainer = document.getElementById('analysisChart');
+        analysisChartInstance = new ApexCharts(chartContainer, options);
+        analysisChartInstance.render();
+    }
+
+    function updateAnalysisStats() {
+        if (!sessionDataForAnalysis || sessionDataForAnalysis.length === 0) {
+            return;
+        }
+
+        const forceValues = sessionDataForAnalysis.map(d => d.forca);
+        const timeValues = sessionDataForAnalysis.map(d => d.tempo);
+        const minForce = Math.min(...forceValues);
+        const maxForce = Math.max(...forceValues);
+        const avgForce = forceValues.reduce((a, b) => a + b, 0) / forceValues.length;
+
+        // Calcula duração em segundos
+        const firstTime = sessionDataForAnalysis[0].tempo;
+        const lastTime = sessionDataForAnalysis[sessionDataForAnalysis.length - 1].tempo;
+        const duration = (lastTime - firstTime).toFixed(2); // Já está em segundos, não divide por 1000
+
+        // Obtém unidade atual
+        const unitLabel = document.getElementById('unitLabel').textContent;
+        const precision = unitLabel === 'N' ? 1 : (unitLabel === 'kg' ? 2 : 1);
+
+        // Converte para unidade atual
+        const convertValue = (forceN) => {
+            if (unitLabel === 'N') return forceN;
+            if (unitLabel === 'kg') return forceN / 9.80665;
+            if (unitLabel === 'g') return (forceN / 9.80665) * 1000;
+            return forceN;
+        };
+
+        const minConverted = convertValue(minForce).toLocaleString('pt-BR', { minimumFractionDigits: precision, maximumFractionDigits: precision });
+        const maxConverted = convertValue(maxForce).toLocaleString('pt-BR', { minimumFractionDigits: precision, maximumFractionDigits: precision });
+        const avgConverted = convertValue(avgForce).toLocaleString('pt-BR', { minimumFractionDigits: precision, maximumFractionDigits: precision });
+        const durationFormatted = (duration).replace('.', ',');
+
+        // Atualiza elementos gerais
+        document.getElementById('statMin').textContent = `${minConverted} ${unitLabel}`;
+        document.getElementById('statMax').textContent = `${maxConverted} ${unitLabel}`;
+        document.getElementById('statAvg').textContent = `${avgConverted} ${unitLabel}`;
+        document.getElementById('statDuration').textContent = `${durationFormatted} s`;
+
+        // Calcula métricas de queima
+        if (burnStartTimeAnalysis !== null && burnEndTimeAnalysis !== null) {
+            const burnMetrics = calculateBurnMetrics(forceValues, timeValues, burnStartTimeAnalysis, burnEndTimeAnalysis);
+            
+            // Formata números em pt-BR (vírgula como separador decimal) - 5 casas decimais
+            const formatPtBR = (num) => num.toLocaleString('pt-BR', { minimumFractionDigits: 5, maximumFractionDigits: 5 });
+            
+            document.getElementById('burnStartTime').textContent = formatPtBR(burnStartTimeAnalysis);
+            document.getElementById('burnEndTime').textContent = formatPtBR(burnEndTimeAnalysis);
+            document.getElementById('burnDuration').textContent = formatPtBR(burnMetrics.duracao);
+            document.getElementById('burnImpulseTotal').textContent = `${formatPtBR(burnMetrics.impulsoTotal)} N·s`;
+            document.getElementById('burnImpulseAvg').textContent = `${formatPtBR(burnMetrics.impulsoMedio)} N/s`;
+        }
+    }
+
+    function discardAnalysis() {
+        closeAnalysisModal();
+        // Reseta para a próxima gravação
+        recordedData = [];
+        if (chartData.length > MAX_CHART_POINTS) {
+            chartData = chartData.slice(chartData.length - MAX_CHART_POINTS);
+        }
+        showNotification('info', 'Sessão descartada.');
+    }
+
+    function saveAnalysisSession() {
+        if (!sessionMetadataForAnalysis) {
+            console.error('Metadados da sessão não encontrados');
+            return;
+        }
+
+        // Extrai dados do metadata
+        const { nomeSessao, startDate, recordingEndTime, recordedData: data } = sessionMetadataForAnalysis;
+
+        const formatTwoDigits = (n) => n.toString().padStart(2, '0');
+        const sessionStartTimeForData = data[0].tempo;
+
+        const dadosTabela = data.map(d => {
             const tempoNormalizado = (d.tempo - sessionStartTimeForData);
             const forcaN = d.forca;
             const g_force = forcaN / 9.80665;
-            
-            const agora = new Date(recordingStartTime.getTime() + (tempoNormalizado * 1000));
+
+            const agora = new Date(startDate.getTime() + (tempoNormalizado * 1000));
             const dd = String(agora.getUTCDate()).padStart(2, '0');
             const mm = String(agora.getUTCMonth() + 1).padStart(2, '0');
             const yyyy = agora.getUTCFullYear();
@@ -705,7 +1352,7 @@
             data_fim: recordingEndTime.toISOString(),
             data_modificacao: new Date().toISOString(),
             dadosTabela: dadosTabela,
-            metadadosMotor: {}, // Metadados vazios como padrão
+            metadadosMotor: {},
             savedToMysql: false
         };
 
@@ -713,16 +1360,15 @@
             let gravacoes = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
             gravacoes.push(gravacao);
             localStorage.setItem('balancaGravacoes', JSON.stringify(gravacoes));
-            showNotification('success', `Sessão "${nomeSessao}" salva localmente!`);
+            showNotification('success', `Sessão "${nomeSessao}" salva com sucesso!`);
             console.log('[Minimal] Sessão salva:', gravacao);
         } catch (e) {
             showNotification('error', 'Erro ao salvar sessão no LocalStorage.');
             console.error('[Minimal] Erro ao salvar sessão:', e);
         }
 
-        // Reseta para a próxima gravação
+        closeAnalysisModal();
         recordedData = [];
-        // Trunca os dados do gráfico de volta ao normal após a gravação
         if (chartData.length > MAX_CHART_POINTS) {
             chartData = chartData.slice(chartData.length - MAX_CHART_POINTS);
         }
@@ -835,7 +1481,7 @@
       }
 
       const range = maxVal - minVal || 1;
-      const margin = 20;
+      const margin = 40;
       const plotWidth = width - margin * 2;
       const plotHeight = height - margin * 2;
 
@@ -853,7 +1499,7 @@
         // Desenha linha
         ctx.beginPath();
         ctx.moveTo(margin, y);
-        ctx.lineTo(width - margin - 50, y); // Deixa espaço para os labels
+        ctx.lineTo(width - margin - 35, y); // Deixa espaço menor para os labels
         ctx.stroke();
         
         // Calcula valor correspondente a esta linha
@@ -882,7 +1528,7 @@
         ctx.font = '24px -apple-system, BlinkMacSystemFont, sans-serif';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'bottom';
-        ctx.fillText(labelText, width - margin, y);
+        ctx.fillText(labelText, width - margin + 20, y);
       }
 
       // === 2. DESENHA LINHA PRINCIPAL ===
@@ -892,7 +1538,10 @@
       ctx.shadowBlur = 4;
       ctx.beginPath();
 
-      const x_denominator = isRecording ? (chartData.length > 1 ? chartData.length - 1 : 1) : (MAX_CHART_POINTS - 1);
+      // Durante gravação: usa o tamanho real dos dados
+      // Fora da gravação: usa MAX_CHART_POINTS para manter escala consistente
+      let effectiveMax = isRecording ? chartData.length : MAX_CHART_POINTS;
+      const x_denominator = Math.max(effectiveMax - 1, 1);
 
       chartData.forEach((d, i) => {
         const x = margin + (i / x_denominator) * plotWidth;
