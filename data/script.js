@@ -1130,9 +1130,9 @@ function handleWorkerMessage(event) {
       updateMysqlIndicator(isMysqlConnected);
       updateSessionActionButtons(); // Adicionado para atualizar botões
       break;
-    case 'serial_status_update': // NEW: Handle Serial status updates
+    case 'serial_status': // NEW: Handle Serial status updates
       if (typeof handleSerialStatusUpdate === 'function') {
-        handleSerialStatusUpdate(payload);
+        handleSerialStatusUpdate(event.data); // Pass the entire 'event.data' object as payload
       }
       break;
     case 'mysql_save_success':

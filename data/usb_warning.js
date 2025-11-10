@@ -85,18 +85,4 @@ function fecharModalSerial() {
 }
 
 // Load the modal when the DOM is fully loaded
-document.addEventListener('DOMContentLoaded', () => {
-    loadUsbWarningModal();
-    // FOR DEBUGGING: Force display the modal
-    setTimeout(() => {
-        const modal = document.getElementById('modal-serial-warning');
-        if (modal) {
-            modal.style.display = 'block';
-            const errorMessage = document.getElementById('serial-error-message');
-            if (errorMessage) {
-                errorMessage.textContent = "DEBUG: Modal forçado a aparecer. Verifique a console para mensagens do worker.";
-            }
-            console.log('DEBUG: USB warning modal forced to display.');
-        }
-    }, 1000); // Give it a moment to load
-});
+document.addEventListener('DOMContentLoaded', loadUsbWarningModal);
