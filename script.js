@@ -1096,6 +1096,10 @@ function handleWorkerMessage(event) {
   let currentSessionId = null; // Declare it here
   let notificationMessage = message; // Use a new variable for notification message
 
+  // DEBUG LOG: Log the type of message received
+  console.log(`[handleWorkerMessage] Received message type: '${type}'`);
+  console.log(`[handleWorkerMessage] Full event.data:`, event.data);
+
   // Extract sessionId and update notificationMessage for specific cases
   if (type === 'mysql_save_success' || type === 'mysql_save_error') {
     currentSessionId = payload.sessionId;
@@ -1130,7 +1134,10 @@ function handleWorkerMessage(event) {
       updateSessionActionButtons(); // Adicionado para atualizar botões
       break;
     case 'serial_status_update': // NEW: Handle Serial status updates
-      handleSerialStatusUpdate(payload);
+      console.log(`[handleWorkerMessage] Matched case 'serial_status_update'. Payload:`, payload);
+      if (typeof handleSerialStatusUpdate === 'function') {
+        handleSerialStatusUpdate(payload); // Pass the 'payload' variable directly
+      }
       break;
     case 'mysql_save_success':
       showNotification('success', `Sessão "${notificationMessage}" salva no MySQL!`); // Use notificationMessage
@@ -1174,56 +1181,8 @@ function updateSessionActionButtons() {
 }
 
 // NEW: Function to handle serial connection status updates
-let serialModalShown = false;
-function handleSerialStatusUpdate(payload) {
-  const { connected, error, port, baudrate } = payload;
 
-  // Update balança status in footer
-  const balancaStatus = document.getElementById('balanca-status');
-  if (balancaStatus) {
-    if (connected) {
-      balancaStatus.textContent = `Conectado (${port || 'USB'})`;
-      balancaStatus.style.color = 'var(--cor-sucesso)';
-    } else {
-      balancaStatus.textContent = 'Desconectado';
-      balancaStatus.style.color = 'var(--cor-alerta)';
-    }
-  }
 
-  // Show/hide modal based on connection status
-  const modal = document.getElementById('modal-serial-warning');
-  const errorMessage = document.getElementById('serial-error-message');
-  const reconnectStatus = document.getElementById('serial-reconnect-status');
-
-  if (!connected && error) {
-    // Show error modal
-    if (errorMessage) {
-      errorMessage.textContent = error;
-    }
-    if (reconnectStatus) {
-      reconnectStatus.textContent = 'Tentando reconectar automaticamente...';
-    }
-    if (modal && !serialModalShown) {
-      modal.style.display = 'block';
-      serialModalShown = true;
-    }
-  } else if (connected) {
-    // Hide modal and show success notification
-    if (modal && serialModalShown) {
-      modal.style.display = 'none';
-      serialModalShown = false;
-      showNotification('success', `✓ Conectado à balança via ${port || 'USB'}`);
-    }
-  }
-}
-
-function fecharModalSerial() {
-  const modal = document.getElementById('modal-serial-warning');
-  if (modal) {
-    modal.style.display = 'none';
-    serialModalShown = false;
-  }
-}
 
 function sendCommandToWorker(command, value = null) {
   if (!dataWorker) {
@@ -1854,18 +1813,7 @@ function abrirMarteloFullscreen() {
   window.open('jogos/index.html', 'jogos', 'width=1400,height=900,scrollbars=yes,resizable=yes');
 }
 
-function showNotification(type, message, duration = 5000) {
-  const area = document.getElementById('notification-area');
-  const notification = document.createElement('div');
-  notification.className = 'notification ' + type;
-  notification.innerHTML = message;
-  area.prepend(notification);
-  setTimeout(() => {
-    notification.style.transition = 'opacity 0.5s';
-    notification.style.opacity = '0';
-    setTimeout(() => notification.remove(), 500);
-  }, duration);
-}
+
 
 /**
  * Mostra overlay de carregamento
