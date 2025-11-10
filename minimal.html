@@ -112,6 +112,52 @@
       transform: scale(0.95);
     }
 
+    .decimal-controls {
+      display: flex;
+      flex-direction: row;
+      gap: 0.3rem;
+      margin-left: 1rem;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .decimal-btn {
+      width: 2.8rem;
+      height: 2.5rem;
+      font-size: 0.75rem;
+      font-weight: 300;
+      border: 1px solid #d0d0d0;
+      background: #fafafa;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: #999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .decimal-btn:hover {
+      background: #f0f0f0;
+      border-color: #bbb;
+      color: #666;
+    }
+
+    .decimal-btn:active {
+      background: #e5e5e5;
+      transform: scale(0.95);
+    }
+
+    .decimal-display {
+      font-size: 0.9rem;
+      font-weight: 400;
+      color: #aaa;
+      min-width: 1.5rem;
+      text-align: center;
+    }
+
     /* Transições suaves para mudança de cor */
     #readingValue {
       transition: color 0.4s ease-in-out;
@@ -670,6 +716,11 @@
         <span id="readingValue" class="loading">---</span>
         <span class="unit" id="unitLabel" onclick="alternarUnidade()" style="cursor: pointer;" title="Clique para alternar entre N, kg e g">N</span>
       </div>
+      <div class="decimal-controls">
+        <button class="decimal-btn" id="decreaseDecimal" onclick="decreaseDecimalPlaces()" title="Diminuir casas decimais">.0←</button>
+        <span class="decimal-display" id="decimalDisplay">2</span>
+        <button class="decimal-btn" id="increaseDecimal" onclick="increaseDecimalPlaces()" title="Aumentar casas decimais">→.0</button>
+      </div>
     </div>
 
     <!-- Gráfico -->
@@ -906,6 +957,7 @@
     let recordedData = [];
     let recordingStartTime = null;
     let recordingEndTime = null;
+    let decimalPlaces = 2; // Controla número de casas decimais na leitura principal
 
     function toggleRecording() {
         isRecording = !isRecording;
@@ -1873,23 +1925,26 @@
         const readingEl = document.getElementById('readingValue');
         const readingContainerEl = document.querySelector('.reading-container');
 
-        let valorConvertido, precisao;
+        let valorConvertido, precisaoBase;
 
         switch (unidadeAtual) {
           case 'kg':
             valorConvertido = valorN / 9.80665;
-            precisao = 3;
+            precisaoBase = 3;
             break;
           case 'g':
             valorConvertido = (valorN / 9.80665) * 1000;
-            precisao = 3;
+            precisaoBase = 3;
             break;
           case 'N':
           default:
             valorConvertido = valorN;
-            precisao = 2;
+            precisaoBase = 2;
             break;
         }
+
+        // Usa o número de casas decimais definido pelo usuário
+        const precisao = decimalPlaces !== undefined ? decimalPlaces : precisaoBase;
 
         const valorArredondado = parseFloat(valorConvertido.toFixed(precisao));
         const valorFormatado = valorArredondado.toFixed(precisao).replace('.', ',');
@@ -1948,6 +2003,26 @@
 
       // Atualiza escala de range com nova unidade
       atualizarRangeScale();
+    }
+
+    function increaseDecimalPlaces() {
+      if (decimalPlaces < 5) {
+        decimalPlaces++;
+        document.getElementById('decimalDisplay').textContent = decimalPlaces;
+        // Re-renderiza a leitura com novo número de casas
+        atualizarRangeScale();
+        showNotification('info', `Casas decimais: ${decimalPlaces}`);
+      }
+    }
+
+    function decreaseDecimalPlaces() {
+      if (decimalPlaces > 0) {
+        decimalPlaces--;
+        document.getElementById('decimalDisplay').textContent = decimalPlaces;
+        // Re-renderiza a leitura com novo número de casas
+        atualizarRangeScale();
+        showNotification('info', `Casas decimais: ${decimalPlaces}`);
+      }
     }
 
     // ============================================================================
