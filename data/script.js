@@ -1096,6 +1096,10 @@ function handleWorkerMessage(event) {
   let currentSessionId = null; // Declare it here
   let notificationMessage = message; // Use a new variable for notification message
 
+  // DEBUG LOG: Log the type of message received
+  console.log(`[handleWorkerMessage] Received message type: '${type}'`);
+  console.log(`[handleWorkerMessage] Full event.data:`, event.data);
+
   // Extract sessionId and update notificationMessage for specific cases
   if (type === 'mysql_save_success' || type === 'mysql_save_error') {
     currentSessionId = payload.sessionId;
@@ -1130,6 +1134,7 @@ function handleWorkerMessage(event) {
       updateSessionActionButtons(); // Adicionado para atualizar botões
       break;
     case 'serial_status_update': // NEW: Handle Serial status updates
+      console.log(`[handleWorkerMessage] Matched case 'serial_status_update'. Payload:`, payload);
       if (typeof handleSerialStatusUpdate === 'function') {
         handleSerialStatusUpdate(payload); // Pass the 'payload' variable directly
       }
