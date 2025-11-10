@@ -781,6 +781,10 @@
               <label>Impulso Médio</label>
               <span id="burnImpulseAvg">---</span>
             </div>
+            <div class="stat-item">
+              <label>Classificação NAR</label>
+              <span id="motorClassification" style="font-weight: bold; padding: 4px 8px; border-radius: 4px; background-color: #95a5a6; color: white;">Indefinido</span>
+            </div>
           </div>
 
           <div class="control-buttons">
@@ -957,6 +961,42 @@
     let burnStartTimeAnalysis = null;
     let burnEndTimeAnalysis = null;
     let analysisChartInstance = null;
+
+    function classificarMotor(impulsoNs) {
+        // Classifica um motor baseado no seu impulso total em N·s (NAR classification)
+        const classificacoes = [
+            { min: 0.00, max: 0.3125, classe: 'Micro 1/8A', cor: '#8e44ad' },
+            { min: 0.3126, max: 0.625, classe: '¼A', cor: '#9b59b6' },
+            { min: 0.626, max: 1.25, classe: '½A', cor: '#e74c3c' },
+            { min: 1.26, max: 2.50, classe: 'A', cor: '#e67e22' },
+            { min: 2.51, max: 5.00, classe: 'B', cor: '#f39c12' },
+            { min: 5.01, max: 10.00, classe: 'C', cor: '#f1c40f' },
+            { min: 10.01, max: 20.00, classe: 'D', cor: '#2ecc71' },
+            { min: 20.01, max: 40.00, classe: 'E', cor: '#1abc9c' },
+            { min: 40.01, max: 80.00, classe: 'F', cor: '#3498db' },
+            { min: 80.01, max: 160.00, classe: 'G', cor: '#9b59b6' },
+            { min: 160.01, max: 320.00, classe: 'H', cor: '#e74c3c' },
+            { min: 320.01, max: 640.00, classe: 'I', cor: '#e67e22' },
+            { min: 640.01, max: 1280.00, classe: 'J', cor: '#f39c12' },
+            { min: 1280.01, max: 2560.00, classe: 'K', cor: '#2ecc71' },
+            { min: 2560.01, max: 5120.00, classe: 'L', cor: '#3498db' },
+            { min: 5120.01, max: 10240.00, classe: 'M', cor: '#9b59b6' },
+            { min: 10240.01, max: 20480.00, classe: 'N', cor: '#e74c3c' },
+            { min: 20480.01, max: 40960.00, classe: 'O', cor: '#c0392b' }
+        ];
+
+        if (impulsoNs === null || impulsoNs === undefined) {
+            return { classe: 'Indefinido', cor: '#95a5a6' };
+        }
+
+        const EPS = 1e-6;
+        for (let c of classificacoes) {
+            if ((c.min - EPS) <= impulsoNs && impulsoNs <= (c.max + EPS)) {
+                return { classe: c.classe, cor: c.cor };
+            }
+        }
+        return { classe: 'Indefinido', cor: '#95a5a6' };
+    }
 
     function detectBurnStart(forceValues, timeValues) {
         // Detecta o início da queima como o primeiro ponto onde a força > 5% da máxima
@@ -1295,6 +1335,12 @@
             document.getElementById('burnDuration').textContent = formatPtBR(burnMetrics.duracao);
             document.getElementById('burnImpulseTotal').textContent = `${formatPtBR(burnMetrics.impulsoTotal)} N·s`;
             document.getElementById('burnImpulseAvg').textContent = `${formatPtBR(burnMetrics.impulsoMedio)} N/s`;
+            
+            // Classifica o motor conforme NAR
+            const classification = classificarMotor(burnMetrics.impulsoTotal);
+            const motorClassEl = document.getElementById('motorClassification');
+            motorClassEl.textContent = classification.classe;
+            motorClassEl.style.backgroundColor = classification.cor;
         }
     }
 
