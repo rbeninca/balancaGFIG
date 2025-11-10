@@ -4,8 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Balança GFIG - Modo Minimalista</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preload" href="estilo.css" as="style">
   <link rel="stylesheet" href="estilo.css">
-  <script src="apexcharts"></script>
+  <script src="apexcharts" defer></script>
   <script src="wizard_simplificado.js" defer></script>
   <style>
     * {
@@ -646,7 +648,7 @@
 
     .stat-item {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       gap: 0.5rem;
     }
 
@@ -2032,25 +2034,45 @@
         // Monta HTML com dígitos destacados
         let htmlFormatado = '';
         const partes = valorFormatado.split(',');
-        const parteInteira = partes[0] || '0';
+        let parteInteira = partes[0] || '0';
         const parteDecimal = partes[1] || '';
 
-        // Se casasConfiaveis < 0, significa que o erro afeta até a unidade inteira
-        if (casasConfiaveis < 0) {
-          // Toda a parte inteira é cinza
-          htmlFormatado += `<span class="digit-unreliable">${parteInteira}</span>`;
-        } else if (casasConfiaveis === 0) {
-          // Unidade confiável, mas sem casas decimais
-          htmlFormatado += `<span class="digit-reliable">${parteInteira}</span>`;
-        } else {
-          // Parte inteira sempre confiável
-          htmlFormatado += `<span class="digit-reliable">${parteInteira}</span>`;
+        // Lida com números negativos
+        let temNegativo = false;
+        if (parteInteira.startsWith('-')) {
+          temNegativo = true;
+          parteInteira = parteInteira.substring(1);
+        }
+
+        // Determina quais dígitos inteiros são afetados pelo erro
+        let digitosInteirosNaoConfiaveis = [];
+        if (erroConvertido > 0) {
+          // Para cada dígito inteiro, verifica se sua magnitude é > erro
+          for (let i = 0; i < parteInteira.length; i++) {
+            const posicao = parteInteira.length - i - 1; // 0 = unidade, 1 = dezena, etc
+            const magnitude = Math.pow(10, posicao);
+            if (magnitude <= erroConvertido) {
+              digitosInteirosNaoConfiaveis.push(i);
+            }
+          }
+        }
+
+        // Monta parte inteira com dígitos destacados
+        if (temNegativo) {
+          htmlFormatado += '−'; // Sinal de menos
+        }
+        for (let i = 0; i < parteInteira.length; i++) {
+          if (digitosInteirosNaoConfiaveis.includes(i)) {
+            htmlFormatado += `<span class="digit-unreliable">${parteInteira[i]}</span>`;
+          } else {
+            htmlFormatado += `<span class="digit-reliable">${parteInteira[i]}</span>`;
+          }
         }
 
         if (parteDecimal) {
           htmlFormatado += '<span class="digit-reliable">,</span>';
           
-          // Separa dígitos confiáveis dos não confiáveis
+          // Separa dígitos decimais confiáveis dos não confiáveis
           for (let i = 0; i < parteDecimal.length; i++) {
             if (i < casasConfiaveis) {
               htmlFormatado += `<span class="digit-reliable">${parteDecimal[i]}</span>`;
@@ -2069,15 +2091,22 @@
           let mensagem = 'Dígitos <span style="color: #aaaaaa;">cinza</span> = abaixo da acurácia';
           
           if (erroConvertido > 0) {
-            if (casasConfiaveis < 0) {
-              // Erro afeta a unidade inteira
+            const temDigitosInteirosNaoConfiaveis = digitosInteirosNaoConfiaveis.length > 0;
+            const temDigitosDecimaisNaoConfiaveis = casasConfiaveis < parteDecimal.length;
+            
+            if (temDigitosInteirosNaoConfiaveis && casasConfiaveis < 0) {
+              // Todos os dígitos inteiros são afetados
               mensagem = '⚠️ Erro de medição afeta até a unidade inteira';
+              mostrarAviso = true;
+            } else if (temDigitosInteirosNaoConfiaveis) {
+              // Alguns dígitos inteiros são afetados
+              mensagem = '⚠️ Erro afeta os dígitos à direita (menos significativos)';
               mostrarAviso = true;
             } else if (casasConfiaveis === 0) {
               mensagem = 'Nenhuma casa decimal confiável - use ' + 
                 (unidadeAtual === 'kg' ? 'GRAMAS' : (unidadeAtual === 'g' ? 'MILIGRAMAS' : 'unidade menor'));
               mostrarAviso = true;
-            } else {
+            } else if (temDigitosDecimaisNaoConfiaveis) {
               mostrarAviso = true;
             }
           }
