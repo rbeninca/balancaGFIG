@@ -58,6 +58,13 @@ function handleSerialStatusUpdate(payload) {
         }
         if (!serialModalShown) {
             modal.style.display = 'block';
+            modal.style.zIndex = '99999'; // Force to top layer
+            modal.style.position = 'fixed'; // Ensure it's fixed
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100%';
+            modal.style.height = '100%';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.7)'; // Ensure background is visible
             serialModalShown = true;
         }
     } else if (connected) {
