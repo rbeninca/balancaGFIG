@@ -1862,6 +1862,7 @@
     }
 
     function processarMensagemWS(dados) {
+      console.log('[processarMensagemWS] Received message from WS:', dados); // Added log
       // --- BRIDGE PARA O WIZARD ---
       if (window.wizardListener) {
         let wizardPayload;

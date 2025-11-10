@@ -1092,6 +1092,7 @@ function conectarWorker() {
 }
 
 function handleWorkerMessage(event) {
+  console.log('[handleWorkerMessage] Received message from worker:', event.data); // Added log
   const { type, payload, status, message } = event.data;
   let currentSessionId = null; // Declare it here
   let notificationMessage = message; // Use a new variable for notification message
