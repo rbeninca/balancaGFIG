@@ -112,6 +112,31 @@
       transform: scale(0.95);
     }
 
+    /* Estilos para dígitos de precisão */
+    .digit-reliable {
+      color: inherit;
+      font-weight: inherit;
+    }
+
+    .digit-unreliable {
+      color: #aaaaaa;
+      opacity: 0.6;
+      font-weight: 300;
+    }
+
+    .accuracy-indicator {
+      font-size: 0.7rem;
+      color: #999;
+      margin-top: 4px;
+      text-align: center;
+      font-weight: 300;
+      letter-spacing: 0.5px;
+    }
+
+    .accuracy-indicator span {
+      color: #aaaaaa;
+    }
+
     .decimal-controls {
       display: flex;
       flex-direction: row;
@@ -715,6 +740,9 @@
       <div class="reading" id="mainReading">
         <span id="readingValue" class="loading">---</span>
         <span class="unit" id="unitLabel" onclick="alternarUnidade()" style="cursor: pointer;" title="Clique para alternar entre N, kg e g">N</span>
+        <div class="accuracy-indicator" id="accuracyIndicator" style="display: none; font-size: 0.65rem; color: #999; margin-top: 2px; text-align: center;">
+          <span id="accuracyText">Dígitos <span style="color: #ccc;">cinza</span> = abaixo da acurácia</span>
+        </div>
       </div>
       <div class="decimal-controls">
         <button class="decimal-btn" id="decreaseDecimal" onclick="decreaseDecimalPlaces()" title="Diminuir casas decimais">.0←</button>
@@ -1768,6 +1796,21 @@
     // CONEXÃO WEBSOCKET E LEITURA DE DADOS
     // ============================================================================
 
+    // Solicita configurações da célula com retry automático
+    function solicitarConfiguracao() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(JSON.stringify({cmd: 'get_config'}));
+          console.log('[Minimal] 📋 Configuração da célula solicitada');
+          return true;
+        } catch (e) {
+          console.warn('[Minimal] Erro ao solicitar configuração:', e);
+          return false;
+        }
+      }
+      return false;
+    }
+
     function conectarWebSocket() {
       try {
         console.log('[Minimal] 🔌 Conectando ao WebSocket...');
@@ -1793,6 +1836,20 @@
             clearInterval(wsReconnectInterval);
             wsReconnectInterval = null;
           }
+
+          // Solicita configurações da célula de forma assíncrona com pequeno delay
+          console.log('[Minimal] 📋 Solicitando configurações da célula em background...');
+          setTimeout(() => {
+            solicitarConfiguracao();
+          }, 100);
+
+          // Tenta solicitar novamente após 500ms se ainda não temos os dados
+          setTimeout(() => {
+            if (capacidadeMaxN === 500) { // Valor padrão, significa que não recebemos config
+              console.log('[Minimal] 🔄 Reenviando solicitação de configuração...');
+              solicitarConfiguracao();
+            }
+          }, 500);
         };
 
         ws.onmessage = (event) => {
@@ -1924,21 +1981,29 @@
     function atualizarLeituraPrincipal(valorN) {
         const readingEl = document.getElementById('readingValue');
         const readingContainerEl = document.querySelector('.reading-container');
+        const accuracyIndicatorEl = document.getElementById('accuracyIndicator');
 
         let valorConvertido, precisaoBase;
+        let erroConvertido = 0;
 
         switch (unidadeAtual) {
           case 'kg':
             valorConvertido = valorN / 9.80665;
+            // erroMinN está em N, converter para kg
+            erroConvertido = (erroMinN || 0) / 9.80665;
             precisaoBase = 3;
             break;
           case 'g':
             valorConvertido = (valorN / 9.80665) * 1000;
+            // erroMinN está em N, converter para g
+            erroConvertido = ((erroMinN || 0) / 9.80665) * 1000;
             precisaoBase = 3;
             break;
           case 'N':
           default:
             valorConvertido = valorN;
+            // erroMinN já está em N
+            erroConvertido = erroMinN || 0;
             precisaoBase = 2;
             break;
         }
@@ -1949,8 +2014,55 @@
         const valorArredondado = parseFloat(valorConvertido.toFixed(precisao));
         const valorFormatado = valorArredondado.toFixed(precisao).replace('.', ',');
 
-        readingEl.textContent = valorFormatado;
+        // Calcula a precisão confiável: encontra a última casa decimal onde 10^(-i) > erro
+        let casasConfiaveis = 0;
+        if (erroConvertido > 0) {
+          for (let i = 1; i <= precisao; i++) {
+            const magnitudei = Math.pow(10, -i);
+            if (magnitudei > erroConvertido) {
+              casasConfiaveis = i;
+            } else {
+              break;
+            }
+          }
+        } else {
+          casasConfiaveis = precisao; // Se não há erro definido, tudo é confiável
+        }
+
+        // Monta HTML com dígitos destacados
+        let htmlFormatado = '';
+        const partes = valorFormatado.split(',');
+        const parteInteira = partes[0] || '0';
+        const parteDecimal = partes[1] || '';
+
+        // Parte inteira sempre confiável
+        htmlFormatado += `<span class="digit-reliable">${parteInteira}</span>`;
+
+        if (parteDecimal) {
+          htmlFormatado += '<span class="digit-reliable">,</span>';
+          
+          // Separa dígitos confiáveis dos não confiáveis
+          for (let i = 0; i < parteDecimal.length; i++) {
+            if (i < casasConfiaveis) {
+              htmlFormatado += `<span class="digit-reliable">${parteDecimal[i]}</span>`;
+            } else {
+              htmlFormatado += `<span class="digit-unreliable">${parteDecimal[i]}</span>`;
+            }
+          }
+        }
+
+        readingEl.innerHTML = htmlFormatado;
         readingEl.classList.remove('loading');
+
+        // Mostra/esconde indicador de acurácia se houver dígitos não confiáveis
+        const temDigitosNaoConfiaveis = casasConfiaveis < parteDecimal.length;
+        if (accuracyIndicatorEl) {
+          if (temDigitosNaoConfiaveis && erroConvertido > 0) {
+            accuracyIndicatorEl.style.display = 'block';
+          } else {
+            accuracyIndicatorEl.style.display = 'none';
+          }
+        }
 
         const cor = coresUnidades[unidadeAtual];
         readingEl.style.color = cor;
