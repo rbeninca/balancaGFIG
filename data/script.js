@@ -1129,16 +1129,9 @@ function handleWorkerMessage(event) {
       updateMysqlIndicator(isMysqlConnected);
       updateSessionActionButtons(); // Adicionado para atualizar botões
       break;
-    case 'serial_status': // NEW: Handle Serial status updates
+    case 'serial_status_update': // NEW: Handle Serial status updates
       if (typeof handleSerialStatusUpdate === 'function') {
-        // Construct payload to match what usb_warning.js expects
-        const serialPayload = {
-          connected: event.data.connected,
-          error: event.data.error,
-          port: event.data.port, // Assuming port is also directly on event.data
-          baudrate: event.data.baudrate // Assuming baudrate is also directly on event.data
-        };
-        handleSerialStatusUpdate(serialPayload);
+        handleSerialStatusUpdate(payload); // Pass the 'payload' variable directly
       }
       break;
     case 'mysql_save_success':
