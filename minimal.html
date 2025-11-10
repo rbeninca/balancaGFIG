@@ -25,24 +25,42 @@
       /*      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; --- IGNORE --- */
       background: #ffffff;
       color: #000000;
-      overflow: hidden;
-      height: 100vh;
+      /* Removed overflow: hidden; to allow scrolling */
+      min-height: 100vh; /* Changed height to min-height to allow content to expand */
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start; /* Changed to flex-start to align content from the top */
+      padding-bottom: 80px; /* Add padding for the fixed footer */
     }
 
     /* Container Principal */
     .container {
       width: 100%;
       max-width: 900px;
-      padding: 2rem;
+      padding: 1rem;
       text-align: center;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 3rem;
+      
+    }
+
+    /* Adjustments for smaller screens */
+    @media (max-width: 768px) {
+      .container {
+        gap: 1.5rem; /* Reduced gap for mobile */
+        padding: 1rem; /* Reduced padding for mobile */
+      }
+
+      .chart-container {
+        height: 35vh; /* Reduced chart height for mobile */
+        margin-top: 1rem; /* Reduced margin for mobile */
+      }
+
+      .actions {
+        margin-top: 0.5rem; /* Further reduced margin for buttons */
+      }
     }
 
     /* Logo/Título */
