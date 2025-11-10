@@ -46,6 +46,23 @@
       gap: 3rem;
     }
 
+    /* Adjustments for smaller screens */
+    @media (max-width: 768px) {
+      .container {
+        gap: 1.5rem; /* Reduced gap for mobile */
+        padding: 1rem; /* Reduced padding for mobile */
+      }
+
+      .chart-container {
+        height: 35vh; /* Reduced chart height for mobile */
+        margin-top: 1rem; /* Reduced margin for mobile */
+      }
+
+      .actions {
+        margin-top: 1rem; /* Reduced margin for buttons */
+      }
+    }
+
     /* Logo/Título */
     .header {
       opacity: 0.6;
