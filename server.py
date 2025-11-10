@@ -588,6 +588,13 @@ class APIRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory='/app/data', **kwargs)
 
+    def translate_path(self, path):
+        """Sobrescreve translate_path para carregar minimal.html como padrão em vez de index.html"""
+        # Se for a raiz (/), redireciona para minimal.html
+        if path == '/' or path == '':
+            path = '/minimal.html'
+        return super().translate_path(path)
+
     def do_GET(self):
         start = time.perf_counter()
         try:
