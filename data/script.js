@@ -1092,7 +1092,6 @@ function conectarWorker() {
 }
 
 function handleWorkerMessage(event) {
-  console.log('[handleWorkerMessage] Received message from worker:', event.data); // Added log
   const { type, payload, status, message } = event.data;
   let currentSessionId = null; // Declare it here
   let notificationMessage = message; // Use a new variable for notification message
@@ -1132,7 +1131,14 @@ function handleWorkerMessage(event) {
       break;
     case 'serial_status': // NEW: Handle Serial status updates
       if (typeof handleSerialStatusUpdate === 'function') {
-        handleSerialStatusUpdate(event.data); // Pass the entire 'event.data' object as payload
+        // Construct payload to match what usb_warning.js expects
+        const serialPayload = {
+          connected: event.data.connected,
+          error: event.data.error,
+          port: event.data.port, // Assuming port is also directly on event.data
+          baudrate: event.data.baudrate // Assuming baudrate is also directly on event.data
+        };
+        handleSerialStatusUpdate(serialPayload);
       }
       break;
     case 'mysql_save_success':
