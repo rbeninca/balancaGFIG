@@ -1,0 +1,2218 @@
+ <!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Balança GFIG - Modo Minimalista</title>
+  <link rel="stylesheet" href="estilo.css">
+  <script src="apexcharts"></script>
+  <script src="wizard_simplificado.js" defer></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      /*fonte monométrica para melhor legibilidade de números*/
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      /*      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; --- IGNORE --- */
+      background: #ffffff;
+      color: #000000;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Container Principal */
+    .container {
+      width: 100%;
+      max-width: 900px;
+      padding: 2rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3rem;
+    }
+
+    /* Logo/Título */
+    .header {
+      opacity: 0.6;
+      transition: opacity 0.3s;
+    }
+
+    .header:hover {
+      opacity: 1;
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 300;
+      letter-spacing: 0.5px;
+    }
+
+    /* Leitura Principal */
+    .reading-container {
+      position: relative;
+    }
+
+    .reading {
+      font-size: 8rem;
+      font-weight: 200;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      color: #000000;
+      position: relative;
+      text-align: right;
+      display: inline-block;
+    }
+
+    .reading.negative::before {
+      content: '−';
+      position: absolute;
+      left: -1.2em;
+      top: 0;
+      font-size: 1em;
+      color: inherit;
+    }
+
+    .reading.positive {
+      color: #000000;
+    }
+
+    .reading.negative {
+      color: #888888;
+    }
+
+    .unit {
+      font-size: 6.5rem;
+      font-weight: 300;
+      margin-left: 0.5rem;
+      opacity: 0.7;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 8px;
+    }
+
+    .unit:hover {
+      opacity: 1;
+      transform: scale(1.05);
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .unit:active {
+      transform: scale(0.95);
+    }
+
+    /* Transições suaves para mudança de cor */
+    #readingValue {
+      transition: color 0.4s ease-in-out;
+    }
+
+    /* Gráfico */
+    .chart-container {
+      width: calc(100vw - 20px);
+      height: 45vh;
+      position: relative;
+      margin-top: 1.5rem;
+      margin-left: 10px;
+      margin-right: 10px;
+      display: flex;
+    }
+
+    #minimalChart {
+      flex: 1;
+      height: 100%;
+      max-width: calc(100% - 65px);
+    }
+
+    /* Barra de Range Vertical */
+    .range-control {
+      width: 60px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0;
+      background: transparent;
+      border: none;
+    }
+
+    .range-toggle {
+      font-size: 1rem;
+      color: #666;
+      padding: 4px 8px;
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.2s;
+      text-align: center;
+      border-radius: 4px;
+      position: absolute;
+      top: -30px;
+      z-index: 10;
+    }
+
+    .range-toggle:hover {
+      color: #000;
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .range-toggle.active {
+      color: #0066ff;
+      font-weight: 500;
+    }
+
+    .range-scale {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 0 10px;
+      position: relative;
+      margin-top: 40px;
+      margin-bottom: 40px;
+    }
+
+    .range-tick {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      position: relative;
+      height: 0;
+    }
+
+    .range-tick-line {
+      width: 8px;
+      height: 1px;
+      background: #d0d0d0;
+      margin-left: 4px;
+    }
+
+    .range-tick-value {
+      font-size: 0.6rem;
+      color: #666;
+      min-width: 35px;
+      text-align: right;
+      display: none;
+    }
+
+    .range-bar {
+      position: absolute;
+      right: 18px;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: #d0d0d0;
+    }
+
+    .range-indicator {
+      position: absolute;
+      right: 16px;
+      width: 6px;
+      height: 6px;
+      background: #0066ff;
+      border-radius: 50%;
+      transform: translateY(-50%);
+      transition: top 0.2s ease-out, width 0.3s, height 0.3s, right 0.3s;
+    }
+
+    .range-indicator.auto-mode {
+      width: 10px;
+      height: 10px;
+      right: 14px;
+      box-shadow: 0 0 8px rgba(0, 102, 255, 0.5);
+    }
+
+    .range-slider {
+      position: absolute;
+      right: -5px;
+      top: 0;
+      bottom: 0;
+      width: 30px;
+      cursor: pointer;
+    }
+
+    .range-handle {
+      position: absolute;
+      right: -13px;
+      width: 24px;
+      height: 24px;
+      background: #ffffff;
+      border: 2px solid #0066ff;
+      border-radius: 4px;
+      cursor: ns-resize;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      transform: translateY(-50%);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .range-handle:hover {
+      border-width: 3px;
+      box-shadow: 0 3px 8px rgba(0, 102, 255, 0.3);
+      transform: translateY(-50%) scale(1.1);
+    }
+
+    .range-handle:active {
+      background: #f0f8ff;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      transform: translateY(-50%) scale(1.05);
+    }
+
+    .range-handle::before {
+      content: '';
+      width: 12px;
+      height: 2px;
+      background: #0066ff;
+      position: absolute;
+    }
+
+    .range-handle::after {
+      content: '';
+      width: 12px;
+      height: 2px;
+      background: #0066ff;
+      position: absolute;
+      margin-top: 4px;
+    }
+
+    .range-track {
+      position: absolute;
+      right: 18px;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: linear-gradient(to bottom, #0066ff 0%, #e0e0e0 100%);
+      border-radius: 2px;
+      pointer-events: none;
+    }
+
+    .range-fill {
+      position: absolute;
+      right: 18px;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(to top, #0066ff, #0066ff40);
+      transition: height 0.2s ease-out;
+      pointer-events: none;
+    }
+
+    /* Botões de Ação */
+    .actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    .btn {
+      padding: 1rem 2rem;
+      font-size: 1rem;
+      font-weight: 400;
+      border: 1px solid #000000;
+      background: transparent;
+      color: #000000;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .btn:hover {
+      background: #000000;
+      color: #ffffff;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: #000000;
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: #333333;
+    }
+
+    /* Footer com Status */
+    .footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 1rem;
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      opacity: 0.4;
+      transition: opacity 0.3s;
+      font-size: 0.85rem;
+    }
+
+    .footer:hover {
+      opacity: 1;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #cccccc;
+      transition: background 0.3s;
+    }
+
+    .status-indicator.active {
+      background: #000000;
+      animation: pulse 2s infinite;
+    }
+
+    .status-indicator.connected {
+      background: #00cc00;
+    }
+
+    .status-indicator.error {
+      background: #ff0000;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Link para interface completa */
+    .switch-interface {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      opacity: 0.3;
+      transition: opacity 0.3s;
+      font-size: 0.9rem;
+    }
+
+    .switch-interface:hover {
+      opacity: 1;
+    }
+
+    .switch-interface a {
+      color: #000000;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border: 1px solid #000000;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .switch-interface a:hover {
+      background: #000000;
+      color: #ffffff;
+    }
+
+    /* Responsivo */
+    @media (max-width: 768px) {
+      .reading {
+        font-size: 5rem;
+      }
+
+      .unit {
+        font-size: 2rem;
+      }
+
+      .actions {
+        flex-direction: column;
+        width: 100%;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+
+    /* Loading inicial */
+    .loading {
+      font-size: 1rem;
+      opacity: 0.5;
+      animation: fadeInOut 2s infinite;
+    }
+
+    @keyframes fadeInOut {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.7; }
+    }
+
+    /* Modal de Análise de Sessão */
+    .analysis-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .analysis-modal {
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      max-width: 90vw;
+      max-height: 90vh;
+      width: 900px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .analysis-modal-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .analysis-modal-header h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      margin: 0;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 2rem;
+      cursor: pointer;
+      color: #666;
+      transition: color 0.2s;
+      padding: 0;
+      width: 2rem;
+      height: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-close:hover {
+      color: #000;
+    }
+
+    .analysis-modal-content {
+      flex: 1;
+      padding: 1.5rem;
+      display: flex;
+      gap: 1.5rem;
+      overflow-y: auto;
+    }
+
+    .analysis-graph-container {
+      flex: 2;
+      position: relative;
+      background: #f9f9f9;
+      border-radius: 4px;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .analysis-graph-container canvas {
+      width: 100% !important;
+      height: auto !important;
+    }
+
+    .analysis-stats-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      background: #f9f9f9;
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-y: auto;
+      max-height: 100%;
+    }
+
+    .stats-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .stats-group:last-of-type {
+      border-bottom: none;
+    }
+
+    .stats-group h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #333;
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .stat-item label {
+      font-size: 0.875rem;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .stat-item span {
+      font-size: 1.1rem;
+      font-weight: 300;
+      color: #000;
+    }
+
+    .control-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .btn-small {
+      padding: 0.5rem 1rem !important;
+      font-size: 0.875rem !important;
+      flex: 1;
+    }
+
+    .analysis-modal-footer {
+      padding: 1.5rem;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+    }
+
+    .btn-secondary {
+      background: #f0f0f0 !important;
+      color: #000 !important;
+      border: 1px solid #d0d0d0 !important;
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0 !important;
+    }
+
+    @media (max-width: 768px) {
+      .analysis-modal {
+        width: 95vw;
+        max-height: 95vh;
+      }
+
+      .analysis-modal-content {
+        flex-direction: column;
+      }
+
+      .analysis-graph-container {
+        flex: 1;
+      }
+
+      .analysis-stats-panel {
+        flex: 1;
+      }
+
+      .analysis-modal-footer {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Link para interface completa -->
+  <div class="switch-interface">
+    <a href="index.html">Interface Completa</a>
+  </div>
+
+  <!-- Container Principal -->
+  <div class="container">
+
+    <!-- Header -->
+    <div class="header">
+      <h1>BALANÇA GFIG</h1>
+    </div>
+
+    <!-- Leitura Principal -->
+    <div class="reading-container">
+      <div class="reading" id="mainReading">
+        <span id="readingValue" class="loading">---</span>
+        <span class="unit" id="unitLabel" onclick="alternarUnidade()" style="cursor: pointer;" title="Clique para alternar entre N, kg e g">N</span>
+      </div>
+    </div>
+
+    <!-- Gráfico -->
+    <div class="chart-container">
+      <canvas id="minimalChart"></canvas>
+
+      <!-- Barra de Range Vertical -->
+      <div class="range-control">
+        <div class="range-toggle" id="rangeToggle" onclick="toggleAutoRange()" title="Clique para alternar entre Auto e Manual">
+          AUTO
+        </div>
+        <div class="range-scale" id="rangeScale">
+          <!-- Barra de fundo -->
+          <div class="range-bar"></div>
+          <!-- Barra de preenchimento (até o valor atual) -->
+          <div class="range-fill" id="rangeFill"></div>
+          <!-- Indicador de valor atual -->
+          <div class="range-indicator" id="rangeIndicator"></div>
+          <!-- Área de arrasto para modo manual -->
+          <div class="range-slider" id="rangeSlider">
+            <!-- Track do slider -->
+            <div class="range-track"></div>
+            <!-- Handle arrastável -->
+            <div class="range-handle" id="rangeHandle"></div>
+          </div>
+          <!-- Ticks serão inseridos dinamicamente -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Botões de Ação -->
+    <div class="actions">
+      <button id="record-btn" class="btn btn-primary" onclick="toggleRecording()">Iniciar Gravação</button>
+      <button class="btn" onclick="openWizardSimplificado()">Calibração</button>
+    </div>
+
+  </div>
+
+  <!-- Footer com Status -->
+  <div class="footer">
+    <div class="status-item">
+      <div class="status-indicator" id="statusConexao"></div>
+      <span id="statusConexaoText">Desconectado</span>
+    </div>
+    <div class="status-item">
+      <div class="status-indicator" id="statusBalanca"></div>
+      <span id="statusBalancaText">Aguardando</span>
+    </div>
+    <div class="status-item">
+      <span id="statusFreq">0 Hz</span>
+    </div>
+  </div>
+
+  <!-- Modal de Análise de Sessão -->
+  <div class="analysis-modal-overlay" id="analysisModalOverlay" style="display: none;">
+    <div class="analysis-modal" id="analysisModal">
+      <div class="analysis-modal-header">
+        <div style="flex-grow: 1;">
+            <label for="analysisSessionName" style="font-size: 0.8rem; color: #666;">Nome da Sessão</label>
+            <input type="text" id="analysisSessionName" style="font-size: 1.4rem; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; width: 95%; margin-top: 4px;">
+        </div>
+        <button class="modal-close" id="modalCloseBtn" onclick="closeAnalysisModal()">×</button>
+      </div>
+      
+      <div class="analysis-modal-content">
+        <!-- Gráfico de análise -->
+        <div class="analysis-graph-container">
+          <div id="analysisChart" style="width: 100%; height: 100%;"></div>
+        </div>
+        
+        <!-- Painel de estatísticas -->
+        <div class="analysis-stats-panel">
+          <div class="stats-group">
+            <h3>Leitura Geral</h3>
+            <div class="stat-item">
+              <label>Valor Mínimo</label>
+              <span id="statMin">---</span>
+            </div>
+            <div class="stat-item">
+              <label>Valor Máximo</label>
+              <span id="statMax">---</span>
+            </div>
+            <div class="stat-item">
+              <label>Valor Médio</label>
+              <span id="statAvg">---</span>
+            </div>
+            <div class="stat-item">
+              <label>Duração Total</label>
+              <span id="statDuration">---</span>
+            </div>
+          </div>
+
+          <div class="stats-group">
+            <h3>Análise de Queima</h3>
+            <div class="stat-item">
+              <label>Início Queima</label>
+              <span id="burnStartTime">---</span>
+            </div>
+            <div class="stat-item">
+              <label>Fim Queima</label>
+              <span id="burnEndTime">---</span>
+            </div>
+            <div class="stat-item">
+              <label>Tempo de Queima</label>
+              <span id="burnDuration">---</span>
+            </div>
+            <div class="stat-item">
+              <label>Impulso Total</label>
+              <span id="burnImpulseTotal">---</span>
+            </div>
+            <div class="stat-item">
+              <label>Impulso Médio</label>
+              <span id="burnImpulseAvg">---</span>
+            </div>
+            <div class="stat-item">
+              <label>Classificação NAR</label>
+              <span id="motorClassification" style="font-weight: bold; padding: 4px 8px; border-radius: 4px; background-color: #95a5a6; color: white;">Indefinido</span>
+            </div>
+          </div>
+
+          <div class="control-buttons">
+            <button class="btn btn-small" onclick="resetBurnDetection()">Auto-Detectar</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="analysis-modal-footer">
+        <button class="btn btn-secondary" onclick="discardAnalysis()">Descartar</button>
+        <button class="btn btn-primary" onclick="saveAnalysisSession()">Salvar Sessão</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    // ============================================================================
+    // WIZARD DE CALIBRAÇÃO - CAMADA DE COMPATIBILIDADE
+    // ============================================================================
+
+    // Simula a interface do dataWorker que o wizard_simplificado.js espera.
+    const dataWorker = {
+      postMessage: (message) => {
+        const { type, payload } = message;
+        if (type === 'sendCommand') {
+          const { cmd, value } = payload;
+          const commandToSend = {};
+
+          if (cmd === 't' || cmd === 'get_config') {
+            commandToSend.cmd = cmd;
+          } else if (cmd === 'c') { // Calibrate
+            const mass = parseFloat(value);
+            if (!isNaN(mass) && mass > 0) {
+              commandToSend.cmd = 'c';
+              commandToSend.massa_g = mass;
+            }
+          } else if (cmd === 'set') { // Set parameter
+            if (value && value.param && value.value !== undefined) {
+              commandToSend.cmd = 'set';
+              commandToSend.param = value.param;
+              commandToSend.value = value.value;
+            }
+          }
+          
+          if (commandToSend.cmd) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify(commandToSend));
+            } else {
+              console.error('[Bridge] WebSocket não conectado. Comando não enviado:', commandToSend);
+            }
+          }
+        } else if (type === 'get_config') {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({cmd: 'get_config'}));
+            }
+        }
+      },
+      addEventListener: (type, listener) => {
+        if (type === 'message') {
+          window.wizardListener = listener;
+        }
+      },
+      removeEventListener: (type, listener) => {
+        if (type === 'message' && window.wizardListener === listener) {
+          window.wizardListener = null;
+        }
+      }
+    };
+
+    // Função global que o wizard usa.
+    function sendCommandToWorker(command, value = null) {
+      const messagePayload = { cmd: command };
+      if (value !== null) {
+        messagePayload.value = value;
+      }
+      dataWorker.postMessage({ type: 'sendCommand', payload: messagePayload });
+    }
+
+    // Função de notificação que o wizard e a gravação precisam.
+    function showNotification(type, message, duration = 5000) {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            font-family: sans-serif;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.5s, transform 0.5s;
+            transform: translateX(100%);
+        `;
+        notification.style.backgroundColor = type === 'error' ? '#e74c3c' : (type === 'success' ? '#2ecc71' : (type === 'warning' ? '#f39c12' : '#3498db'));
+        notification.innerHTML = message;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.style.opacity = '1';
+            notification.style.transform = 'translateX(0)';
+        }, 10);
+
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => notification.remove(), 500);
+        }, duration);
+    }
+
+    // ============================================================================
+    // LÓGICA DE GRAVAÇÃO DE SESSÃO
+    // ============================================================================
+    let isRecording = false;
+    let recordedData = [];
+    let recordingStartTime = null;
+    let recordingEndTime = null;
+
+    function toggleRecording() {
+        isRecording = !isRecording;
+        const recordBtn = document.getElementById('record-btn');
+
+        if (isRecording) {
+            // Start recording
+            recordedData = [];
+            chartData = []; // Limpa o gráfico para a nova gravação
+            recordingStartTime = new Date();
+            recordBtn.textContent = 'Parar Gravação';
+            recordBtn.style.backgroundColor = '#e74c3c';
+            recordBtn.style.borderColor = '#e74c3c';
+            recordBtn.style.color = '#ffffff';
+            console.log('[Minimal] Gravação iniciada.');
+            showNotification('info', 'Gravação da sessão iniciada.');
+        } else {
+            // Stop recording
+            recordingEndTime = new Date();
+            recordBtn.textContent = 'Iniciar Gravação';
+            recordBtn.style.backgroundColor = '';
+            recordBtn.style.borderColor = '';
+            recordBtn.style.color = '';
+            console.log('[Minimal] Gravação encerrada.');
+            generateAndSaveSession();
+        }
+    }
+
+    function generateAndSaveSession() {
+        if (recordedData.length === 0) {
+            showNotification('warning', 'Nenhum dado foi gravado na sessão.');
+            return;
+        }
+
+        const formatTwoDigits = (n) => n.toString().padStart(2, '0');
+        const startDate = recordingStartTime;
+        const nomeSessao = `${startDate.getFullYear()}-${formatTwoDigits(startDate.getMonth() + 1)}-${formatTwoDigits(startDate.getDate())}-${formatTwoDigits(startDate.getHours())}-${formatTwoDigits(startDate.getMinutes())}-${formatTwoDigits(startDate.getSeconds())}`;
+
+        // Prepara metadados para o modal de análise
+        const sessionMetadata = {
+            nomeSessao: nomeSessao,
+            startDate: startDate,
+            recordingEndTime: recordingEndTime,
+            recordedData: recordedData
+        };
+
+        // Mostra modal de análise
+        showAnalysisModal(recordedData, sessionMetadata);
+    }
+
+    // ============================================================================
+    // MODAL DE ANÁLISE DE SESSÃO
+    // ============================================================================
+    let sessionDataForAnalysis = null;
+    let sessionMetadataForAnalysis = null;
+    let burnStartTimeAnalysis = null;
+    let burnEndTimeAnalysis = null;
+    let analysisChartInstance = null;
+
+    function classificarMotor(impulsoNs) {
+        // Classifica um motor baseado no seu impulso total em N·s (NAR classification)
+        const classificacoes = [
+            { min: 0.00, max: 0.3125, classe: 'Micro 1/8A', cor: '#8e44ad' },
+            { min: 0.3126, max: 0.625, classe: '¼A', cor: '#9b59b6' },
+            { min: 0.626, max: 1.25, classe: '½A', cor: '#e74c3c' },
+            { min: 1.26, max: 2.50, classe: 'A', cor: '#e67e22' },
+            { min: 2.51, max: 5.00, classe: 'B', cor: '#f39c12' },
+            { min: 5.01, max: 10.00, classe: 'C', cor: '#f1c40f' },
+            { min: 10.01, max: 20.00, classe: 'D', cor: '#2ecc71' },
+            { min: 20.01, max: 40.00, classe: 'E', cor: '#1abc9c' },
+            { min: 40.01, max: 80.00, classe: 'F', cor: '#3498db' },
+            { min: 80.01, max: 160.00, classe: 'G', cor: '#9b59b6' },
+            { min: 160.01, max: 320.00, classe: 'H', cor: '#e74c3c' },
+            { min: 320.01, max: 640.00, classe: 'I', cor: '#e67e22' },
+            { min: 640.01, max: 1280.00, classe: 'J', cor: '#f39c12' },
+            { min: 1280.01, max: 2560.00, classe: 'K', cor: '#2ecc71' },
+            { min: 2560.01, max: 5120.00, classe: 'L', cor: '#3498db' },
+            { min: 5120.01, max: 10240.00, classe: 'M', cor: '#9b59b6' },
+            { min: 10240.01, max: 20480.00, classe: 'N', cor: '#e74c3c' },
+            { min: 20480.01, max: 40960.00, classe: 'O', cor: '#c0392b' }
+        ];
+
+        if (impulsoNs === null || impulsoNs === undefined) {
+            return { classe: 'Indefinido', cor: '#95a5a6' };
+        }
+
+        const EPS = 1e-6;
+        for (let c of classificacoes) {
+            if ((c.min - EPS) <= impulsoNs && impulsoNs <= (c.max + EPS)) {
+                return { classe: c.classe, cor: c.cor };
+            }
+        }
+        return { classe: 'Indefinido', cor: '#95a5a6' };
+    }
+
+    function detectBurnStart(forceValues, timeValues) {
+        // Detecta o início da queima como o primeiro ponto onde a força > 5% da máxima
+        // Nota: timeValues já estão em segundos (não em milissegundos)
+        const maxForce = Math.max(...forceValues);
+        const threshold = maxForce * 0.05;
+        const minTime = Math.min(...timeValues);
+        
+        console.log('[DEBUG detectBurnStart]:', { maxForce, threshold, minTime, firstTime: timeValues[0], lastTime: timeValues[timeValues.length - 1] });
+
+        for (let i = 0; i < forceValues.length; i++) {
+            if (forceValues[i] > threshold) {
+                const relativeTime = timeValues[i] - minTime; // Já está em segundos, só subtrai o mínimo
+                console.log('[DEBUG detectBurnStart] Encontrado em:', { i, force: forceValues[i], absoluteTime: timeValues[i], relativeTime });
+                return relativeTime;
+            }
+        }
+
+        return 0; // Se não encontrar, retorna 0s
+    }
+
+    function detectBurnEnd(forceValues, timeValues) {
+        // Detecta o fim da queima como o último ponto onde a força > 5% da máxima
+        // Nota: timeValues já estão em segundos (não em milissegundos)
+        const maxForce = Math.max(...forceValues);
+        const threshold = maxForce * 0.05;
+        const minTime = Math.min(...timeValues);
+
+        for (let i = forceValues.length - 1; i >= 0; i--) {
+            if (forceValues[i] > threshold) {
+                const relativeTime = timeValues[i] - minTime; // Já está em segundos, só subtrai o mínimo
+                console.log('[DEBUG detectBurnEnd] Encontrado em:', { i, force: forceValues[i], absoluteTime: timeValues[i], relativeTime });
+                return relativeTime;
+            }
+        }
+
+        const relativeTime = timeValues[timeValues.length - 1] - minTime; // Se não encontrar, retorna último tempo
+        console.log('[DEBUG detectBurnEnd] Usando último ponto:', { relativeTime });
+        return relativeTime;
+    }
+
+    function calculateBurnMetrics(forceValues, timeValues, startTime, endTime) {
+        // startTime e endTime são em segundos (tempo relativo)
+        // timeValues também já estão em segundos
+        const minTime = Math.min(...timeValues);
+        const startTimeAbs = startTime + minTime;
+        const endTimeAbs = endTime + minTime;
+
+        // Calcula impulso total e médio usando regra do trapézio
+        let impulsoTotal = 0;
+        let countPoints = 0;
+
+        for (let i = 0; i < timeValues.length; i++) {
+            if (i > 0) {
+                const tPrev = timeValues[i - 1];
+                const tCur = timeValues[i];
+                
+                if (tCur >= startTimeAbs && tPrev >= startTimeAbs && tCur <= endTimeAbs) {
+                    const dt = tCur - tPrev; // Já está em segundos
+                    const f1 = forceValues[i - 1];
+                    const f2 = forceValues[i];
+                    const areaTrap = dt * (f1 + f2) / 2;
+                    if (areaTrap > 0) {
+                        impulsoTotal += areaTrap;
+                        countPoints++;
+                    }
+                }
+            }
+        }
+
+        const impulsoMedio = countPoints > 0 ? impulsoTotal / (endTime - startTime) : 0;
+        const duracao = endTime - startTime;
+
+        return {
+            impulsoTotal: impulsoTotal,
+            impulsoMedio: impulsoMedio,
+            duracao: duracao
+        };
+    }
+
+    function resetBurnDetection() {
+        if (!sessionDataForAnalysis) return;
+
+        const forceValues = sessionDataForAnalysis.map(d => d.forca);
+        const timeValues = sessionDataForAnalysis.map(d => d.tempo);
+
+        burnStartTimeAnalysis = detectBurnStart(forceValues, timeValues);
+        burnEndTimeAnalysis = detectBurnEnd(forceValues, timeValues);
+
+        renderAnalysisGraph();
+        updateAnalysisStats();
+    }
+
+
+    function showAnalysisModal(sessionData, sessionMetadata) {
+        sessionDataForAnalysis = sessionData;
+        sessionMetadataForAnalysis = sessionMetadata;
+
+        const overlay = document.getElementById('analysisModalOverlay');
+        overlay.style.display = 'flex';
+
+        // Popula o nome da sessão no novo input
+        document.getElementById('analysisSessionName').value = sessionMetadata.nomeSessao;
+
+        // Detecta automaticamente início e fim da queima
+        const forceValues = sessionData.map(d => d.forca);
+        const timeValues = sessionData.map(d => d.tempo);
+        
+        console.log('[DEBUG] Dados da sessão:');
+        console.log('  - Total de pontos:', sessionData.length);
+        console.log('  - Tempo do primeiro ponto:', timeValues[0], 'ms');
+        console.log('  - Tempo do último ponto:', timeValues[timeValues.length - 1], 'ms');
+        console.log('  - Diferença:', timeValues[timeValues.length - 1] - timeValues[0], 'ms');
+        
+        burnStartTimeAnalysis = detectBurnStart(forceValues, timeValues);
+        burnEndTimeAnalysis = detectBurnEnd(forceValues, timeValues);
+        
+        console.log('[DEBUG] Tempos detectados:');
+        console.log('  - Início da queima:', burnStartTimeAnalysis, 's');
+        console.log('  - Fim da queima:', burnEndTimeAnalysis, 's');
+
+        // Renderizar gráfico e estatísticas
+        setTimeout(() => {
+            renderAnalysisGraph();
+            updateAnalysisStats();
+        }, 100);
+    }
+
+    function closeAnalysisModal() {
+        const overlay = document.getElementById('analysisModalOverlay');
+        overlay.style.display = 'none';
+        sessionDataForAnalysis = null;
+        sessionMetadataForAnalysis = null;
+        burnStartTimeAnalysis = null;
+        burnEndTimeAnalysis = null;
+        // Limpa dados da gravação anterior
+        recordedData = [];
+        if (chartData.length > MAX_CHART_POINTS) {
+            chartData = chartData.slice(chartData.length - MAX_CHART_POINTS);
+        }
+    }
+
+    function renderAnalysisGraph() {
+        if (!sessionDataForAnalysis || sessionDataForAnalysis.length === 0) {
+            console.warn('Nenhum dado para renderizar no gráfico de análise');
+            return;
+        }
+
+        // Destói gráfico anterior se existir
+        if (analysisChartInstance) {
+            analysisChartInstance.destroy();
+            analysisChartInstance = null;
+        }
+
+        const forceValues = sessionDataForAnalysis.map(d => d.forca);
+        const timeValues = sessionDataForAnalysis.map(d => d.tempo);
+        const minTime = Math.min(...timeValues);
+
+        // Converte tempos para relativo (0 = início da gravação)
+        // Nota: timeValues já estão em segundos, só precisa subtrair o mínimo
+        const relativeTimeValues = timeValues.map(t => t - minTime); // em segundos
+
+        // Prepara dados para ApexCharts
+        const chartData = relativeTimeValues.map((t, i) => ({
+            x: t,
+            y: forceValues[i]
+        }));
+
+        // burnStartTimeAnalysis e burnEndTimeAnalysis já estão em tempo relativo (segundos)
+        const startRelative = burnStartTimeAnalysis;
+        const endRelative = burnEndTimeAnalysis;
+
+        // Cria área de queima
+        const burnAreaData = relativeTimeValues.map((t, i) => ({
+            x: t,
+            y: (t >= startRelative && t <= endRelative) ? forceValues[i] : null
+        }));
+
+        const options = {
+            series: [
+                {
+                    name: 'Força (N)',
+                    type: 'line',
+                    data: chartData
+                },
+                {
+                    name: 'Queima',
+                    type: 'area',
+                    data: burnAreaData
+                }
+            ],
+            chart: {
+                type: 'line',
+                height: 400,
+                animations: {
+                    enabled: false
+                },
+                toolbar: {
+                    show: true,
+                    tools: {
+                        download: true,
+                        selection: false,
+                        zoom: true,
+                        zoomin: true,
+                        zoomout: true,
+                        pan: true,
+                        reset: true
+                    },
+                    autoSelected: 'pan'
+                },
+                events: {
+                    click: function(event, chartContext, config) {
+                        // Permite clicar no gráfico para ajustar pontos de queima
+                        if (config.dataPointIndex !== undefined && config.dataPointIndex >= 0) {
+                            const clickedTime = chartData[config.dataPointIndex].x; // Tempo relativo em segundos
+
+                            // Determina se está mais próximo do início ou fim
+                            const distStart = Math.abs(clickedTime - burnStartTimeAnalysis);
+                            const distEnd = Math.abs(clickedTime - burnEndTimeAnalysis);
+
+                            if (distStart < distEnd) {
+                                burnStartTimeAnalysis = clickedTime; // Mantém em tempo relativo
+                            } else {
+                                burnEndTimeAnalysis = clickedTime; // Mantém em tempo relativo
+                            }
+
+                            renderAnalysisGraph();
+                            updateAnalysisStats();
+                        }
+                    }
+                }
+            },
+            responsive: [
+                {
+                    breakpoint: 768,
+                    options: {
+                        chart: {
+                            height: 350
+                        },
+                        xaxis: {
+                            labels: {
+                                style: {
+                                    fontSize: '11px'
+                                }
+                            }
+                        },
+                        yaxis: {
+                            labels: {
+                                style: {
+                                    fontSize: '11px'
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    breakpoint: 480,
+                    options: {
+                        chart: {
+                            height: 300
+                        },
+                        xaxis: {
+                            labels: {
+                                style: {
+                                    fontSize: '10px'
+                                }
+                            }
+                        },
+                        yaxis: {
+                            labels: {
+                                style: {
+                                    fontSize: '10px'
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            stroke: {
+                curve: 'smooth',
+                width: [2, 0]
+            },
+            fill: {
+                type: ['solid', 'solid'],
+                opacity: [1, 0.3]
+            },
+            colors: ['#3498db', '#2ecc71'],
+            xaxis: {
+                type: 'numeric',
+                title: {
+                    text: 'Tempo Relativo (s)'
+                },
+                decimalsInFloat: 3
+            },
+            yaxis: {
+                title: {
+                    text: 'Força (N)'
+                },
+                decimalsInFloat: 2
+            },
+            annotations: {
+                xaxis: [
+                    {
+                        x: startRelative,
+                        borderColor: '#00E396',
+                        label: {
+                            borderColor: '#00E396',
+                            style: { color: '#fff', background: '#00E396' },
+                            text: '🔥 Início'
+                        }
+                    },
+                    {
+                        x: endRelative,
+                        borderColor: '#FEB019',
+                        label: {
+                            borderColor: '#FEB019',
+                            style: { color: '#fff', background: '#FEB019' },
+                            text: '🏁 Fim'
+                        }
+                    }
+                ]
+            },
+            grid: {
+                borderColor: '#e7e7e7',
+                row: {
+                    colors: ['#f3f3f3', 'transparent'],
+                    opacity: 0.5
+                }
+            }
+        };
+
+        const chartContainer = document.getElementById('analysisChart');
+        analysisChartInstance = new ApexCharts(chartContainer, options);
+        analysisChartInstance.render();
+    }
+
+    function updateAnalysisStats() {
+        if (!sessionDataForAnalysis || sessionDataForAnalysis.length === 0) {
+            return;
+        }
+
+        const forceValues = sessionDataForAnalysis.map(d => d.forca);
+        const timeValues = sessionDataForAnalysis.map(d => d.tempo);
+        const minForce = Math.min(...forceValues);
+        const maxForce = Math.max(...forceValues);
+        const avgForce = forceValues.reduce((a, b) => a + b, 0) / forceValues.length;
+
+        // Calcula duração em segundos
+        const firstTime = sessionDataForAnalysis[0].tempo;
+        const lastTime = sessionDataForAnalysis[sessionDataForAnalysis.length - 1].tempo;
+        const duration = (lastTime - firstTime).toFixed(2); // Já está em segundos, não divide por 1000
+
+        // Obtém unidade atual
+        const unitLabel = document.getElementById('unitLabel').textContent;
+        const precision = unitLabel === 'N' ? 1 : (unitLabel === 'kg' ? 2 : 1);
+
+        // Converte para unidade atual
+        const convertValue = (forceN) => {
+            if (unitLabel === 'N') return forceN;
+            if (unitLabel === 'kg') return forceN / 9.80665;
+            if (unitLabel === 'g') return (forceN / 9.80665) * 1000;
+            return forceN;
+        };
+
+        const minConverted = convertValue(minForce).toLocaleString('pt-BR', { minimumFractionDigits: precision, maximumFractionDigits: precision });
+        const maxConverted = convertValue(maxForce).toLocaleString('pt-BR', { minimumFractionDigits: precision, maximumFractionDigits: precision });
+        const avgConverted = convertValue(avgForce).toLocaleString('pt-BR', { minimumFractionDigits: precision, maximumFractionDigits: precision });
+        const durationFormatted = (duration).replace('.', ',');
+
+        // Atualiza elementos gerais
+        document.getElementById('statMin').textContent = `${minConverted} ${unitLabel}`;
+        document.getElementById('statMax').textContent = `${maxConverted} ${unitLabel}`;
+        document.getElementById('statAvg').textContent = `${avgConverted} ${unitLabel}`;
+        document.getElementById('statDuration').textContent = `${durationFormatted} s`;
+
+        // Calcula métricas de queima
+        if (burnStartTimeAnalysis !== null && burnEndTimeAnalysis !== null) {
+            const burnMetrics = calculateBurnMetrics(forceValues, timeValues, burnStartTimeAnalysis, burnEndTimeAnalysis);
+            
+            // Formata números em pt-BR (vírgula como separador decimal) - 5 casas decimais
+            const formatPtBR = (num) => num.toLocaleString('pt-BR', { minimumFractionDigits: 5, maximumFractionDigits: 5 });
+            
+            document.getElementById('burnStartTime').textContent = formatPtBR(burnStartTimeAnalysis);
+            document.getElementById('burnEndTime').textContent = formatPtBR(burnEndTimeAnalysis);
+            document.getElementById('burnDuration').textContent = formatPtBR(burnMetrics.duracao);
+            document.getElementById('burnImpulseTotal').textContent = `${formatPtBR(burnMetrics.impulsoTotal)} N·s`;
+            document.getElementById('burnImpulseAvg').textContent = `${formatPtBR(burnMetrics.impulsoMedio)} N/s`;
+            
+            // Classifica o motor conforme NAR
+            const classification = classificarMotor(burnMetrics.impulsoTotal);
+            const motorClassEl = document.getElementById('motorClassification');
+            motorClassEl.textContent = classification.classe;
+            motorClassEl.style.backgroundColor = classification.cor;
+        }
+    }
+
+    function discardAnalysis() {
+        closeAnalysisModal();
+        // Reseta para a próxima gravação
+        recordedData = [];
+        if (chartData.length > MAX_CHART_POINTS) {
+            chartData = chartData.slice(chartData.length - MAX_CHART_POINTS);
+        }
+        showNotification('info', 'Sessão descartada.');
+    }
+
+    function saveAnalysisSession() {
+        if (!sessionMetadataForAnalysis) {
+            console.error('Metadados da sessão não encontrados');
+            return;
+        }
+
+        // Pega o nome da sessão do input
+        const nomeSessao = document.getElementById('analysisSessionName').value.trim();
+        if (!nomeSessao) {
+            showNotification('error', 'O nome da sessão não pode estar vazio.');
+            return;
+        }
+
+        // Extrai dados do metadata
+        const { startDate, recordingEndTime, recordedData: data } = sessionMetadataForAnalysis;
+
+        const formatTwoDigits = (n) => n.toString().padStart(2, '0');
+        const sessionStartTimeForData = data[0].tempo;
+
+        const dadosTabela = data.map(d => {
+            const tempoNormalizado = (d.tempo - sessionStartTimeForData);
+            const forcaN = d.forca;
+            const g_force = forcaN / 9.80665;
+
+            const agora = new Date(startDate.getTime() + (tempoNormalizado * 1000));
+            const dd = String(agora.getUTCDate()).padStart(2, '0');
+            const mm = String(agora.getUTCMonth() + 1).padStart(2, '0');
+            const yyyy = agora.getUTCFullYear();
+            const HH = String(agora.getUTCHours()).padStart(2, '0');
+            const MM = String(agora.getUTCMinutes()).padStart(2, '0');
+            const SS = String(agora.getUTCSeconds()).padStart(2, '0');
+            const mmm = String(agora.getUTCMilliseconds()).padStart(3, '0');
+            const timestamp = `${dd}/${mm}/${yyyy} ${HH}:${MM}:${SS}.${mmm}`;
+
+            return {
+                timestamp: timestamp,
+                tempo_esp: tempoNormalizado.toFixed(3),
+                newtons: forcaN.toFixed(6),
+                grama_forca: (g_force * 1000).toFixed(3),
+                quilo_forca: g_force.toFixed(6)
+            };
+        });
+
+        const gravacao = {
+            id: startDate.getTime(),
+            nome: nomeSessao, // Usa o nome do input
+            timestamp: startDate.toISOString(),
+            data_inicio: startDate.toISOString(),
+            data_fim: recordingEndTime.toISOString(),
+            data_modificacao: new Date().toISOString(),
+            dadosTabela: dadosTabela,
+            metadadosMotor: {},
+            savedToMysql: false
+        };
+
+        try {
+            let gravacoes = JSON.parse(localStorage.getItem('balancaGravacoes')) || [];
+            gravacoes.push(gravacao);
+            localStorage.setItem('balancaGravacoes', JSON.stringify(gravacoes));
+            showNotification('success', `Sessão "${nomeSessao}" salva localmente!`);
+            console.log('[Minimal] Sessão salva localmente:', gravacao);
+
+            // Tenta salvar no banco de dados se o WebSocket estiver conectado
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const command = {
+                    cmd: "save_session_to_mysql",
+                    payload: gravacao
+                };
+                ws.send(JSON.stringify(command));
+                showNotification('info', `Enviando sessão "${nomeSessao}" para o banco de dados...`);
+                console.log('[Minimal] Enviando sessão para o DB via WebSocket.');
+            } else {
+                showNotification('warning', 'Sessão salva localmente. Conexão com o servidor inativa para salvar no DB.');
+            }
+
+        } catch (e) {
+            showNotification('error', 'Erro ao salvar sessão no LocalStorage.');
+            console.error('[Minimal] Erro ao salvar sessão:', e);
+        }
+
+        closeAnalysisModal();
+        recordedData = [];
+        if (chartData.length > MAX_CHART_POINTS) {
+            chartData = chartData.slice(chartData.length - MAX_CHART_POINTS);
+        }
+    }
+
+
+    // ============================================================================
+    // CONFIGURAÇÃO E VARIÁVEIS GLOBAIS (Originais)
+    // ============================================================================
+
+    let chart = null;
+    let chartData = [];
+    const MAX_CHART_POINTS = 100;
+    let lastUpdateTime = 0;
+    let updateCount = 0;
+    let frequencyHz = 0;
+
+    // Conexão WebSocket e dados
+    let ws = null;
+    let wsReconnectInterval = null;
+    let isConnected = false;
+
+    // Unidade de medida
+    let unidadeAtual = 'N'; // 'N' (Newtons), 'kg', 'g'
+    const coresUnidades = {
+      'N': '#0066ff',   // Azul para Newtons
+      'kg': '#000000',  // Preto para kg
+      'g': '#00cc66'    // Verde para gramas
+    };
+
+    // Controle de Range
+    let autoRange = true;
+    let manualRangeMax = 100; // Valor máximo manual em N
+    let capacidadeMaxN = 500; // Capacidade da célula em N (será atualizada)
+    let erroMinN = 1; // Erro mínimo da célula em N (será atualizado pela acurácia)
+    let isDragging = false;
+
+    // ============================================================================
+    // INICIALIZAÇÃO
+    // ============================================================================
+
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('[Minimal] 🚀 Página carregada');
+      inicializarGrafico();
+
+      // Inicializa controle de range
+      document.getElementById('rangeToggle').classList.add('active');
+      document.getElementById('rangeIndicator').classList.add('auto-mode');
+      inicializarRangeSlider();
+
+      // Conecta ao WebSocket automaticamente
+      conectarWebSocket();
+    });
+
+    // ============================================================================
+    // GRÁFICO MINIMALISTA
+    // ============================================================================
+
+    function inicializarGrafico() {
+      const canvas = document.getElementById('minimalChart');
+      const ctx = canvas.getContext('2d');
+
+      // Configura tamanho do canvas
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * window.devicePixelRatio;
+      canvas.height = rect.height * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+      chart = {
+        canvas,
+        ctx,
+        width: rect.width,
+        height: rect.height
+      };
+
+      // Renderiza gráfico vazio
+      renderizarGrafico();
+    }
+
+    function renderizarGrafico() {
+      if (!chart) return;
+
+      const { ctx, width, height } = chart;
+
+      // Limpa canvas
+      ctx.clearRect(0, 0, width, height);
+
+      if (chartData.length === 0) {
+        // Mensagem de aguardando dados
+        ctx.fillStyle = '#cccccc';
+        ctx.font = '14px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Aguardando dados...', width / 2, height / 2);
+        return;
+      }
+
+      // Calcula min/max baseado no modo de range
+      const valores = chartData.map(d => d.valor);
+      let minVal, maxVal;
+
+      if (autoRange) {
+        // Modo AUTO: usa valores reais dos dados
+        minVal = Math.min(...valores, 0);
+        maxVal = Math.max(...valores);
+        maxVal = Math.max(maxVal * 1.2, 10); // 20% margem, mínimo 10N
+      } else {
+        // Modo MANUAL: usa o range definido pelo usuário
+        minVal = 0;
+        maxVal = manualRangeMax;
+      }
+
+      const range = maxVal - minVal || 1;
+      const margin = 40;
+      const plotWidth = width - margin * 2;
+      const plotHeight = height - margin * 2;
+
+      // Cor baseada na unidade atual
+      const cor = coresUnidades[unidadeAtual];
+
+      // === 1. GRID SUTIL COM ESCALAS ===
+      ctx.strokeStyle = '#d0d0d0';
+      ctx.lineWidth = 1;
+
+      // Linhas horizontais com labels de escala (10 linhas)
+      for (let i = 0; i <= 10; i++) {
+        const y = margin + (plotHeight / 10) * i;
+        
+        // Desenha linha
+        ctx.beginPath();
+        ctx.moveTo(margin, y);
+        ctx.lineTo(width - margin - 35, y); // Deixa espaço menor para os labels
+        ctx.stroke();
+        
+        // Calcula valor correspondente a esta linha
+        const valorNaLinha = maxVal - (maxVal - minVal) * (i / 10);
+        
+        // Converte para unidade atual
+        let valorDisplay, labelText;
+        switch (unidadeAtual) {
+          case 'kg':
+            valorDisplay = (valorNaLinha / 9.80665).toFixed(2);
+            labelText = `${valorDisplay} kg`;
+            break;
+          case 'g':
+            valorDisplay = (valorNaLinha / 9.80665 * 1000).toFixed(1);
+            labelText = `${valorDisplay} g`;
+            break;
+          case 'N':
+          default:
+            valorDisplay = valorNaLinha.toFixed(1);
+            labelText = `${valorDisplay} N`;
+            break;
+        }
+        
+        // Desenha label do lado direito
+        ctx.fillStyle = '#666666';
+        ctx.font = '24px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(labelText, width - margin + 20, y);
+      }
+
+      // === 2. DESENHA LINHA PRINCIPAL ===
+      ctx.strokeStyle = cor;
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = cor;
+      ctx.shadowBlur = 4;
+      ctx.beginPath();
+
+      // Durante gravação: usa o tamanho real dos dados
+      // Fora da gravação: usa MAX_CHART_POINTS para manter escala consistente
+      let effectiveMax = isRecording ? chartData.length : MAX_CHART_POINTS;
+      const x_denominator = Math.max(effectiveMax - 1, 1);
+
+      chartData.forEach((d, i) => {
+        const x = margin + (i / x_denominator) * plotWidth;
+        const y = margin + plotHeight - ((d.valor - minVal) / range) * plotHeight;
+
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // === 3. PONTO ATUAL (último valor) ===
+      if (chartData.length > 0) {
+        const last = chartData[chartData.length - 1];
+        const lastX = margin + ((chartData.length - 1) / x_denominator) * plotWidth;
+        const lastY = margin + plotHeight - ((last.valor - minVal) / range) * plotHeight;
+
+        // Círculo externo (halo)
+        ctx.beginPath();
+        ctx.arc(lastX, lastY, 6, 0, Math.PI * 2);
+        ctx.fillStyle = cor + '40';
+        ctx.fill();
+
+        // Círculo interno
+        ctx.beginPath();
+        ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+        ctx.fillStyle = cor;
+        ctx.fill();
+      }
+
+      // === 4. LINHA DE ZERO (se visível) ===
+      if (minVal < 0 && maxVal > 0) {
+        const zeroY = margin + plotHeight - ((0 - minVal) / range) * plotHeight;
+        ctx.strokeStyle = '#cccccc';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(margin, zeroY);
+        ctx.lineTo(width - margin, zeroY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Atualiza escala de range
+      atualizarRangeScale();
+    }
+
+    // ============================================================================
+    // CONEXÃO WEBSOCKET E LEITURA DE DADOS
+    // ============================================================================
+
+    function conectarWebSocket() {
+      try {
+        console.log('[Minimal] 🔌 Conectando ao WebSocket...');
+
+        // Constrói URL do WebSocket (porta 81, como a interface principal)
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const hostname = window.location.hostname;
+
+        // Usa porta 81 (servidor Python WebSocket)
+        const wsUrl = `${protocol}//${hostname}:81`;
+
+        console.log('[Minimal] 📡 URL do WebSocket:', wsUrl);
+
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          console.log('[Minimal] ✅ WebSocket conectado!');
+          isConnected = true;
+          atualizarStatusConexao(true);
+
+          // Limpa tentativas de reconexão
+          if (wsReconnectInterval) {
+            clearInterval(wsReconnectInterval);
+            wsReconnectInterval = null;
+          }
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const dados = JSON.parse(event.data);
+            processarMensagemWS(dados);
+          } catch (e) {
+            console.warn('[Minimal] Erro ao parsear mensagem WS:', e);
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error('[Minimal] ❌ Erro no WebSocket:', error);
+        };
+
+        ws.onclose = () => {
+          console.log('[Minimal] ⚠️ WebSocket desconectado');
+          isConnected = false;
+          atualizarStatusConexao(false);
+
+          // Tenta reconectar a cada 3 segundos
+          if (!wsReconnectInterval) {
+            wsReconnectInterval = setInterval(() => {
+              console.log('[Minimal] 🔄 Tentando reconectar...');
+              conectarWebSocket();
+            }, 3000);
+          }
+        };
+
+      } catch (error) {
+        console.error('[Minimal] ❌ Erro ao criar WebSocket:', error);
+        atualizarStatusConexao(false);
+      }
+    }
+
+    function processarMensagemWS(dados) {
+      // --- BRIDGE PARA O WIZARD ---
+      if (window.wizardListener) {
+        let wizardPayload;
+        if (dados.type === 'data') {
+          // O wizard espera um array de dados
+          wizardPayload = { type: 'dadosDisponiveis', payload: [dados] };
+        } else if (dados.type === 'config') {
+          wizardPayload = { type: 'config', payload: dados };
+        }
+        if (wizardPayload) {
+          window.wizardListener({ data: wizardPayload });
+        }
+      }
+      // --- FIM DA BRIDGE ---
+
+      // Mensagem pode conter um ou mais pacotes de dados
+      if (dados.type === 'data') {
+        // Dados em tempo real
+        processarDado({
+          forca: dados.forca || 0,
+          tempo: dados.tempo,
+          status: dados.status || 0,
+          raw: dados.raw || 0
+        });
+      } else if (dados.type === 'batch' && Array.isArray(dados.data)) {
+        // Batch de dados (vários pacotes de uma vez)
+        dados.data.forEach(d => {
+          processarDado({
+            forca: d.forca || 0,
+            tempo: d.tempo,
+            status: d.status || 0,
+            raw: d.raw || 0
+          });
+        });
+      } else if (dados.type === 'config') {
+        // Configurações da célula de carga
+        if (dados.capacidadeMaximaGramas) {
+          capacidadeMaxN = (dados.capacidadeMaximaGramas / 1000) * 9.80665; // g → kg → N
+        }
+        if (dados.percentualAcuracia) {
+          // Calcula erro mínimo baseado na acurácia
+          erroMinN = capacidadeMaxN * dados.percentualAcuracia;
+        }
+        console.log(`[Minimal] Config atualizada: Cap=${capacidadeMaxN.toFixed(1)}N, Erro=${erroMinN.toFixed(3)}N`);
+      }
+    }
+
+    function processarDado(dado) {
+      if (typeof dado.tempo === 'undefined') return; // Ignora pacotes sem timestamp
+
+      if (isRecording) {
+        recordedData.push(dado);
+      }
+      // Atualiza leitura principal
+      atualizarLeituraPrincipal(dado.forca);
+
+      // Adiciona ao gráfico
+      chartData.push({
+        valor: dado.forca,
+        tempo: dado.tempo
+      });
+
+      // Limita tamanho do array somente se não estiver gravando
+      if (!isRecording && chartData.length > MAX_CHART_POINTS) {
+        chartData.shift();
+      }
+
+      // Renderiza gráfico
+      renderizarGrafico();
+
+      // Calcula frequência
+      updateCount++;
+      const now = Date.now();
+      if (now - lastUpdateTime >= 1000) {
+        frequencyHz = updateCount;
+        document.getElementById('statusFreq').textContent = `${frequencyHz} Hz`;
+        updateCount = 0;
+        lastUpdateTime = now;
+      }
+
+      // Mapeia código de status para string
+      const statusMap = {
+        0: 'Pesando',
+        1: 'Tarar',
+        2: 'Calibrar',
+        3: 'Pronta'
+      };
+
+      const statusTexto = statusMap[dado.status] || 'Pesando';
+      atualizarStatusBalanca(statusTexto);
+    }
+
+    function atualizarLeituraPrincipal(valorN) {
+        const readingEl = document.getElementById('readingValue');
+        const readingContainerEl = document.querySelector('.reading-container');
+
+        let valorConvertido, precisao;
+
+        switch (unidadeAtual) {
+          case 'kg':
+            valorConvertido = valorN / 9.80665;
+            precisao = 3;
+            break;
+          case 'g':
+            valorConvertido = (valorN / 9.80665) * 1000;
+            precisao = 3;
+            break;
+          case 'N':
+          default:
+            valorConvertido = valorN;
+            precisao = 2;
+            break;
+        }
+
+        const valorArredondado = parseFloat(valorConvertido.toFixed(precisao));
+        const valorFormatado = valorArredondado.toFixed(precisao).replace('.', ',');
+
+        readingEl.textContent = valorFormatado;
+        readingEl.classList.remove('loading');
+
+        const cor = coresUnidades[unidadeAtual];
+        readingEl.style.color = cor;
+        document.getElementById('unitLabel').style.color = cor;
+
+        if (readingContainerEl) {
+          if (valorArredondado >= 0) {
+            readingContainerEl.classList.add('positive');
+            readingContainerEl.classList.remove('negative');
+          } else {
+            readingContainerEl.classList.add('negative');
+            readingContainerEl.classList.remove('positive');
+          }
+        }
+    }
+
+    function alternarUnidade() {
+      // Ciclo: N → kg → g → N
+      const unidades = ['N', 'kg', 'g'];
+      const indexAtual = unidades.indexOf(unidadeAtual);
+      const proximoIndex = (indexAtual + 1) % unidades.length;
+
+      unidadeAtual = unidades[proximoIndex];
+
+      // Atualiza label
+      document.getElementById('unitLabel').textContent = unidadeAtual;
+
+      // Atualiza cor
+      const cor = coresUnidades[unidadeAtual];
+      document.getElementById('readingValue').style.color = cor;
+      document.getElementById('unitLabel').style.color = cor;
+
+      console.log(`[Minimal] Unidade alterada para: ${unidadeAtual}`);
+
+      // Efeito visual de feedback (pulso)
+      const unitLabel = document.getElementById('unitLabel');
+      const readingValue = document.getElementById('readingValue');
+
+      // Pulso na unidade
+      unitLabel.style.transform = 'scale(1.3)';
+      setTimeout(() => {
+        unitLabel.style.transform = 'scale(1)';
+      }, 200);
+
+      // Flash sutil no valor
+      readingValue.style.opacity = '0.7';
+      setTimeout(() => {
+        readingValue.style.opacity = '1';
+      }, 150);
+
+      // Atualiza escala de range com nova unidade
+      atualizarRangeScale();
+    }
+
+    // ============================================================================
+    // CONTROLE DE RANGE
+    // ============================================================================
+
+    function toggleAutoRange() {
+      autoRange = !autoRange;
+      const toggle = document.getElementById('rangeToggle');
+      const indicator = document.getElementById('rangeIndicator');
+      const slider = document.getElementById('rangeSlider');
+
+      if (autoRange) {
+        toggle.textContent = 'AUTO';
+        toggle.classList.add('active');
+        indicator.classList.add('auto-mode');
+        slider.style.display = 'none';
+        toggle.title = 'Clique para alternar para Manual';
+      } else {
+        toggle.textContent = 'MANUAL';
+        toggle.classList.remove('active');
+        indicator.classList.remove('auto-mode');
+        slider.style.display = 'block';
+
+        // Inicializa range manual com o valor atual do auto
+        if (chartData.length > 0) {
+          const valores = chartData.map(d => d.valor);
+          manualRangeMax = Math.max(...valores, 10) * 1.2;
+        }
+
+        // Posiciona handle baseado no valor atual
+        const scaleEl = document.getElementById('rangeScale');
+        const handle = document.getElementById('rangeHandle');
+        if (scaleEl && handle) {
+          const percent = (manualRangeMax - erroMinN) / (capacidadeMaxN - erroMinN);
+          const y = scaleEl.offsetHeight * (1 - percent);
+          handle.style.top = `${y}px`;
+        }
+
+        const erroKg = (erroMinN / 9.80665).toFixed(3);
+        const capKg = (capacidadeMaxN / 9.80665).toFixed(1);
+        toggle.title = `Arraste verticalmente: ${erroKg}kg - ${capKg}kg`;
+      }
+
+      renderizarGrafico();
+    }
+
+    function inicializarRangeSlider() {
+      const slider = document.getElementById('rangeSlider');
+      const handle = document.getElementById('rangeHandle');
+      const scaleEl = document.getElementById('rangeScale');
+
+      slider.style.display = 'none'; // Oculto inicialmente (modo AUTO)
+
+      // Mouse events no handle
+      handle.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        if (!autoRange) {
+          isDragging = true;
+          document.body.style.cursor = 'ns-resize';
+        }
+      });
+
+      // Mouse events no slider (clique direto na track)
+      slider.addEventListener('mousedown', (e) => {
+        if (!autoRange && e.target !== handle) {
+          isDragging = true;
+          handleRangeDrag(e, scaleEl);
+          document.body.style.cursor = 'ns-resize';
+        }
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (isDragging && !autoRange) {
+          handleRangeDrag(e, scaleEl);
+        }
+      });
+
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+        document.body.style.cursor = '';
+      });
+
+      // Touch events para mobile
+      handle.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        if (!autoRange) {
+          isDragging = true;
+        }
+      });
+
+      slider.addEventListener('touchstart', (e) => {
+        if (!autoRange && e.target !== handle) {
+          isDragging = true;
+          handleRangeDrag(e.touches[0], scaleEl);
+        }
+      }, { passive: false });
+
+      document.addEventListener('touchmove', (e) => {
+        if (isDragging && !autoRange) {
+          e.preventDefault();
+          handleRangeDrag(e.touches[0], scaleEl);
+        }
+      }, { passive: false });
+
+      document.addEventListener('touchend', () => {
+        isDragging = false;
+      });
+    }
+
+  function handleRangeDrag(e, scaleEl) {
+      const rect = scaleEl.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const percent = 1 - (y / rect.height); // Inverte para bottom-up
+      const clampedPercent = Math.max(0, Math.min(1, percent)); // 0% a 100%
+
+      // Interpola entre erro mínimo e capacidade máxima
+      // 0% = erroMinN, 100% = capacidadeMaxN
+      manualRangeMax = erroMinN + (capacidadeMaxN - erroMinN) * clampedPercent;
+
+      // Atualiza posição do handle
+      const handle = document.getElementById('rangeHandle');
+      if (handle) {
+        handle.style.top = `${y}px`;
+      }
+
+      // Força atualização imediata do gráfico e escala
+      renderizarGrafico();
+    }
+
+    function atualizarRangeScale() {
+      const scaleEl = document.getElementById('rangeScale');
+      if (!scaleEl) return; // Ainda não inicializado
+
+      const indicatorEl = document.getElementById('rangeIndicator');
+
+      // Determina o range máximo
+      let maxVal;
+      if (autoRange) {
+        if (chartData.length > 0) {
+          const valores = chartData.map(d => d.valor);
+          maxVal = Math.max(...valores, 10); // Mínimo de 10N para escala visível
+          maxVal = maxVal * 1.2; // 20% margem
+        } else {
+          maxVal = capacidadeMaxN;
+        }
+      } else {
+        // Modo manual - usa o valor ajustado pelo usuário
+        maxVal = manualRangeMax;
+      }
+
+      // Cria 11 ticks para 10 linhas (alinhadas com o gráfico)
+      const numTicks = 11;
+      let ticksHTML = '';
+
+      for (let i = 0; i < numTicks; i++) {
+        const percent = (numTicks - 1 - i) / (numTicks - 1); // Inverte para começar do topo
+        const valorN = maxVal * percent;
+
+        // Converte para unidade atual
+        let valorDisplay, unidade;
+        switch (unidadeAtual) {
+          case 'kg':
+            valorDisplay = (valorN / 9.80665).toFixed(2).replace('.', ',');
+            unidade = 'kg';
+            break;
+          case 'g':
+            valorDisplay = (valorN / 9.80665 * 1000).toFixed(1);
+            unidade = 'g';
+            break;
+          case 'N':
+          default:
+            valorDisplay = valorN.toFixed(1);
+            unidade = 'N';
+            break;
+        }
+
+        ticksHTML += `
+          <div class="range-tick">
+            <span class="range-tick-value">${valorDisplay}</span>
+            <div class="range-tick-line"></div>
+          </div>
+        `;
+      }
+
+      // Preserva barra, preenchimento, indicador e slider
+      const bar = scaleEl.querySelector('.range-bar');
+      const fill = scaleEl.querySelector('.range-fill');
+      const indicator = scaleEl.querySelector('.range-indicator');
+      const slider = scaleEl.querySelector('.range-slider');
+      scaleEl.innerHTML = ticksHTML;
+      scaleEl.appendChild(bar);
+      scaleEl.appendChild(fill);
+      scaleEl.appendChild(indicator);
+      scaleEl.appendChild(slider);
+
+      // Atualiza posição do indicador e barra de preenchimento com o valor atual
+      if (chartData.length > 0) {
+        const valorAtual = chartData[chartData.length - 1].valor;
+        const percent = Math.min(Math.max(valorAtual / maxVal, 0), 1);
+        const scaleHeight = scaleEl.offsetHeight;
+        const topPos = scaleHeight * (1 - percent); // Inverte para bottom-up
+
+        indicator.style.top = `${topPos}px`;
+        indicator.style.background = coresUnidades[unidadeAtual];
+
+        // Atualiza barra de preenchimento
+        fill.style.height = `${percent * 100}%`;
+        fill.style.background = `linear-gradient(to top, ${coresUnidades[unidadeAtual]}, ${coresUnidades[unidadeAtual]}40)`;
+      }
+    }
+
+    function atualizarStatusConexao(conectado) {
+      const indicator = document.getElementById('statusConexao');
+      const text = document.getElementById('statusConexaoText');
+
+      if (conectado) {
+        indicator.classList.add('connected');
+        indicator.classList.remove('error');
+        text.textContent = 'Conectado';
+      } else {
+        indicator.classList.remove('connected');
+        indicator.classList.add('error');
+        text.textContent = 'Desconectado';
+      }
+    }
+
+    function atualizarStatusBalanca(status) {
+      const indicator = document.getElementById('statusBalanca');
+      const text = document.getElementById('statusBalancaText');
+
+      text.textContent = status;
+
+      if (status === 'Pesando') {
+        indicator.classList.add('active');
+      } else {
+        indicator.classList.remove('active');
+      }
+    }
+
+    // ============================================================================
+    // AÇÕES DOS BOTÕES (originais)
+    // ============================================================================
+
+    function iniciarNovaSessao() {
+      // Redireciona para interface completa com sessão
+      window.location.href = 'index.html?action=nova_sessao';
+    }
+
+    // ============================================================================
+    // REDIMENSIONAMENTO
+    // ============================================================================
+
+    window.addEventListener('resize', () => {
+      if (chart) {
+        inicializarGrafico();
+      }
+    });
+
+  </script>
+</body>
+</html>
+
+
+
+
+</body>
+</html>

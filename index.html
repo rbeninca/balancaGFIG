@@ -11,6 +11,7 @@
   <script src="script_grafico_sessao.js" defer></script>
   <script src="funcoespdf.js" defer></script>
   <script src="script.js" defer></script>
+  <script src="wizard_simplificado.js" defer></script>
   <script src="burn_analysis.js" defer></script>
   <script src="martelo-do-thor.js" defer></script>
 </head>
@@ -93,6 +94,7 @@
           <button class="tablink" onclick="abrirAba(this, 'abaMartelo')">⚡ Martelo do Thor</button>
           <button class="tablink" onclick="abrirAba(this, 'abaConexao')">🔌 Conexão</button>
           <button class="tablink" onclick="window.open('creditos.html', '_blank')">Créditos</button>
+          <a href="minimal.html" class="tablink">📱 Modo Minimalista</a>
           <button id="btn-open-wizard" class="btn-wizard" title="Assistente de configuração da balança">🧙‍♂️ Configuração Guiada</button>
         </nav>
       </div>
@@ -427,6 +429,21 @@
       </div>
     </main>
 
+    <!-- Ícone flutuante para toggle do rodapé -->
+    <div id="footer-toggle" title="Mostrar/Ocultar informações de status">
+      <div class="footer-toggle-indicators">
+        <div class="footer-toggle-dot" id="toggle-ws-indicator" title="WebSocket"></div>
+        <div class="footer-toggle-dot" id="toggle-mysql-indicator" title="MySQL"></div>
+        <div class="footer-toggle-dot" id="toggle-balanca-indicator" title="Balança"></div>
+          <div class="footer-section footer-time">
+        <span class="time-label" title="Horário atual do servidor (UTC-3 - America/Sao_Paulo)">🕐 Servidor:</span>
+        <span id="server-clock">--:--:--</span>
+        <button onclick="syncServerTime()" class="btn btn-sync" title="Sincronizar relógio do servidor com a hora do seu navegador">🔄</button>
+      </div>
+      </div>
+      <span class="footer-toggle-icon">▼</span>
+    </div>
+
     <footer id="footer-atalhos">
       <div class="footer-section footer-brand">
         <h3>🚀 balançaGFIG</h3>
@@ -454,11 +471,7 @@
         </div>
       </div>
       
-      <div class="footer-section footer-time">
-        <span class="time-label" title="Horário atual do servidor (UTC-3 - America/Sao_Paulo)">🕐 Servidor:</span>
-        <span id="server-clock">--:--:--</span>
-        <button onclick="syncServerTime()" class="btn btn-sync" title="Sincronizar relógio do servidor com a hora do seu navegador">🔄</button>
-      </div>
+    
       
       <div class="footer-section footer-shortcuts">
         <span class="shortcuts-title">⚡ ATALHOS:</span>
@@ -567,147 +580,7 @@ sudo chmod 666 /dev/ttyUSB0</pre>
       <!-- Chart and controls will be moved here by JavaScript -->
     </div>
 
-    <!-- Modal Wizard de Configuração Guiada -->
-    <div id="wizard-modal" class="wizard-modal">
-      <div class="wizard-content">
-        <div class="wizard-header">
-          <h2>Assistente de Configuração da Balança</h2>
-          <button class="wizard-close" onclick="closeWizard()">&times;</button>
-        </div>
-        <div class="wizard-body">
-          <div class="wizard-progress">
-            <div class="wizard-progress-bar"></div>
-          </div>
-          <!-- Etapa 0: Inicialização -->
-          <div class="wizard-step" id="wizard-step-0">
-            <h3>Bem-vindo ao Assistente de Configuração!</h3>
-            <p>Este guia irá ajudá-lo a configurar e calibrar sua balança passo a passo.</p>
-            <div id="wizard-loading">
-              <p>Carregando configurações atuais do dispositivo...</p>
-              <div class="spinner"></div>
-            </div>
-            <div id="wizard-error" style="display: none;">
-              <p class="text-error">Não foi possível carregar as configurações. Verifique a conexão com a balança. Você pode continuar com os valores padrão.</p>
-            </div>
-          </div>
-          <!-- Etapa 1: Parâmetros da Célula -->
-          <div class="wizard-step" id="wizard-step-1" style="display: none;">
-            <h4>Etapa 1: Parâmetros da Célula de Carga</h4>
-            <p class="wizard-explanation">Informe os dados nominais da sua célula de carga. Essas informações são encontradas na folha de dados (datasheet) do componente.</p>
-            <div>
-              <label for="wizard-capacidade-maxima">Limite da Célula de Carga (Capacidade)</label>
-              <div style="display: flex; gap: 0.5rem; align-items: center;">
-                <input type="number" id="wizard-capacidade-maxima" placeholder="Ex: 5000 para 5kg" style="flex: 1;">
-                <select id="wizard-capacidade-unidade" style="width: auto;">
-                  <option value="g" selected>gramas (g)</option>
-                  <option value="kg">quilogramas (kg)</option>
-                  <option value="N">Newtons (N)</option>
-                </select>
-              </div>
-              <small id="wizard-capacidade-em-gramas" style="display: block; color: var(--cor-texto-secundario); margin-top: 0.25rem;">≈ 5000 g</small>
-              <small>Capacidade máxima que a célula de carga suporta. Nunca exceda este valor.</small>
-            </div>
-            <div>
-              <label for="wizard-acuracia">Acurácia/Erro da Célula (%)</label>
-              <input type="number" id="wizard-acuracia" step="0.001" placeholder="Ex: 0.05" oninput="updateWizardErroEmGramas()">
-              <small id="wizard-erro-em-gramas" style="display: block; color: var(--cor-info); margin-top: 0.25rem; font-weight: 600;">Erro: ± 2.50 g</small>
-              <small>Classe de precisão ou erro percentual da célula. Ex: 0.05% para uma célula comum.</small>
-            </div>
-          </div>
-          <!-- Etapa 2: Parâmetros de Calibração -->
-          <div class="wizard-step" id="wizard-step-2" style="display: none;">
-            <h4>Etapa 2: Parâmetros de Calibração</h4>
-            <p class="wizard-explanation">Ajuste os parâmetros para o processo de calibração. As sugestões são um bom ponto de partida.</p>
-            <div>
-              <label for="wizard-num-amostras">Nº de Leituras para Média</label>
-              <input type="number" id="wizard-num-amostras" placeholder="Ex: 10">
-              <small>Quantidade de amostras para calcular a média durante a calibração. Mais amostras = mais estável, porém mais lento.</small>
-            </div>
-            <div>
-              <label for="wizard-tolerancia">Tolerância de Calibração (em gramas)</label>
-              <input type="number" id="wizard-tolerancia" step="any" placeholder="Ex: 0.5" oninput="validateWizardTolerancia()">
-              <small id="wizard-tolerancia-warning" style="display: none; color: var(--cor-alerta); font-weight: 600; margin-top: 0.25rem;">⚠️ CRÍTICO: Tolerância abaixo do erro da célula! Pode ser impossível concluir a calibração.</small>
-              <small id="wizard-tolerancia-sugestao" style="display: block; color: var(--cor-info); margin-top: 0.25rem;"></small>
-              <small>Variação máxima permitida entre as leituras. Se a calibração falhar, tente aumentar este valor.</small>
-            </div>
-            <div>
-              <label for="wizard-timeout">Timeout de Calibração (ms)</label>
-              <input type="number" id="wizard-timeout" placeholder="Ex: 10000" oninput="validateWizardTimeout()">
-              <small id="wizard-timeout-warning" style="display: none; color: var(--cor-aviso); font-weight: 600; margin-top: 0.25rem;">⚠️ Recomendável usar valores maiores que 5000ms (5 segundos) para melhor estabilização.</small>
-              <small>Tempo máximo de espera para a balança estabilizar antes de abortar a calibração. Sugestão: 10000ms (10 segundos)</small>
-            </div>
-          </div>
-          <!-- Etapa 3: Tara e Calibração -->
-          <div class="wizard-step" id="wizard-step-3" style="display: none;">
-            <h4>Etapa 3: Guia de Tara e Calibração</h4>
-
-            <div style="background: var(--cor-info-light); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border-left: 4px solid var(--cor-info);">
-              <strong>📊 Leitura Atual da Balança:</strong>
-              <div style="font-size: 1.5rem; font-weight: bold; color: var(--cor-primaria); margin-top: 0.5rem;" id="wizard-leitura-atual">--- N</div>
-              <small style="color: var(--cor-texto-secundario);">Leitura em tempo real da célula de carga</small>
-            </div>
-
-            <div class="wizard-substep">
-              <p><strong>1. Posicione a Célula:</strong> Coloque a célula de carga na posição vertical de teste, firmemente fixada.</p>
-            </div>
-            <div class="wizard-substep">
-              <p><strong>2. Tara Inicial:</strong> Certifique-se de que não há NENHUM peso sobre a célula e clique abaixo.</p>
-              <button onclick="wizardTare()" class="btn btn-primario">Fazer Tara (sem peso)</button>
-              <span id="wizard-tare-status"></span>
-            </div>
-            <div class="wizard-substep">
-              <p><strong>3. Calibração com Massa Conhecida:</strong></p>
-              <p style="background: var(--cor-aviso-light); padding: 0.75rem; border-radius: 0.5rem; border-left: 4px solid var(--cor-aviso);">
-                <strong>⚠️ Importante:</strong> Utilize uma massa conhecida e precisa para calibração, como por exemplo:
-                <br>• 1 kg = 1000 g
-                <br>• 500 g
-                <br>• 2 kg = 2000 g
-                <br>Quanto maior e mais precisa a massa, melhor será a calibração.
-              </p>
-              <p>Coloque o peso de massa conhecida sobre a célula e informe o valor em gramas:</p>
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <input type="number" id="wizard-massa-calibracao" placeholder="Ex: 1000 (para 1kg)">
-                <button onclick="wizardCalibrate()" class="btn btn-aviso">Calibrar com esta Massa</button>
-              </div>
-              <span id="wizard-calibrate-status"></span>
-            </div>
-             <div class="wizard-substep">
-              <p><strong>4. Tara Final:</strong> Retire o peso de calibração e faça uma nova tara para finalizar.</p>
-              <button onclick="wizardTare()" class="btn btn-primario">Fazer Tara Final</button>
-            </div>
-          </div>
-          <!-- Etapa 4: Análise de Ruído -->
-          <div class="wizard-step" id="wizard-step-4" style="display: none;">
-            <h4>Etapa 4: Análise de Ruído</h4>
-            <p class="wizard-explanation">Com a célula de carga vazia e estável, vamos analisar o ruído para melhorar a precisão das leituras.</p>
-            <div class="wizard-substep">
-                <p><strong>Análise de Ruído:</strong> Certifique-se de que a célula de carga está vazia e não está sendo tocada.</p>
-                <button onclick="wizardAnalyzeNoise()" class="btn btn-info">Analisar Ruído</button>
-                <span id="wizard-noise-status"></span>
-            </div>
-            <div>
-              <label for="wizard-anti-noising-multiplier">Multiplicador de Threshold</label>
-              <input type="number" id="wizard-anti-noising-multiplier" step="0.1" min="0.5" max="10" value="2.0">
-              <small>Controla a agressividade do filtro anti-ruído. 2.0x = filtro moderado, 3.0x = agressivo.</small>
-            </div>
-          </div>
-          <!-- Etapa 5: Conclusão -->
-          <div class="wizard-step" id="wizard-step-5" style="display: none;">
-            <h4>Etapa 5: Conclusão e Dicas</h4>
-            <p><strong>Configuração Concluída!</strong></p>
-            <p class="wizard-explanation">Lembre-se: antes de cada sessão de teste, e sempre que a posição da célula de carga for alterada, é <strong>obrigatório</strong> fazer uma nova tara (botão "Zerar (Tara)" ou atalho <kbd>Shift</kbd>+<kbd>T</kbd>).</p>
-            <label>
-              <input type="checkbox" id="wizard-show-reminder"> Mostrar este lembrete ao iniciar uma nova sessão.
-            </label>
-          </div>
-        </div>
-        <div class="wizard-footer">
-          <button id="wizard-btn-prev" onclick="wizardGoToStep(-1)" class="btn btn-secundario">Voltar</button>
-          <button id="wizard-btn-next" onclick="wizardGoToStep(1)" class="btn btn-primario">Avançar</button>
-          <button id="wizard-btn-finish" onclick="applyWizardSettings()" class="btn btn-sucesso" style="display: none;">Concluir</button>
-        </div>
-      </div>
-    </div>
+    
   <!-- Modal de Nova Sessão -->
     <div id="modal-nova-sessao" class="wizard-modal">
       <div class="wizard-content" style="max-width: 1000px;">
@@ -828,7 +701,7 @@ sudo chmod 666 /dev/ttyUSB0</pre>
                     <td style="padding: 0.3rem 0.4rem; font-family: monospace; font-size: 0.7rem;" id="burn-test-start-time-absolute">---</td>
                     <td style="padding: 0.3rem 0.4rem; font-family: monospace; font-weight: bold; color: var(--cor-primaria); text-align: right; font-size: 0.7rem;">00:00.000s</td>
                   </tr>
-                  <tr style="background: rgba(52, 152, 219, 0.05);">
+                  <tr style="background: rgba(52, 152,219, 0.05);">
                     <td style="padding: 0.3rem 0.4rem; font-family: monospace; font-size: 0.7rem;" id="burn-test-end-time-absolute">---</td>
                     <td style="padding: 0.3rem 0.4rem; font-family: monospace; font-weight: bold; color: var(--cor-primaria); text-align: right; font-size: 0.7rem;" id="burn-test-end-time-relative">---</td>
                   </tr>

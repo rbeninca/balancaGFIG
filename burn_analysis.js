@@ -3,7 +3,7 @@ let burnAnalysisChart = null;
 let currentBurnSession = null;
 let burnStartTime = null;
 let burnEndTime = null;
-let burnChartColorMode = 'class'; // 'class' ou 'simple'
+let burnChartColorMode = 'simple'; // 'class' ou 'simple' - simple é o padrão com cor sólida azul
 
 function setBurnChartColorMode(mode) {
   burnChartColorMode = mode;
@@ -397,11 +397,11 @@ function renderBurnAnalysisChart(dados) {
     },
     stroke: {
       curve: 'smooth',
-      width: burnChartColorMode === 'class' ? [2, ...segmentSeries.map(() => 0)] : [2, 1],
+      width: burnChartColorMode === 'class' ? [2, ...segmentSeries.map(() => 0)] : [2, 0],
     },
     fill: {
-      type: burnChartColorMode === 'class' ? ['solid', ...segmentSeries.map(() => 'solid')] : ['solid', 'gradient'],
-      opacity: burnChartColorMode === 'class' ? [1, ...segmentSeries.map(() => 0.40)] : [1, 0.3],
+      type: burnChartColorMode === 'class' ? ['solid', ...segmentSeries.map(() => 'solid')] : ['solid', 'solid'],
+      opacity: burnChartColorMode === 'class' ? [1, ...segmentSeries.map(() => 0.40)] : [1, 0.6],
       gradient: {
         shade: 'light',
         type: "vertical",
@@ -414,7 +414,7 @@ function renderBurnAnalysisChart(dados) {
     },
     colors: burnChartColorMode === 'class' 
       ? ['#008FFB', ...classificacoes.map(c => c.cor)] 
-      : ['#008FFB', '#3b82f6'],
+      : ['#008FFB', '#3498db'],
     xaxis: {
       type: 'numeric',
       title: {

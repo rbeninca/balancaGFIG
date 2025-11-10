@@ -1,9 +1,19 @@
-// --- CONFIGURAÇÃO GUIADA (WIZARD) ---
+// --- CONFIGURAÇÃO GUIADA (WIZARD) SIMPLIFICADO ---
 
 let wizardCurrentStep = 0;
-const WIZARD_TOTAL_STEPS = 5;
-let wizardState = {};
+const WIZARD_TOTAL_STEPS = 4; // Reduzido de 5 para 4
+let wizardState = {
+  ruidoMedidoG: 0,
+  toleranciaCalculadaG: 0,
+  capacidadeKg: 0,
+  acuraciaPercent: 0.02,
+  leituraSemPeso: 0,
+  leituraComPeso: 0,
+  pesoConhecido: 0,
+  fatorConversao: 0
+};
 let configTimeout;
+let wizardRealtimeListeners = [];
 
 function openWizard() {
   const modal = document.getElementById('wizard-modal');
@@ -618,7 +628,13 @@ window.onload = () => {
   // Setup for Wizard button
   const wizardButton = document.getElementById('btn-open-wizard');
   if (wizardButton) {
-    wizardButton.addEventListener('click', openWizard);
+    wizardButton.addEventListener('click', () => {
+      if (typeof openWizardSimplificado === 'function') {
+        openWizardSimplificado();
+      } else {
+        openWizard(); // Fallback para wizard antigo
+      }
+    });
   }
 
   const leiturasContainer = document.getElementById('leituras-container');
@@ -1111,6 +1127,7 @@ function handleWorkerMessage(event) {
     case 'mysql_status_update': // NEW: Handle MySQL status updates
       isMysqlConnected = payload;
       updateMysqlIndicator(isMysqlConnected);
+      updateSessionActionButtons(); // Adicionado para atualizar botões
       break;
     case 'serial_status_update': // NEW: Handle Serial status updates
       handleSerialStatusUpdate(payload);
@@ -1141,6 +1158,19 @@ function updateMysqlIndicator(connected) {
   if (textElement) {
     textElement.textContent = connected ? 'Conectado' : 'Desconectado';
   }
+}
+
+function updateSessionActionButtons() {
+  const saveButtons = document.querySelectorAll('.btn-save-to-db');
+  saveButtons.forEach(button => {
+    if (isMysqlConnected) {
+      button.disabled = false;
+      button.title = "Salvar do LocalStorage para o Banco de Dados";
+    } else {
+      button.disabled = true;
+      button.title = "MySQL desconectado";
+    }
+  });
 }
 
 // NEW: Function to handle serial connection status updates
@@ -1381,7 +1411,17 @@ function updateConfigForm(config) {
   document.getElementById("param-gravidade").value = getValue(config.gravity);
   document.getElementById("param-offset").value = getValue(config.tareOffset);
   document.getElementById("param-leituras-estaveis").value = getValue(config.leiturasEstaveis);
-  document.getElementById("param-tolerancia").value = getValue(config.toleranciaEstabilidade);
+  
+  // A tolerância vem em contagens ADC do ESP. Converte para gramas para exibição.
+  const toleranciaEmADC = getValue(config.toleranciaEstabilidade);
+  const fatorConversao = getValue(config.conversionFactor);
+  if (toleranciaEmADC && fatorConversao) {
+    const toleranciaEmGramas = toleranciaEmADC / fatorConversao;
+    document.getElementById("param-tolerancia").value = toleranciaEmGramas.toFixed(2);
+  } else {
+    document.getElementById("param-tolerancia").value = '';
+  }
+
   document.getElementById("param-num-amostras").value = getValue(config.numAmostrasMedia);
   document.getElementById("param-timeout").value = getValue(config.timeoutCalibracao);
   document.getElementById("param-capacidade-maxima").value = getValue(config.capacidadeMaximaGramas);
@@ -1399,7 +1439,7 @@ function updateConfigForm(config) {
   console.log('[updateConfigForm] Valores recebidos do ESP:');
   console.log('  Capacidade:', config.capacidadeMaximaGramas, '→', capacidadeMaximaGramas);
   console.log('  Acurácia:', config.percentualAcuracia, '→', percentualAcuracia);
-  console.log('  Tolerância:', config.toleranciaEstabilidade, '→', novaTol.toFixed(2));
+  console.log('  Tolerância (ADC):', config.toleranciaEstabilidade, '→', novaTol.toFixed(0));
   console.log('  Timeout (ms):', config.timeoutCalibracao, '→', novoTimeout.toFixed(0));
   console.log('  Erro Absoluto calculado:', (capacidadeMaximaGramas * percentualAcuracia).toFixed(2), 'g');
 
@@ -1437,21 +1477,28 @@ async function salvarParametros() {
   const params = {
     conversionFactor: "param-conversao", gravity: "param-gravidade",
     tareOffset: "param-offset", leiturasEstaveis: "param-leituras-estaveis",
-    toleranciaEstabilidade: "param-tolerancia", numAmostrasMedia: "param-num-amostras",
+    numAmostrasMedia: "param-num-amostras",
     timeoutCalibracao: "param-timeout", capacidadeMaximaGramas: "param-capacidade-maxima",
     percentualAcuracia: "param-acuracia",
   };
 
   showNotification('info', 'Enviando parâmetros para o dispositivo...');
 
+  // Trata a tolerância separadamente
+  const toleranciaEmGramas = parseFloat(document.getElementById("param-tolerancia").value.replace(',', '.'));
+  const fatorConversao = parseFloat(document.getElementById("param-conversao").value.replace(',', '.'));
+  if (!isNaN(toleranciaEmGramas) && !isNaN(fatorConversao) && fatorConversao !== 0) {
+    const toleranciaEmADC = toleranciaEmGramas * fatorConversao;
+    await new Promise(resolve => setTimeout(resolve, 100));
+    sendCommandToWorker('set', { param: 'toleranciaEstabilidade', value: toleranciaEmADC });
+  }
+
   for (const [key, id] of Object.entries(params)) {
     const valueStr = document.getElementById(id).value.trim();
     if (valueStr !== '') {
       const valueNum = parseFloat(valueStr.replace(',', '.'));
       if (!isNaN(valueNum)) {
-        // Envia um comando de cada vez com um pequeno atraso
         await new Promise(resolve => setTimeout(resolve, 100));
-        // Usa o protocolo padronizado do worker: cmd 'set' com objeto {param, value}
         sendCommandToWorker('set', { param: key, value: valueNum });
       }
     }
@@ -1461,7 +1508,7 @@ async function salvarParametros() {
   setTimeout(() => {
     showNotification('success', 'Parâmetros salvos! Atualizando valores...');
     sendCommandToWorker('get_config');
-  }, 1000); // Espera 1 segundo
+  }, 1200); // Aumentado para dar tempo a todos os comandos
 }
 
 function salvarWsUrl() {
@@ -2042,7 +2089,7 @@ function atualizarBarraEsforcoDisplay(percentual, forcaAtualN) {
   barraFill.style.width = Math.min(percentual, 100) + '%';
   
   // Atualiza texto dentro da barra (valor | percentual)
-  barraTexto.textContent = `${valorDisplay.toFixed(2)} ${displayUnit} | ${percentual.toFixed(1)}%`;
+  barraTexto.textContent = `${valorDisplay.toFixed(3)} ${displayUnit} | ${percentual.toFixed(3)}%`;
   
   // Remove todas as classes anteriores
   barraFill.classList.remove('nivel-50', 'nivel-60', 'nivel-70', 'nivel-80', 'nivel-90', 'nivel-100');
@@ -2823,8 +2870,8 @@ async function loadAndDisplayAllSessions() {
               <button onclick="exportarCSV(${session.id}, '${session.source}')" title="Exportar Dados em CSV" class="btn btn-sucesso"> CSV</button>
               <button onclick="exportarEng(${session.id}, '${session.source}')" title="Exportar Curva de Empuxo para OpenRocket/RASAero" class="btn btn-aviso"> ENG</button>
               ${session.inLocal && !session.inDb
-          ? `<button class="btn btn-info btn-small"
-                  ${!isMysqlConnected ? 'disabled title="MySQL desconectado"' : 'title="Salvar do LocalStorage para o Banco de Dados"'}
+          ? `<button class="btn btn-info btn-small btn-save-to-db"
+                  title="Salvar do LocalStorage para o Banco de Dados"
                 onclick="salvarNoDB(${session.id})">
                 💾 ➜ ☁️ Salvar no BD
              </button>
@@ -2854,6 +2901,7 @@ async function loadAndDisplayAllSessions() {
       `;
     }
   }).join('');
+  updateSessionActionButtons();
   } catch (error) {
     console.error('[loadAndDisplayAllSessions] Erro ao renderizar sessões:', error);
     listaGravacoesDiv.innerHTML = `<p style="color: #e74c3c;">Erro ao carregar sessões. Verifique o console para mais detalhes.</p>`;
@@ -4210,4 +4258,76 @@ window.addEventListener('load', () => {
 
   // Busca a hora do servidor a cada 5 minutos para corrigir drift
   setInterval(updateServerClock, 5 * 60 * 1000);
+
+  // Configuração do toggle do rodapé
+  initFooterToggle();
 });
+
+/**
+ * Inicializa o sistema de toggle do rodapé
+ */
+function initFooterToggle() {
+  const footerToggle = document.getElementById('footer-toggle');
+  const footer = document.getElementById('footer-atalhos');
+
+  if (!footerToggle || !footer) return;
+
+  // Carrega o estado salvo (se o usuário deixou aberto)
+  const isFooterOpen = localStorage.getItem('footerOpen') === 'true';
+  if (isFooterOpen) {
+    footer.classList.add('footer-visible');
+    footerToggle.classList.add('footer-open');
+  }
+
+  // Toggle ao clicar
+  footerToggle.addEventListener('click', () => {
+    const isOpen = footer.classList.toggle('footer-visible');
+    footerToggle.classList.toggle('footer-open');
+
+    // Salva o estado
+    localStorage.setItem('footerOpen', isOpen);
+  });
+
+  // Sincroniza os indicadores do toggle com os indicadores do rodapé
+  syncFooterToggleIndicators();
+
+  // Atualiza os indicadores a cada segundo
+  setInterval(syncFooterToggleIndicators, 1000);
+}
+
+/**
+ * Sincroniza os indicadores do ícone flutuante com os do rodapé
+ */
+function syncFooterToggleIndicators() {
+  // WebSocket
+  const wsIndicator = document.getElementById('ws-indicator');
+  const toggleWsIndicator = document.getElementById('toggle-ws-indicator');
+  if (wsIndicator && toggleWsIndicator) {
+    toggleWsIndicator.className = 'footer-toggle-dot ' +
+      (wsIndicator.classList.contains('conectado') ? 'conectado' :
+       wsIndicator.classList.contains('desconectado') ? 'desconectado' : '');
+  }
+
+  // MySQL
+  const mysqlIndicator = document.getElementById('mysql-indicator');
+  const toggleMysqlIndicator = document.getElementById('toggle-mysql-indicator');
+  if (mysqlIndicator && toggleMysqlIndicator) {
+    toggleMysqlIndicator.className = 'footer-toggle-dot ' +
+      (mysqlIndicator.classList.contains('conectado') ? 'conectado' :
+       mysqlIndicator.classList.contains('desconectado') ? 'desconectado' : '');
+  }
+
+  // Balança (usa o texto do status)
+  const balancaStatus = document.getElementById('balanca-status');
+  const toggleBalancaIndicator = document.getElementById('toggle-balanca-indicator');
+  if (balancaStatus && toggleBalancaIndicator) {
+    const statusText = balancaStatus.textContent.toLowerCase();
+    if (statusText.includes('conectado') || statusText.includes('lendo')) {
+      toggleBalancaIndicator.className = 'footer-toggle-dot conectado';
+    } else if (statusText.includes('aguardando') || statusText.includes('...')) {
+      toggleBalancaIndicator.className = 'footer-toggle-dot';
+    } else {
+      toggleBalancaIndicator.className = 'footer-toggle-dot desconectado';
+    }
+  }
+}
