@@ -817,17 +817,47 @@
       // Cor baseada na unidade atual
       const cor = coresUnidades[unidadeAtual];
 
-      // === 1. GRID SUTIL ===
+      // === 1. GRID SUTIL COM ESCALAS ===
       ctx.strokeStyle = '#d0d0d0';
       ctx.lineWidth = 1;
 
-      // Linhas horizontais
-      for (let i = 0; i <= 4; i++) {
-        const y = margin + (plotHeight / 4) * i;
+      // Linhas horizontais com labels de escala (10 linhas)
+      for (let i = 0; i <= 10; i++) {
+        const y = margin + (plotHeight / 10) * i;
+        
+        // Desenha linha
         ctx.beginPath();
         ctx.moveTo(margin, y);
-        ctx.lineTo(width - margin, y);
+        ctx.lineTo(width - margin - 50, y); // Deixa espaço para os labels
         ctx.stroke();
+        
+        // Calcula valor correspondente a esta linha
+        const valorNaLinha = maxVal - (maxVal - minVal) * (i / 10);
+        
+        // Converte para unidade atual
+        let valorDisplay, labelText;
+        switch (unidadeAtual) {
+          case 'kg':
+            valorDisplay = (valorNaLinha / 9.80665).toFixed(2);
+            labelText = `${valorDisplay} kg`;
+            break;
+          case 'g':
+            valorDisplay = (valorNaLinha / 9.80665 * 1000).toFixed(1);
+            labelText = `${valorDisplay} g`;
+            break;
+          case 'N':
+          default:
+            valorDisplay = valorNaLinha.toFixed(1);
+            labelText = `${valorDisplay} N`;
+            break;
+        }
+        
+        // Desenha label do lado direito
+        ctx.fillStyle = '#666666';
+        ctx.font = '24px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(labelText, width - margin, y);
       }
 
       // === 2. DESENHA LINHA PRINCIPAL ===
@@ -1047,48 +1077,46 @@
     }
 
     function atualizarLeituraPrincipal(valorN) {
-      const readingEl = document.getElementById('readingValue');
-      const mainReadingEl = document.getElementById('mainReading');
+        const readingEl = document.getElementById('readingValue');
+        const readingContainerEl = document.querySelector('.reading-container');
 
-      // Converte para unidade selecionada
-      let valorConvertido, precisao;
+        let valorConvertido, precisao;
 
-      switch (unidadeAtual) {
-        case 'kg':
-          valorConvertido = valorN / 9.80665;  // N → kg
-          precisao = 3;
-          break;
-        case 'g':
-          valorConvertido = (valorN / 9.80665) * 1000;  // N → kg → g
-          precisao = 1;
-          break;
-        case 'N':
-        default:
-          valorConvertido = valorN;
-          precisao = 2;
-          break;
-      }
+        switch (unidadeAtual) {
+          case 'kg':
+            valorConvertido = valorN / 9.80665;
+            precisao = 2;
+            break;
+          case 'g':
+            valorConvertido = (valorN / 9.80665) * 1000;
+            precisao = 1;
+            break;
+          case 'N':
+          default:
+            valorConvertido = valorN;
+            precisao = 1;
+            break;
+        }
 
-      // Formata valor
-      const valorFormatado = Math.abs(valorConvertido).toFixed(precisao).replace('.', ',');
+        const valorArredondado = parseFloat(valorConvertido.toFixed(precisao));
+        const valorFormatado = valorArredondado.toFixed(precisao).replace('.', ',');
 
-      // Atualiza texto
-      readingEl.textContent = valorFormatado;
-      readingEl.classList.remove('loading');
+        readingEl.textContent = valorFormatado;
+        readingEl.classList.remove('loading');
 
-      // Atualiza cor baseado na unidade
-      const cor = coresUnidades[unidadeAtual];
-      readingEl.style.color = cor;
-      document.getElementById('unitLabel').style.color = cor;
+        const cor = coresUnidades[unidadeAtual];
+        readingEl.style.color = cor;
+        document.getElementById('unitLabel').style.color = cor;
 
-      // Mantém cor de sinal (opcional, pode remover se quiser só cor de unidade)
-      if (valorConvertido >= 0) {
-        mainReadingEl.classList.add('positive');
-        mainReadingEl.classList.remove('negative');
-      } else {
-        mainReadingEl.classList.add('negative');
-        mainReadingEl.classList.remove('positive');
-      }
+        if (readingContainerEl) {
+          if (valorArredondado >= 0) {
+            readingContainerEl.classList.add('positive');
+            readingContainerEl.classList.remove('negative');
+          } else {
+            readingContainerEl.classList.add('negative');
+            readingContainerEl.classList.remove('positive');
+          }
+        }
     }
 
     function alternarUnidade() {
@@ -1150,13 +1178,14 @@
         toggle.classList.remove('active');
         indicator.classList.remove('auto-mode');
         slider.style.display = 'block';
+
         // Inicializa range manual com o valor atual do auto
         if (chartData.length > 0) {
           const valores = chartData.map(d => d.valor);
           manualRangeMax = Math.max(...valores, 10) * 1.2;
         }
 
-        // Posiciona handle inicialmente no meio (50% da capacidade)
+        // Posiciona handle baseado no valor atual
         const scaleEl = document.getElementById('rangeScale');
         const handle = document.getElementById('rangeHandle');
         if (scaleEl && handle) {
@@ -1236,7 +1265,7 @@
       });
     }
 
-    function handleRangeDrag(e, scaleEl) {
+  function handleRangeDrag(e, scaleEl) {
       const rect = scaleEl.getBoundingClientRect();
       const y = e.clientY - rect.top;
       const percent = 1 - (y / rect.height); // Inverte para bottom-up
@@ -1289,16 +1318,16 @@
         let valorDisplay, unidade;
         switch (unidadeAtual) {
           case 'kg':
-            valorDisplay = (valorN / 9.80665).toFixed(1).replace('.', ',');
+            valorDisplay = (valorN / 9.80665).toFixed(2).replace('.', ',');
             unidade = 'kg';
             break;
           case 'g':
-            valorDisplay = (valorN / 9.80665 * 1000).toFixed(0);
+            valorDisplay = (valorN / 9.80665 * 1000).toFixed(1);
             unidade = 'g';
             break;
           case 'N':
           default:
-            valorDisplay = valorN.toFixed(0);
+            valorDisplay = valorN.toFixed(1);
             unidade = 'N';
             break;
         }
