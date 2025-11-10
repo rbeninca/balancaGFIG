@@ -2015,9 +2015,9 @@
         const valorFormatado = valorArredondado.toFixed(precisao).replace('.', ',');
 
         // Calcula a precisão confiável: encontra a última casa decimal onde 10^(-i) > erro
-        let casasConfiaveis = 0;
+        let casasConfiaveis = -1; // -1 significa que até a unidade é afetada
         if (erroConvertido > 0) {
-          for (let i = 1; i <= precisao; i++) {
+          for (let i = 0; i <= precisao; i++) {
             const magnitudei = Math.pow(10, -i);
             if (magnitudei > erroConvertido) {
               casasConfiaveis = i;
@@ -2035,8 +2035,17 @@
         const parteInteira = partes[0] || '0';
         const parteDecimal = partes[1] || '';
 
-        // Parte inteira sempre confiável
-        htmlFormatado += `<span class="digit-reliable">${parteInteira}</span>`;
+        // Se casasConfiaveis < 0, significa que o erro afeta até a unidade inteira
+        if (casasConfiaveis < 0) {
+          // Toda a parte inteira é cinza
+          htmlFormatado += `<span class="digit-unreliable">${parteInteira}</span>`;
+        } else if (casasConfiaveis === 0) {
+          // Unidade confiável, mas sem casas decimais
+          htmlFormatado += `<span class="digit-reliable">${parteInteira}</span>`;
+        } else {
+          // Parte inteira sempre confiável
+          htmlFormatado += `<span class="digit-reliable">${parteInteira}</span>`;
+        }
 
         if (parteDecimal) {
           htmlFormatado += '<span class="digit-reliable">,</span>';
@@ -2054,14 +2063,27 @@
         readingEl.innerHTML = htmlFormatado;
         readingEl.classList.remove('loading');
 
-        // Mostra/esconde indicador de acurácia se houver dígitos não confiáveis
-        const temDigitosNaoConfiaveis = casasConfiaveis < parteDecimal.length;
+        // Atualiza mensagem de acurácia
         if (accuracyIndicatorEl) {
-          if (temDigitosNaoConfiaveis && erroConvertido > 0) {
-            accuracyIndicatorEl.style.display = 'block';
-          } else {
-            accuracyIndicatorEl.style.display = 'none';
+          let mostrarAviso = false;
+          let mensagem = 'Dígitos <span style="color: #aaaaaa;">cinza</span> = abaixo da acurácia';
+          
+          if (erroConvertido > 0) {
+            if (casasConfiaveis < 0) {
+              // Erro afeta a unidade inteira
+              mensagem = '⚠️ Erro de medição afeta até a unidade inteira';
+              mostrarAviso = true;
+            } else if (casasConfiaveis === 0) {
+              mensagem = 'Nenhuma casa decimal confiável - use ' + 
+                (unidadeAtual === 'kg' ? 'GRAMAS' : (unidadeAtual === 'g' ? 'MILIGRAMAS' : 'unidade menor'));
+              mostrarAviso = true;
+            } else {
+              mostrarAviso = true;
+            }
           }
+          
+          accuracyIndicatorEl.innerHTML = mensagem;
+          accuracyIndicatorEl.style.display = (mostrarAviso && erroConvertido > 0) ? 'block' : 'none';
         }
 
         const cor = coresUnidades[unidadeAtual];
