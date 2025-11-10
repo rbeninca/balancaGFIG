@@ -1808,18 +1808,7 @@ function abrirMarteloFullscreen() {
   window.open('jogos/index.html', 'jogos', 'width=1400,height=900,scrollbars=yes,resizable=yes');
 }
 
-function showNotification(type, message, duration = 5000) {
-  const area = document.getElementById('notification-area');
-  const notification = document.createElement('div');
-  notification.className = 'notification ' + type;
-  notification.innerHTML = message;
-  area.prepend(notification);
-  setTimeout(() => {
-    notification.style.transition = 'opacity 0.5s';
-    notification.style.opacity = '0';
-    setTimeout(() => notification.remove(), 500);
-  }, duration);
-}
+
 
 /**
  * Mostra overlay de carregamento

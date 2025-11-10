@@ -13,7 +13,7 @@ async function loadUsbWarningModal() {
         }
         const html = await response.text();
         document.body.insertAdjacentHTML('beforeend', html);
-        console.log('USB warning modal loaded and injected.');
+        console.log('USB warning modal loaded and injected successfully.');
     } catch (e) {
         console.error('Failed to load USB warning modal:', e);
     }
@@ -48,7 +48,7 @@ function handleSerialStatusUpdate(payload) {
         return;
     }
 
-    if (!connected && error) {
+    if (!connected && (error || true)) {
         // Show error modal
         if (errorMessage) {
             errorMessage.textContent = error;
