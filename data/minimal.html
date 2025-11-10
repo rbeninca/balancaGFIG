@@ -1070,7 +1070,7 @@
       }
 
       // Formata valor
-      const valorFormatado = Math.abs(valorConvertido).toFixed(precisao);
+      const valorFormatado = Math.abs(valorConvertido).toFixed(precisao).replace('.', ',');
 
       // Atualiza texto
       readingEl.textContent = valorFormatado;
@@ -1289,7 +1289,7 @@
         let valorDisplay, unidade;
         switch (unidadeAtual) {
           case 'kg':
-            valorDisplay = (valorN / 9.80665).toFixed(1);
+            valorDisplay = (valorN / 9.80665).toFixed(1).replace('.', ',');
             unidade = 'kg';
             break;
           case 'g':

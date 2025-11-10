@@ -89,7 +89,7 @@ async function wizardPasso0_Avancar() {
     wizardStateSimple.passo0.amostrasColetadas = amostras.length;
 
     // Exibe o ruído medido
-    document.getElementById('wizard-ruido-medido').textContent = `${ruidoStd.toFixed(6)} N (σ)`;
+    document.getElementById('wizard-ruido-medido').textContent = `${ruidoStd.toFixed(6).replace('.', ',')} N (σ)`;
     document.getElementById('wizard-analise-status').style.display = 'block';
 
     console.log(`[Wizard] Passo 0 completo: σ=${ruidoStd.toFixed(6)}N (${amostras.length} amostras)`);
@@ -138,7 +138,7 @@ function calculateStabilityParameters() {
     wizardStateSimple.passo1.erroMaximoKg = maxErrorGrams / 1000;
 
     // Exibe apenas o erro máximo esperado
-    document.getElementById('wizard-erro-maximo-valor').textContent = `${maxErrorGrams.toFixed(2)}`;
+    document.getElementById('wizard-erro-maximo-valor').textContent = `${maxErrorGrams.toFixed(2).replace('.', ',')}`;
     document.getElementById('wizard-tolerancia-valor').textContent = `Será calculada após calibração`;
     document.getElementById('wizard-tolerancia-calculada').style.display = 'block';
 
@@ -178,6 +178,9 @@ async function wizardPasso2_Avancar() {
 
     // Coleta leitura com balança vazia
     const amostras = await coletarAmostrasRuido(3000);
+    if (amostras.length < 5) {
+      throw new Error('Não foi possível ler dados suficientes da balança. Verifique a conexão.');
+    }
     const nZero = amostras.reduce((a, b) => a + b, 0) / amostras.length;
 
     // Salva
@@ -223,6 +226,10 @@ async function wizardAdicionarPonto() {
   try {
     // Coleta média de leituras (3 segundos)
     const amostras = await coletarAmostrasRuido(3000);
+    if (amostras.length < 5) {
+      showNotification('error', 'Não foi possível ler dados suficientes da balança. Verifique a conexão.');
+      return;
+    }
     const nLeitura = amostras.reduce((a, b) => a + b, 0) / amostras.length;
 
     // Adiciona ponto
@@ -264,7 +271,7 @@ function atualizarListaPontos() {
     const canDelete = p.m_kg > 0; // Não pode deletar o ponto zero
     html += `<tr>
       <td>${i + 1}</td>
-      <td>${p.m_kg.toFixed(3)}</td>
+      <td>${p.m_kg.toFixed(3).replace('.', ',')}</td>
       <td>${p.N_leitura.toFixed(0)}</td>
       <td>${canDelete ? `<button onclick="removerPonto(${i})" class="btn btn-secundario" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">🗑️</button>` : '-'}</td>
     </tr>`;
@@ -423,15 +430,15 @@ async function calcularRegressao() {
   wizardStateSimple.passo5.toleranciaN = toleranciaADC;
 
   // Exibe resultados
-  document.getElementById('wizard-alpha-valor').textContent = alpha.toFixed(8);
-  document.getElementById('wizard-beta-valor').textContent = beta.toFixed(8);
-  document.getElementById('wizard-r2-valor').textContent = r2.toFixed(6);
-  document.getElementById('wizard-erro-max-valor').textContent = (Math.abs(erroMax) * 1000).toFixed(2);
+  document.getElementById('wizard-alpha-valor').textContent = alpha.toFixed(8).replace('.', ',');
+  document.getElementById('wizard-beta-valor').textContent = beta.toFixed(8).replace('.', ',');
+  document.getElementById('wizard-r2-valor').textContent = r2.toFixed(6).replace('.', ',');
+  document.getElementById('wizard-erro-max-valor').textContent = (Math.abs(erroMax) * 1000).toFixed(2).replace('.', ',');
 
   // Exibe tolerância calculada com componentes
   document.getElementById('wizard-tolerancia-final').textContent =
-    `${toleranciaADC.toFixed(0)} contagens (≈${toleranciaEmGramas.toFixed(2)} g)\n` +
-    `Baseado em: Erro célula (${erroCelulaGramas.toFixed(2)}g) + Ruído medido (${ruidoGramas.toFixed(2)}g) × 1.5`;
+    `${toleranciaADC.toFixed(0)} contagens (≈${toleranciaEmGramas.toFixed(2).replace('.', ',')} g)\n` +
+    `Baseado em: Erro célula (${erroCelulaGramas.toFixed(2).replace('.', ',')}g) + Ruído medido (${ruidoGramas.toFixed(2).replace('.', ',')}g) × 1.5`;
 
   // Desenha gráfico da regressão
   desenharGraficoRegressao(pontos, alpha, beta);
@@ -440,15 +447,15 @@ async function calcularRegressao() {
 
   // Verifica qualidade
   if (r2 < 0.999) {
-    showNotification('warning', `⚠️ R²=${r2.toFixed(4)} baixo. Verifique linearidade da célula.`);
+    showNotification('warning', `⚠️ R²=${r2.toFixed(4).replace('.', ',')} baixo. Verifique linearidade da célula.`);
   }
 
   // Compara o erro medido da regressão com o erro esperado da célula (informado no Passo 1)
   const erroEsperadoKg = wizardStateSimple.passo1.erroMaximoKg;
   if (Math.abs(erroMax) > erroEsperadoKg) {
-    showNotification('warning', `⚠️ Erro da regressão (${(Math.abs(erroMax)*1000).toFixed(2)}g) excede especificação da célula (${(erroEsperadoKg*1000).toFixed(2)}g)`);
+    showNotification('warning', `⚠️ Erro da regressão (${(Math.abs(erroMax)*1000).toFixed(2).replace('.', ',')}g) excede especificação da célula (${(erroEsperadoKg*1000).toFixed(2).replace('.', ',')}g)`);
   } else {
-    showNotification('success', `✅ Erro da regressão (${(Math.abs(erroMax)*1000).toFixed(2)}g) está dentro da especificação (${(erroEsperadoKg*1000).toFixed(2)}g)`);
+    showNotification('success', `✅ Erro da regressão (${(Math.abs(erroMax)*1000).toFixed(2).replace('.', ',')}g) está dentro da especificação (${(erroEsperadoKg*1000).toFixed(2).replace('.', ',')}g)`);
   }
 
   // Faz tara final
@@ -574,8 +581,8 @@ function wizardStartRealtimeReading(passo) {
     try {
       const dataPoint = await lerValorAtualBalanca();
       const adc = dataPoint.raw.toFixed(0);
-      const forcaN = dataPoint.forca.toFixed(3);
-      const gramas = (dataPoint.massaKg * 1000).toFixed(1);
+      const forcaN = dataPoint.forca.toFixed(3).replace('.', ',');
+      const gramas = (dataPoint.massaKg * 1000).toFixed(1).replace('.', ',');
       
       leituraEl.innerHTML = `ADC: ${adc}<br>Força: ${forcaN} N<br>Massa: ${gramas} g`;
     } catch (e) {
@@ -608,12 +615,12 @@ function wizardPasso6_ExibirResumo() {
   const erroMaximoGramas = (capacidadeKg * 1000) * (acuracia / 100);
 
   // Atualiza resumo no Passo 5
-  document.getElementById('wizard-resumo-capacidade').textContent = capacidadeKg.toFixed(2);
-  document.getElementById('wizard-resumo-alpha').textContent = alpha.toFixed(8);
-  document.getElementById('wizard-resumo-beta').textContent = beta.toFixed(8);
+  document.getElementById('wizard-resumo-capacidade').textContent = capacidadeKg.toFixed(2).replace('.', ',');
+  document.getElementById('wizard-resumo-alpha').textContent = alpha.toFixed(8).replace('.', ',');
+  document.getElementById('wizard-resumo-beta').textContent = beta.toFixed(8).replace('.', ',');
   document.getElementById('wizard-resumo-tolerancia').textContent =
-    `${toleranciaEmGramas.toFixed(2)} g (${toleranciaADC.toFixed(0)} contagens)`;
-  document.getElementById('wizard-resumo-erro-maximo').textContent = erroMaximoGramas.toFixed(2);
+    `${toleranciaEmGramas.toFixed(2).replace('.', ',')} g (${toleranciaADC.toFixed(0)} contagens)`;
+  document.getElementById('wizard-resumo-erro-maximo').textContent = erroMaximoGramas.toFixed(2).replace('.', ',');
 
   console.log('[Wizard] Resumo exibido no Passo 5:');
   console.log(`  α=${alpha.toFixed(8)} kg/ADC, β=${beta.toFixed(8)} kg`);
@@ -772,7 +779,7 @@ function desenharGraficoRegressao(pontos, alpha, beta, canvasId = 'wizard-grafic
     ctx.moveTo(padding - 5, y); // Pequeno traço para fora
     ctx.lineTo(width - padding, y);
     ctx.stroke();
-    ctx.fillText(m_val.toFixed(3), padding - 40, y + 3);
+    ctx.fillText(m_val.toFixed(3).replace('.', ','), padding - 40, y + 3);
   }
 
   // Desenha eixos principais
@@ -810,7 +817,7 @@ function desenharGraficoRegressao(pontos, alpha, beta, canvasId = 'wizard-grafic
 
   // Calcula e exibe o ângulo da reta de regressão
   const angleRad = Math.atan(alpha * ( (width - 2 * padding) / (N_max - N_min) ) / ( (height - 2 * padding) / (m_max - m_min) ) ); // Ajusta para a escala do gráfico
-  const angleDeg = (angleRad * 180 / Math.PI).toFixed(2);
+  const angleDeg = (angleRad * 180 / Math.PI).toFixed(2).replace('.', ',');
   const angleEl = document.getElementById(angleDisplayId);
   if (angleEl) {
     angleEl.textContent = `${angleDeg}°`;
