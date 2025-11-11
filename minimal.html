@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -8,11 +8,12 @@
   <link rel="preload" href="estilo.css" as="style">
   <link rel="stylesheet" href="estilo.css">
   <link rel="stylesheet" href="usb_warning.css">
-  <script src="gravacoes.js"></script>
+  <link rel="stylesheet" href="gravacoes.css">
   <script src="apexcharts" defer></script>
   <script src="wizard_simplificado.js" defer></script>
   <script src="notification.js" defer></script>
   <script src="usb_warning.js" defer></script>
+  <script src="gravacoes.js" defer></script>
   <style>
     * {
       margin: 0;
@@ -39,12 +40,12 @@
     .container {
       width: 100%;
       max-width: 900px;
-      padding: 2rem;
+      padding: 1rem;
       text-align: center;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 3rem;
+      
     }
 
     /* Adjustments for smaller screens */
@@ -95,6 +96,13 @@
       position: relative;
       text-align: right;
       display: inline-block;
+    }
+
+    /* Garante que o valor da leitura mantenha o tamanho da fonte */
+    #readingValue {
+      font-size: inherit;
+      font-weight: inherit;
+      line-height: inherit;
     }
 
     .reading.negative::before {
@@ -540,9 +548,8 @@
       }
     }
 
-    /* Loading inicial */
+    /* Loading inicial - usa a classe em vez do elemento específico */
     .loading {
-      font-size: 1rem;
       opacity: 0.5;
       animation: fadeInOut 2s infinite;
     }
@@ -908,23 +915,26 @@
     </div>
   </div>
 
-  <!-- Modal de Gravações -->
-  <div class="analysis-modal-overlay" id="gravacoes-modal-overlay" style="display: none;">
-    <div class="analysis-modal" id="gravacoes-modal">
-      <div class="analysis-modal-header">
-        <h2>Minhas Gravações</h2>
-        <button class="modal-close" onclick="closeGravacoesModal()">×</button>
+  <!-- Modal de Gravações (Injetado via gravacoes.html) -->
+  <div id="gravacoes-modal-overlay" class="gravacoes-modal-overlay">
+    <div class="gravacoes-modal">
+      <div class="gravacoes-modal-header">
+        <h2>Gravações Salvas</h2>
+        <button class="gravacoes-modal-close" onclick="closeGravacoesModal()">×</button>
       </div>
-      <div class="analysis-modal-content" style="flex-direction: column;">
-        <div id="gravacoes-lista" style="flex: 1; overflow-y: auto; padding: 1rem;">
-          <p style="color: #999; text-align: center;">Carregando gravações...</p>
+      <div class="gravacoes-modal-content">
+        <div id="gravacoes-lista" class="gravacoes-lista">
+          <div class="gravacoes-placeholder">
+            <span>Carregando gravações...</span>
+          </div>
         </div>
       </div>
-      <div class="analysis-modal-footer">
-        <p id="gravacoes-status" style="margin: 0; text-align: center; color: #666; font-size: 0.9rem;"></p>
+      <div class="gravacoes-modal-footer">
+        <span id="gravacoes-status"></span>
       </div>
     </div>
   </div>
+
   <!-- Scripts -->
   <script>
     // ============================================================================
@@ -2000,6 +2010,7 @@
         const readingEl = document.getElementById('readingValue');
         const readingContainerEl = document.querySelector('.reading-container');
         const accuracyIndicatorEl = document.getElementById('accuracyIndicator');
+        const mainReadingEl = document.getElementById('mainReading');
 
         let valorConvertido, precisaoBase;
         let erroConvertido = 0;
@@ -2028,461 +2039,281 @@
 
         // Usa o número de casas decimais definido pelo usuário
         const precisao = decimalPlaces !== undefined ? decimalPlaces : precisaoBase;
-
         const valorArredondado = parseFloat(valorConvertido.toFixed(precisao));
         const valorFormatado = valorArredondado.toFixed(precisao).replace('.', ',');
 
         // Calcula a precisão confiável: encontra a última casa decimal onde 10^(-i) > erro
         let casasConfiaveis = -1; // -1 significa que até a unidade é afetada
         if (erroConvertido > 0) {
-          for (let i = 0; i <= precisao; i++) {
-            const magnitudei = Math.pow(10, -i);
-            if (magnitudei > erroConvertido) {
-              casasConfiaveis = i;
-            } else {
-              break;
+            for (let i = 0; i <= precisao; i++) {
+                const magnitude = Math.pow(10, -i);
+                if (magnitude > erroConvertido) {
+                    casasConfiaveis = i;
+                } else {
+                    break;
+                }
             }
-          }
-        } else {
-          casasConfiaveis = precisao; // Se não há erro definido, tudo é confiável
         }
 
-        // Monta HTML com dígitos destacados
+        // Formata a string com dígitos confiáveis e não confiáveis
         let htmlFormatado = '';
         const partes = valorFormatado.split(',');
-        let parteInteira = partes[0] || '0';
+        const parteInteira = partes[0];
         const parteDecimal = partes[1] || '';
 
-        // Lida com números negativos
-        let temNegativo = false;
-        if (parteInteira.startsWith('-')) {
-          temNegativo = true;
-          parteInteira = parteInteira.substring(1);
-        }
+        // Parte inteira (sempre confiável)
+        htmlFormatado += `<span class="digit-reliable">${parteInteira}</span>`;
 
-        // Determina quais dígitos inteiros são afetados pelo erro
-        let digitosInteirosNaoConfiaveis = [];
-        if (erroConvertido > 0) {
-          // Para cada dígito inteiro, verifica se sua magnitude é > erro
-          for (let i = 0; i < parteInteira.length; i++) {
-            const posicao = parteInteira.length - i - 1; // 0 = unidade, 1 = dezena, etc
-            const magnitude = Math.pow(10, posicao);
-            if (magnitude <= erroConvertido) {
-              digitosInteirosNaoConfiaveis.push(i);
+        // Parte decimal
+        if (parteDecimal.length > 0) {
+            htmlFormatado += `,`;
+            for (let i = 0; i < parteDecimal.length; i++) {
+                if (i < casasConfiaveis) {
+                    htmlFormatado += `<span class="digit-reliable">${parteDecimal[i]}</span>`;
+                } else {
+                    htmlFormatado += `<span class="digit-unreliable">${parteDecimal[i]}</span>`;
+                }
             }
-          }
-        }
-
-        // Monta parte inteira com dígitos destacados
-        if (temNegativo) {
-          htmlFormatado += '−'; // Sinal de menos
-        }
-        for (let i = 0; i < parteInteira.length; i++) {
-          if (digitosInteirosNaoConfiaveis.includes(i)) {
-            htmlFormatado += `<span class="digit-unreliable">${parteInteira[i]}</span>`;
-          } else {
-            htmlFormatado += `<span class="digit-reliable">${parteInteira[i]}</span>`;
-          }
-        }
-
-        if (parteDecimal) {
-          htmlFormatado += '<span class="digit-reliable">,</span>';
-          
-          // Separa dígitos decimais confiáveis dos não confiáveis
-          for (let i = 0; i < parteDecimal.length; i++) {
-            if (i < casasConfiaveis) {
-              htmlFormatado += `<span class="digit-reliable">${parteDecimal[i]}</span>`;
-            } else {
-              htmlFormatado += `<span class="digit-unreliable">${parteDecimal[i]}</span>`;
-            }
-          }
         }
 
         readingEl.innerHTML = htmlFormatado;
-        readingEl.classList.remove('loading');
 
-        // Atualiza mensagem de acurácia
-        if (accuracyIndicatorEl) {
-          let mostrarAviso = false;
-          let mensagem = 'Dígitos <span style="color: #aaaaaa;">cinza</span> = abaixo da acurácia';
-          
-          if (erroConvertido > 0) {
-            const temDigitosInteirosNaoConfiaveis = digitosInteirosNaoConfiaveis.length > 0;
-            const temDigitosDecimaisNaoConfiaveis = casasConfiaveis < parteDecimal.length;
-            
-            if (temDigitosInteirosNaoConfiaveis && casasConfiaveis < 0) {
-              // Todos os dígitos inteiros são afetados
-              mensagem = '⚠️ Erro de medição afeta até a unidade inteira';
-              mostrarAviso = true;
-            } else if (temDigitosInteirosNaoConfiaveis) {
-              // Alguns dígitos inteiros são afetados
-              mensagem = '⚠️ Erro afeta os dígitos à direita (menos significativos)';
-              mostrarAviso = true;
-            } else if (casasConfiaveis === 0) {
-              mensagem = 'Nenhuma casa decimal confiável - use ' + 
-                (unidadeAtual === 'kg' ? 'GRAMAS' : (unidadeAtual === 'g' ? 'MILIGRAMAS' : 'unidade menor'));
-              mostrarAviso = true;
-            } else if (temDigitosDecimaisNaoConfiaveis) {
-              mostrarAviso = true;
-            }
-          }
-          
-          accuracyIndicatorEl.innerHTML = mensagem;
-          accuracyIndicatorEl.style.display = (mostrarAviso && erroConvertido > 0) ? 'block' : 'none';
+        // Aplica a cor da unidade atual ao elemento .reading
+        const corUnidade = coresUnidades[unidadeAtual] || '#000000';
+        mainReadingEl.style.color = corUnidade;
+
+        // Atualiza a cor da leitura principal
+        if (valorN < 0) {
+            readingEl.classList.add('negative');
+            readingEl.classList.remove('positive');
+        } else {
+            readingEl.classList.add('positive');
+            readingEl.classList.remove('negative');
         }
 
-        const cor = coresUnidades[unidadeAtual];
-        readingEl.style.color = cor;
-        document.getElementById('unitLabel').style.color = cor;
-
-        if (readingContainerEl) {
-          if (valorArredondado >= 0) {
-            readingContainerEl.classList.add('positive');
-            readingContainerEl.classList.remove('negative');
-          } else {
-            readingContainerEl.classList.add('negative');
-            readingContainerEl.classList.remove('positive');
-          }
+        // Mostra/esconde o indicador de acurácia
+        if (casasConfiaveis < precisao) {
+            accuracyIndicatorEl.style.display = 'block';
+            const unreliableDigits = precisao - casasConfiaveis;
+            accuracyIndicatorEl.querySelector('span').textContent = `Dígitos ${unreliableDigits > 0 ? unreliableDigits : ''} cinza = abaixo da acurácia`;
+        } else {
+            accuracyIndicatorEl.style.display = 'none';
         }
     }
 
     function alternarUnidade() {
-      // Ciclo: N → kg → g → N
-      const unidades = ['N', 'kg', 'g'];
-      const indexAtual = unidades.indexOf(unidadeAtual);
-      const proximoIndex = (indexAtual + 1) % unidades.length;
-
-      unidadeAtual = unidades[proximoIndex];
-
-      // Atualiza label
-      document.getElementById('unitLabel').textContent = unidadeAtual;
-
-      // Atualiza cor
-      const cor = coresUnidades[unidadeAtual];
-      document.getElementById('readingValue').style.color = cor;
-      document.getElementById('unitLabel').style.color = cor;
-
-      console.log(`[Minimal] Unidade alterada para: ${unidadeAtual}`);
-
-      // Efeito visual de feedback (pulso)
-      const unitLabel = document.getElementById('unitLabel');
-      const readingValue = document.getElementById('readingValue');
-
-      // Pulso na unidade
-      unitLabel.style.transform = 'scale(1.3)';
-      setTimeout(() => {
-        unitLabel.style.transform = 'scale(1)';
-      }, 200);
-
-      // Flash sutil no valor
-      readingValue.style.opacity = '0.7';
-      setTimeout(() => {
-        readingValue.style.opacity = '1';
-      }, 150);
-
-      // Atualiza escala de range com nova unidade
-      atualizarRangeScale();
+        const unitLabel = document.getElementById('unitLabel');
+        if (unidadeAtual === 'N') {
+            unidadeAtual = 'kg';
+        } else if (unidadeAtual === 'kg') {
+            unidadeAtual = 'g';
+        } else {
+            unidadeAtual = 'N';
+        }
+        unitLabel.textContent = unidadeAtual;
+        // Força uma atualização da leitura principal para recalcular e exibir na nova unidade
+        // Usa o último valor conhecido de força em N
+        atualizarLeituraPrincipal(chartData.length > 0 ? chartData[chartData.length - 1].valor : 0);
+        renderizarGrafico(); // Redesenha o gráfico com a nova unidade
     }
 
     function increaseDecimalPlaces() {
-      if (decimalPlaces < 5) {
-        decimalPlaces++;
-        document.getElementById('decimalDisplay').textContent = decimalPlaces;
-        // Re-renderiza a leitura com novo número de casas
-        atualizarRangeScale();
-        showNotification('info', `Casas decimais: ${decimalPlaces}`);
-      }
+        if (decimalPlaces < 5) { // Limite máximo de casas decimais
+            decimalPlaces++;
+            document.getElementById('decimalDisplay').textContent = decimalPlaces;
+            atualizarLeituraPrincipal(chartData.length > 0 ? chartData[chartData.length - 1].valor : 0);
+        }
     }
 
     function decreaseDecimalPlaces() {
-      if (decimalPlaces > 0) {
-        decimalPlaces--;
-        document.getElementById('decimalDisplay').textContent = decimalPlaces;
-        // Re-renderiza a leitura com novo número de casas
-        atualizarRangeScale();
-        showNotification('info', `Casas decimais: ${decimalPlaces}`);
-      }
+        if (decimalPlaces > 0) { // Limite mínimo de casas decimais
+            decimalPlaces--;
+            document.getElementById('decimalDisplay').textContent = decimalPlaces;
+            atualizarLeituraPrincipal(chartData.length > 0 ? chartData[chartData.length - 1].valor : 0);
+        }
     }
 
     // ============================================================================
-    // CONTROLE DE RANGE
+    // STATUS DA CONEXÃO E BALANÇA
     // ============================================================================
-
-    function toggleAutoRange() {
-      autoRange = !autoRange;
-      const toggle = document.getElementById('rangeToggle');
-      const indicator = document.getElementById('rangeIndicator');
-      const slider = document.getElementById('rangeSlider');
-
-      if (autoRange) {
-        toggle.textContent = 'AUTO';
-        toggle.classList.add('active');
-        indicator.classList.add('auto-mode');
-        slider.style.display = 'none';
-        toggle.title = 'Clique para alternar para Manual';
-      } else {
-        toggle.textContent = 'MANUAL';
-        toggle.classList.remove('active');
-        indicator.classList.remove('auto-mode');
-        slider.style.display = 'block';
-
-        // Inicializa range manual com o valor atual do auto
-        if (chartData.length > 0) {
-          const valores = chartData.map(d => d.valor);
-          manualRangeMax = Math.max(...valores, 10) * 1.2;
-        }
-
-        // Posiciona handle baseado no valor atual
-        const scaleEl = document.getElementById('rangeScale');
-        const handle = document.getElementById('rangeHandle');
-        if (scaleEl && handle) {
-          const percent = (manualRangeMax - erroMinN) / (capacidadeMaxN - erroMinN);
-          const y = scaleEl.offsetHeight * (1 - percent);
-          handle.style.top = `${y}px`;
-        }
-
-        const erroKg = (erroMinN / 9.80665).toFixed(3);
-        const capKg = (capacidadeMaxN / 9.80665).toFixed(1);
-        toggle.title = `Arraste verticalmente: ${erroKg}kg - ${capKg}kg`;
-      }
-
-      renderizarGrafico();
-    }
-
-    function inicializarRangeSlider() {
-      const slider = document.getElementById('rangeSlider');
-      const handle = document.getElementById('rangeHandle');
-      const scaleEl = document.getElementById('rangeScale');
-
-      slider.style.display = 'none'; // Oculto inicialmente (modo AUTO)
-
-      // Mouse events no handle
-      handle.addEventListener('mousedown', (e) => {
-        e.stopPropagation();
-        if (!autoRange) {
-          isDragging = true;
-          document.body.style.cursor = 'ns-resize';
-        }
-      });
-
-      // Mouse events no slider (clique direto na track)
-      slider.addEventListener('mousedown', (e) => {
-        if (!autoRange && e.target !== handle) {
-          isDragging = true;
-          handleRangeDrag(e, scaleEl);
-          document.body.style.cursor = 'ns-resize';
-        }
-      });
-
-      document.addEventListener('mousemove', (e) => {
-        if (isDragging && !autoRange) {
-          handleRangeDrag(e, scaleEl);
-        }
-      });
-
-      document.addEventListener('mouseup', () => {
-        isDragging = false;
-        document.body.style.cursor = '';
-      });
-
-      // Touch events para mobile
-      handle.addEventListener('touchstart', (e) => {
-        e.stopPropagation();
-        if (!autoRange) {
-          isDragging = true;
-        }
-      });
-
-      slider.addEventListener('touchstart', (e) => {
-        if (!autoRange && e.target !== handle) {
-          isDragging = true;
-          handleRangeDrag(e.touches[0], scaleEl);
-        }
-      }, { passive: false });
-
-      document.addEventListener('touchmove', (e) => {
-        if (isDragging && !autoRange) {
-          e.preventDefault();
-          handleRangeDrag(e.touches[0], scaleEl);
-        }
-      }, { passive: false });
-
-      document.addEventListener('touchend', () => {
-        isDragging = false;
-      });
-    }
-
-  function handleRangeDrag(e, scaleEl) {
-      const rect = scaleEl.getBoundingClientRect();
-      const y = e.clientY - rect.top;
-      const percent = 1 - (y / rect.height); // Inverte para bottom-up
-      const clampedPercent = Math.max(0, Math.min(1, percent)); // 0% a 100%
-
-      // Interpola entre erro mínimo e capacidade máxima
-      // 0% = erroMinN, 100% = capacidadeMaxN
-      manualRangeMax = erroMinN + (capacidadeMaxN - erroMinN) * clampedPercent;
-
-      // Atualiza posição do handle
-      const handle = document.getElementById('rangeHandle');
-      if (handle) {
-        handle.style.top = `${y}px`;
-      }
-
-      // Força atualização imediata do gráfico e escala
-      renderizarGrafico();
-    }
-
-    function atualizarRangeScale() {
-      const scaleEl = document.getElementById('rangeScale');
-      if (!scaleEl) return; // Ainda não inicializado
-
-      const indicatorEl = document.getElementById('rangeIndicator');
-
-      // Determina o range máximo
-      let maxVal;
-      if (autoRange) {
-        if (chartData.length > 0) {
-          const valores = chartData.map(d => d.valor);
-          maxVal = Math.max(...valores, 10); // Mínimo de 10N para escala visível
-          maxVal = maxVal * 1.2; // 20% margem
-        } else {
-          maxVal = capacidadeMaxN;
-        }
-      } else {
-        // Modo manual - usa o valor ajustado pelo usuário
-        maxVal = manualRangeMax;
-      }
-
-      // Cria 11 ticks para 10 linhas (alinhadas com o gráfico)
-      const numTicks = 11;
-      let ticksHTML = '';
-
-      for (let i = 0; i < numTicks; i++) {
-        const percent = (numTicks - 1 - i) / (numTicks - 1); // Inverte para começar do topo
-        const valorN = maxVal * percent;
-
-        // Converte para unidade atual
-        let valorDisplay, unidade;
-        switch (unidadeAtual) {
-          case 'kg':
-            valorDisplay = (valorN / 9.80665).toFixed(2).replace('.', ',');
-            unidade = 'kg';
-            break;
-          case 'g':
-            valorDisplay = (valorN / 9.80665 * 1000).toFixed(1);
-            unidade = 'g';
-            break;
-          case 'N':
-          default:
-            valorDisplay = valorN.toFixed(1);
-            unidade = 'N';
-            break;
-        }
-
-        ticksHTML += `
-          <div class="range-tick">
-            <span class="range-tick-value">${valorDisplay}</span>
-            <div class="range-tick-line"></div>
-          </div>
-        `;
-      }
-
-      // Preserva barra, preenchimento, indicador e slider
-      const bar = scaleEl.querySelector('.range-bar');
-      const fill = scaleEl.querySelector('.range-fill');
-      const indicator = scaleEl.querySelector('.range-indicator');
-      const slider = scaleEl.querySelector('.range-slider');
-      scaleEl.innerHTML = ticksHTML;
-      scaleEl.appendChild(bar);
-      scaleEl.appendChild(fill);
-      scaleEl.appendChild(indicator);
-      scaleEl.appendChild(slider);
-
-      // Atualiza posição do indicador e barra de preenchimento com o valor atual
-      if (chartData.length > 0) {
-        const valorAtual = chartData[chartData.length - 1].valor;
-        const percent = Math.min(Math.max(valorAtual / maxVal, 0), 1);
-        const scaleHeight = scaleEl.offsetHeight;
-        const topPos = scaleHeight * (1 - percent); // Inverte para bottom-up
-
-        indicator.style.top = `${topPos}px`;
-        indicator.style.background = coresUnidades[unidadeAtual];
-
-        // Atualiza barra de preenchimento
-        fill.style.height = `${percent * 100}%`;
-        fill.style.background = `linear-gradient(to top, ${coresUnidades[unidadeAtual]}, ${coresUnidades[unidadeAtual]}40)`;
-      }
-    }
 
     function atualizarStatusConexao(conectado) {
-      const indicator = document.getElementById('statusConexao');
-      const text = document.getElementById('statusConexaoText');
-
+      const statusConexao = document.getElementById('statusConexao');
+      const statusConexaoText = document.getElementById('statusConexaoText');
       if (conectado) {
-        indicator.classList.add('connected');
-        indicator.classList.remove('error');
-        text.textContent = 'Conectado';
+        statusConexao.classList.remove('error');
+        statusConexao.classList.add('connected');
+        statusConexaoText.textContent = 'Conectado';
       } else {
-        indicator.classList.remove('connected');
-        indicator.classList.add('error');
-        text.textContent = 'Desconectado';
+        statusConexao.classList.remove('connected');
+        statusConexao.classList.add('error');
+        statusConexaoText.textContent = 'Desconectado';
       }
     }
 
     function atualizarStatusBalanca(status) {
-      const indicator = document.getElementById('statusBalanca');
-      const text = document.getElementById('statusBalancaText');
-
-      text.textContent = status;
-
-      if (status === 'Pesando') {
-        indicator.classList.add('active');
+      const statusBalanca = document.getElementById('statusBalanca');
+      const statusBalancaText = document.getElementById('statusBalancaText');
+      statusBalancaText.textContent = status;
+      if (status === 'Pronta' || status === 'Pesando') {
+        statusBalanca.classList.remove('error');
+        statusBalanca.classList.add('active');
       } else {
-        indicator.classList.remove('active');
+        statusBalanca.classList.remove('active');
+        statusBalanca.classList.add('error');
       }
     }
 
     // ============================================================================
-    // AÇÕES DOS BOTÕES (originais)
+    // CONTROLE DE RANGE DO GRÁFICO
     // ============================================================================
 
-    function iniciarNovaSessao() {
-      // Redireciona para interface completa com sessão
-      window.location.href = 'index.html?action=nova_sessao';
+    function toggleAutoRange() {
+      autoRange = !autoRange;
+      const rangeToggle = document.getElementById('rangeToggle');
+      const rangeIndicator = document.getElementById('rangeIndicator');
+      const rangeSlider = document.getElementById('rangeSlider');
+
+      if (autoRange) {
+        rangeToggle.classList.add('active');
+        rangeToggle.textContent = 'AUTO';
+        rangeIndicator.classList.add('auto-mode');
+        rangeSlider.style.display = 'none';
+      } else {
+        rangeToggle.classList.remove('active');
+        rangeToggle.textContent = 'MANUAL';
+        rangeIndicator.classList.remove('auto-mode');
+        rangeSlider.style.display = 'block';
+        // Define o manualRangeMax para o valor atual do indicador ao mudar para manual
+        manualRangeMax = parseFloat(rangeIndicator.dataset.value);
+      }
+      renderizarGrafico();
+      atualizarRangeScale();
     }
+
+    function inicializarRangeSlider() {
+      const rangeSlider = document.getElementById('rangeSlider');
+      const rangeHandle = document.getElementById('rangeHandle');
+      const rangeScale = document.getElementById('rangeScale');
+
+      let startY, startTop, maxTop, minTop;
+
+      rangeHandle.addEventListener('mousedown', (e) => {
+        if (autoRange) return; // Não permite arrastar em modo auto
+        isDragging = true;
+        startY = e.clientY;
+        startTop = rangeHandle.offsetTop;
+
+        const scaleRect = rangeScale.getBoundingClientRect();
+        minTop = 0;
+        maxTop = scaleRect.height;
+
+        rangeHandle.style.cursor = 'ns-resize';
+        document.body.style.userSelect = 'none'; // Previne seleção de texto
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        if (autoRange) return;
+
+        const dy = e.clientY - startY;
+        let newTop = startTop + dy;
+
+        // Limita o movimento do handle dentro da escala
+        newTop = Math.max(minTop, Math.min(newTop, maxTop));
+
+        rangeHandle.style.top = `${newTop}px`;
+
+        // Calcula o novo valor de manualRangeMax
+        const percent = 1 - (newTop / maxTop); // 0% no topo, 100% na base
+        manualRangeMax = Math.max(1, capacidadeMaxN * percent); // Mínimo de 1N
+
+        atualizarRangeScale();
+        renderizarGrafico();
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+          rangeHandle.style.cursor = 'grab';
+          document.body.style.userSelect = '';
+        }
+      });
+
+      // Inicializa a posição do handle e o valor do indicador
+      atualizarRangeScale();
+    }
+
+    function atualizarRangeScale() {
+      const rangeScale = document.getElementById('rangeScale');
+      const rangeIndicator = document.getElementById('rangeIndicator');
+      const rangeHandle = document.getElementById('rangeHandle');
+      const rangeFill = document.getElementById('rangeFill');
+
+      // Limpa ticks antigos
+      rangeScale.querySelectorAll('.range-tick').forEach(tick => tick.remove());
+
+      const scaleHeight = rangeScale.clientHeight;
+      const currentMax = autoRange ? Math.max(...chartData.map(d => d.valor), 10) : manualRangeMax;
+      const currentVal = chartData.length > 0 ? chartData[chartData.length - 1].valor : 0;
+
+      // Atualiza a posição do indicador de valor atual
+      const indicatorPercent = Math.min(1, Math.max(0, currentVal / currentMax));
+      const indicatorTop = scaleHeight * (1 - indicatorPercent);
+      rangeIndicator.style.top = `${indicatorTop}px`;
+      rangeIndicator.dataset.value = currentMax; // Armazena o valor máximo atual
+
+      // Atualiza a altura do preenchimento
+      rangeFill.style.height = `${scaleHeight - indicatorTop}px`;
+      rangeFill.style.top = `${indicatorTop}px`;
+
+      // Atualiza a posição do handle do slider (se em modo manual)
+      if (!autoRange) {
+        const handlePercent = manualRangeMax / capacidadeMaxN;
+        const handleTop = scaleHeight * (1 - handlePercent);
+        rangeHandle.style.top = `${handleTop}px`;
+        rangeSlider.style.display = 'block';
+      } else {
+        rangeSlider.style.display = 'none';
+      }
+
+      // Adiciona ticks de escala (ex: 0%, 25%, 50%, 75%, 100%)
+      for (let i = 0; i <= 4; i++) {
+        const tickPercent = i * 0.25; // 0, 0.25, 0.5, 0.75, 1
+        const tickY = scaleHeight * (1 - tickPercent);
+        const tickValueN = currentMax * tickPercent;
+
+        const tickEl = document.createElement('div');
+        tickEl.className = 'range-tick';
+        tickEl.style.top = `${tickY}px`;
+        tickEl.innerHTML = `
+          <span class="range-tick-value">${tickValueN.toFixed(0)}N</span>
+          <div class="range-tick-line"></div>
+        `;
+        rangeScale.appendChild(tickEl);
+      }
+    }
+
+    // ============================================================================
+    // FUNÇÕES DE CALIBRAÇÃO E TARA (COMPATIBILIDADE COM WIZARD)
+    // ============================================================================
 
     function executarTara() {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        try {
-          ws.send(JSON.stringify({cmd: 't'}));
-          showNotification('info', 'Comando de tara enviado para a balança.');
-          console.log('[Minimal] 🎯 Comando de tara enviado');
-        } catch (e) {
-          showNotification('error', 'Erro ao enviar comando de tara.');
-          console.error('[Minimal] Erro ao enviar tara:', e);
-        }
+      sendCommandToWorker('t');
+      showNotification('info', 'Comando de Tara enviado.');
+    }
+
+    function openWizardSimplificado() {
+      // Esta função é um placeholder para o wizard_simplificado.js
+      // que será carregado e terá sua própria implementação de openWizardSimplificado
+      if (typeof window.openWizardSimplificado === 'function') {
+        window.openWizardSimplificado();
       } else {
-        showNotification('error', 'WebSocket não conectado. Conecte à balança primeiro.');
-        console.warn('[Minimal] WebSocket não está conectado');
+        showNotification('warning', 'O assistente de calibração não foi carregado.');
       }
     }
 
-    // ============================================================================
-    // REDIMENSIONAMENTO
-    // ============================================================================
-
-    window.addEventListener('resize', () => {
-      if (chart) {
-        inicializarGrafico();
-      }
-    });
-
   </script>
-</body>
-</html>
-
-
-
-
+  <!-- Modal de Gravações já está incluído inline acima -->
 </body>
 </html>
