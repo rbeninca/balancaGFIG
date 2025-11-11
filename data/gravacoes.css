@@ -108,7 +108,34 @@
 .gravacao-info {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.gravacao-linha1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.gravacao-linha2 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.gravacao-detalhe {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.gravacao-detalhe strong {
+  color: #444;
+  font-weight: 500;
 }
 
 .gravacao-nome {
@@ -158,4 +185,29 @@
     font-size: 0.85rem;
     color: #999;
     text-align: right;
+}
+
+/* Responsivo para telas menores */
+@media (max-width: 768px) {
+  .gravacoes-modal {
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .gravacao-item {
+    padding: 1rem 1.5rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .gravacao-linha2 {
+    font-size: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .gravacao-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }

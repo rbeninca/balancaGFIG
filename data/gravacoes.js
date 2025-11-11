@@ -26,6 +26,106 @@ function closeGravacoesModal() {
 }
 
 /**
+ * Calcula as métricas de análise de uma gravação
+ * @param {Object} gravacao - Objeto da gravação
+ * @returns {Object} - Objeto com as métricas calculadas
+ */
+function calcularMetricasGravacao(gravacao) {
+  try {
+    if (!gravacao.dadosTabela || gravacao.dadosTabela.length === 0) {
+      return null;
+    }
+
+    const forceValues = gravacao.dadosTabela.map(d => parseFloat(d.newtons));
+    const timeValues = gravacao.dadosTabela.map(d => parseFloat(d.tempo_esp));
+    
+    const maxForce = Math.max(...forceValues);
+    const threshold = maxForce * 0.05;
+    const minTime = Math.min(...timeValues);
+    
+    // Detecta início da queima
+    let burnStart = 0;
+    for (let i = 0; i < forceValues.length; i++) {
+      if (forceValues[i] > threshold) {
+        burnStart = timeValues[i] - minTime;
+        break;
+      }
+    }
+    
+    // Detecta fim da queima
+    let burnEnd = timeValues[timeValues.length - 1] - minTime;
+    for (let i = forceValues.length - 1; i >= 0; i--) {
+      if (forceValues[i] > threshold) {
+        burnEnd = timeValues[i] - minTime;
+        break;
+      }
+    }
+    
+    // Calcula impulso total usando regra do trapézio
+    let impulsoTotal = 0;
+    for (let i = 1; i < timeValues.length; i++) {
+      const tPrev = timeValues[i - 1];
+      const tCur = timeValues[i];
+      const startTimeAbs = burnStart + minTime;
+      const endTimeAbs = burnEnd + minTime;
+      
+      if (tCur >= startTimeAbs && tPrev >= startTimeAbs && tCur <= endTimeAbs) {
+        const dt = tCur - tPrev;
+        const f1 = forceValues[i - 1];
+        const f2 = forceValues[i];
+        const areaTrap = dt * (f1 + f2) / 2;
+        if (areaTrap > 0) {
+          impulsoTotal += areaTrap;
+        }
+      }
+    }
+    
+    const tempoBurning = burnEnd - burnStart;
+    
+    // Classifica o motor
+    const classificacoes = [
+      { min: 0.00, max: 0.3125, classe: 'Micro 1/8A', faixa: '0-0.31 N·s' },
+      { min: 0.3126, max: 0.625, classe: '¼A', faixa: '0.31-0.63 N·s' },
+      { min: 0.626, max: 1.25, classe: '½A', faixa: '0.63-1.25 N·s' },
+      { min: 1.26, max: 2.50, classe: 'A', faixa: '1.26-2.5 N·s' },
+      { min: 2.51, max: 5.00, classe: 'B', faixa: '2.5-5 N·s' },
+      { min: 5.01, max: 10.00, classe: 'C', faixa: '5-10 N·s' },
+      { min: 10.01, max: 20.00, classe: 'D', faixa: '10-20 N·s' },
+      { min: 20.01, max: 40.00, classe: 'E', faixa: '20-40 N·s' },
+      { min: 40.01, max: 80.00, classe: 'F', faixa: '40-80 N·s' },
+      { min: 80.01, max: 160.00, classe: 'G', faixa: '80-160 N·s' },
+      { min: 160.01, max: 320.00, classe: 'H', faixa: '160-320 N·s' },
+      { min: 320.01, max: 640.00, classe: 'I', faixa: '320-640 N·s' },
+      { min: 640.01, max: 1280.00, classe: 'J', faixa: '640-1280 N·s' },
+      { min: 1280.01, max: 2560.00, classe: 'K', faixa: '1.28-2.56 kN·s' },
+      { min: 2560.01, max: 5120.00, classe: 'L', faixa: '2.56-5.12 kN·s' },
+      { min: 5120.01, max: 10240.00, classe: 'M', faixa: '5.12-10.24 kN·s' },
+      { min: 10240.01, max: 20480.00, classe: 'N', faixa: '10.24-20.48 kN·s' },
+      { min: 20480.01, max: 40960.00, classe: 'O', faixa: '20.48-40.96 kN·s' }
+    ];
+    
+    let classificacao = { classe: '---', faixa: '---' };
+    const EPS = 1e-6;
+    for (let c of classificacoes) {
+      if ((c.min - EPS) <= impulsoTotal && impulsoTotal <= (c.max + EPS)) {
+        classificacao = { classe: c.classe, faixa: c.faixa };
+        break;
+      }
+    }
+    
+    return {
+      tempoBurning: tempoBurning,
+      impulsoTotal: impulsoTotal,
+      classeMotor: classificacao.classe,
+      faixaMotor: classificacao.faixa
+    };
+  } catch (e) {
+    console.error('Erro ao calcular métricas:', e);
+    return null;
+  }
+}
+
+/**
  * Carrega as gravações do LocalStorage e as exibe na lista.
  */
 function loadAndDisplayRecordings() {
@@ -58,10 +158,27 @@ function loadAndDisplayRecordings() {
         hour: '2-digit', minute: '2-digit'
       });
 
+      // Calcula métricas da gravação
+      const metricas = calcularMetricasGravacao(gravacao);
+      const nomeMotor = gravacao.metadadosMotor?.nome || '---';
+      const tempoBurning = metricas ? metricas.tempoBurning.toFixed(2) + ' s' : '---';
+      const impulsoTotal = metricas ? metricas.impulsoTotal.toFixed(2) + ' N·s' : '---';
+      const classeMotor = metricas ? metricas.classeMotor : '---';
+      const faixaMotor = metricas ? metricas.faixaMotor : '---';
+
       itemEl.innerHTML = `
         <div class="gravacao-info">
-          <span class="gravacao-nome">${gravacao.nome}</span>
-          <span class="gravacao-data">${dataFormatada}</span>
+          <div class="gravacao-linha1">
+            <span class="gravacao-nome">${gravacao.nome}</span>
+            <span class="gravacao-data">${dataFormatada}</span>
+          </div>
+          <div class="gravacao-linha2">
+            <span class="gravacao-detalhe"><strong>Motor:</strong> ${nomeMotor}</span>
+            <span class="gravacao-detalhe"><strong>Tempo:</strong> ${tempoBurning}</span>
+            <span class="gravacao-detalhe"><strong>Impulso:</strong> ${impulsoTotal}</span>
+            <span class="gravacao-detalhe"><strong>Classe:</strong> ${classeMotor}</span>
+            <span class="gravacao-detalhe"><strong>Faixa:</strong> ${faixaMotor}</span>
+          </div>
         </div>
         <div class="gravacao-actions">
           <button class="btn-icon" title="Deletar gravação" onclick="event.stopPropagation(); deleteRecording(${gravacao.id});">

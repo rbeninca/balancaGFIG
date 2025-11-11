@@ -10,14 +10,14 @@ function showNotification(type, message, duration = 5000) {
     const notification = document.createElement('div');
     notification.style.cssText = `
         position: fixed;
-        top: 20px;
+        top: 100px;
         right: 20px;
         padding: 1rem 1.5rem;
         border-radius: 8px;
         color: white;
         font-family: sans-serif;
         z-index: 10000;
-        opacity: 0;
+        opacity: 0.4;
         transition: opacity 0.5s, transform 0.5s;
         transform: translateX(100%);
     `;
