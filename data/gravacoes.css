@@ -14,13 +14,13 @@
   justify-content: center;
   z-index: 2000;
   opacity: 0;
-  visibility: hidden;
+  visibility: hidden !important;
   transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
 .gravacoes-modal-overlay.visible {
   opacity: 1;
-  visibility: visible;
+  visibility: visible !important;
 }
 
 .gravacoes-modal {
