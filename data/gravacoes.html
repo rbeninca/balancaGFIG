@@ -1,0 +1,20 @@
+<!-- Modal/View para Listagem de Gravações -->
+<div id="gravacoes-modal-overlay" class="gravacoes-modal-overlay" style="display: none;">
+  <div class="gravacoes-modal">
+    <div class="gravacoes-modal-header">
+      <h2>Gravações Salvas</h2>
+      <button class="gravacoes-modal-close" onclick="closeGravacoesModal()">×</button>
+    </div>
+    <div class="gravacoes-modal-content">
+      <div id="gravacoes-lista" class="gravacoes-lista">
+        <!-- As gravações serão inseridas aqui pelo JS -->
+        <div class="gravacoes-placeholder">
+          <span>Carregando gravações...</span>
+        </div>
+      </div>
+    </div>
+    <div class="gravacoes-modal-footer">
+        <span id="gravacoes-status"></span>
+    </div>
+  </div>
+</div>
